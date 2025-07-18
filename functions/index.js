@@ -1,11 +1,12 @@
 // =================================================================
-// SETUP
+// SETUP - This runs only ONCE at the top.
 // =================================================================
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { logger } = require("firebase-functions");
 const fetch = require("node-fetch");
 
+// Initialize the Firebase Admin SDK and Firestore ONCE.
 admin.initializeApp();
 const firestore = admin.firestore();
 
@@ -14,34 +15,37 @@ const firestore = admin.firestore();
 // =================================================================
 const PROJECT_ID = "project-kisan-new";
 const BUCKET_NAME = "project-kisan-new.firebasestorage.app";
-const LOCATION = "asia-south1"; // Everything will be in this region
+const LOCATION = "asia-south1";
 
 // =================================================================
 // FUNCTION 1: CROP DOCTOR (ANALYZE PLANT IMAGE)
 // =================================================================
 exports.analyzePlantImage = functions
-    .region(LOCATION) // Moved back to asia-south1
+    .region(LOCATION)
     .runWith({ timeoutSeconds: 300, memory: "1GB" })
     .storage.object()
     .onFinalize(async (object) => {
-        // ... (rest of the function logic is the same)
         const { name: filePath, bucket: bucketName, contentType } = object;
         if (!filePath || !filePath.startsWith("uploads/")) { return; }
+
         try {
             const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
             const tokenData = await tokenResponse.json();
             const accessToken = tokenData.access_token;
             const prompt = `You are an expert agronomist AI for Indian farmers. Respond ONLY with a valid JSON object. {"disease_name_english": "Name", "disease_name_kannada": "Name", "confidence_score": "Score", "description_kannada": "Desc", "remedy_kannada": "Remedy"}`;
             const requestBody = { contents: [{ role: "user", parts: [{ file_data: { mime_type: contentType, file_uri: `gs://${bucketName}/${filePath}` } }, { text: prompt }] }] };
-           
-           // Using the STABLE, CORRECT, LATEST vision model
-           const apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:streamGenerateContent`;
+            
+            // Using the non-streaming endpoint
+            const apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
             
             const geminiResponse = await fetch(apiEndpoint, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(requestBody) });
             const responseData = await geminiResponse.json();
             logger.info("Full Gemini API Response:", JSON.stringify(responseData, null, 2));
-            const modelResponseText = responseData?.[0]?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            // CORRECTED: Reading the non-streaming response structure
+            const modelResponseText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!modelResponseText) { logger.error("Could not find text in Gemini's response.", responseData); return; }
+
             const cleanedJsonString = modelResponseText.replace(/^```json\s*|```\s*$/g, "");
             const diagnosisData = JSON.parse(cleanedJsonString);
             const diagnosisId = filePath.split("/").pop();
@@ -57,21 +61,29 @@ exports.analyzePlantImage = functions
 // =================================================================
 exports.proactiveMarketAnalyst = functions
     .region(LOCATION)
-    // ... (rest of this function is correct and unchanged)
     .pubsub.schedule("every day 08:00").timeZone("Asia/Kolkata").onRun(async (context) => {
         const CROP_NAME = "Tomato";
         try {
-            const todayPrice = 1350; const historicalPrices = [1100, 1150, 1250, 1220, 1300];
+            // CORRECTED: Fixed the syntax error here
+            const todayPrice = 1350;
+            const historicalPrices = [1100, 1150, 1250, 1220, 1300];
+
             const tokenResponse = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', { headers: { 'Metadata-Flavor': 'Google' } });
             const tokenData = await tokenResponse.json();
             const accessToken = tokenData.access_token;
-            const prompt = `Analyze the price trend for ${CROP_NAME}... Respond ONLY with a valid JSON object... {"recommendation": "Sell or Wait", "justification": "..."}`;
+            const prompt = `Analyze the price trend for ${CROP_NAME}. Today's price is ${todayPrice} INR per quintal. The prices for the last 5 days were: ${historicalPrices.join(', ')}. Respond ONLY with a valid JSON object with two keys: {"recommendation": "Sell or Wait", "justification": "A very simple one-sentence justification in plain English."}`;
             const requestBody = { contents: [{ parts: [{ text: prompt }] }] };
-            const apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.0-pro:streamGenerateContent`;
+            
+            // Using the non-streaming endpoint
+            const apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.0-pro:generateContent`;
+            
             const geminiResponse = await fetch(apiEndpoint, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
             const responseData = await geminiResponse.json();
-            const modelResponseText = responseData?.[0]?.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            // CORRECTED: Reading the non-streaming response structure
+            const modelResponseText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!modelResponseText) { logger.error("Could not find text in Market Analyst response.", responseData); return; }
+            
             const analysisData = JSON.parse(modelResponseText);
             const today = new Date().toISOString().slice(0, 10);
             const documentId = `${CROP_NAME}-${today}`;
@@ -86,7 +98,6 @@ exports.proactiveMarketAnalyst = functions
 const cheerio = require("cheerio");
 exports.updateKnowledgeBase = functions
     .region(LOCATION)
-    // ... (rest of this function is correct and unchanged)
     .pubsub.schedule("every 24 hours").onRun(async (context) => {
         const URL_TO_SCRAPE = "https://pib.gov.in/PressReleasePage.aspx?PRID=1945323";
         const FILE_PATH = "knowledge-base/pib_agri_schemes.txt";
