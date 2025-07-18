@@ -3,13 +3,15 @@
 // =================================================================
 
 // TODO: Replace this with your project's actual Firebase configuration!
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "project-kisan-finale",
-    storageBucket: "project-kisan-finale.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg",
+  authDomain: "project-kisan-new.firebaseapp.com",
+  projectId: "project-kisan-new",
+  storageBucket: "project-kisan-new.firebasestorage.app",
+  messagingSenderId: "176046173818",
+  appId: "1:176046173818:web:de8fb0e50752c8f62195c3",
+  measurementId: "G-GDJE785E2N"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -90,15 +92,18 @@ function listenForDiagnosisResult(diagnosisId) {
         unsubscribe();
     });
 }
-
 // =================================================================
 // 5. UI HELPER FUNCTIONS FOR A CLEANER EXPERIENCE
 // =================================================================
 
 function showStatus(message, isError = false) {
     statusText.textContent = message;
-    statusIndicator.style.borderColor = isError ? '#dc3545' : '#e5e5e5';
-    statusIndicator.style.borderTopColor = isError ? '#dc3545' : '#007AFF';
+    // Safely select the spinner to avoid errors
+    const spinner = statusIndicator.querySelector('.spinner');
+    if (spinner) {
+        spinner.style.borderColor = isError ? '#dc3545' : '#e5e5e5';
+        spinner.style.borderTopColor = isError ? '#dc3545' : '#007AFF';
+    }
     statusIndicator.classList.remove('hidden');
     
     // Animate the main content to focus on the status
@@ -112,33 +117,73 @@ function hideStatus() {
     featuresGrid.style.opacity = '1';
 }
 
+function hideResults() {
+    resultsContainer.classList.add('hidden');
+    speakButton.classList.add('hidden');
+}
+// =================================================================
+// 6. FUNCTION TO DISPLAY THE RESULTS (NEW & IMPROVED)
+// =================================================================
+
 function displayDiagnosisResults(data) {
+    // Hide the main status loader
     hideStatus();
+    // Make the results container visible
     resultsContainer.classList.remove('hidden');
 
-    diagnosisOutput.innerHTML = `
-        <p><strong>Disease</strong>${data.disease_name_english}</p>
-        <p><strong>ರೋಗ (Kannada)</strong>${data.disease_name_kannada}</p>
-        <p><strong>Description</strong>${data.description_kannada || 'No description available.'}</p>
-        <p><strong>Remedy</strong>${data.remedy_kannada || 'No remedy suggested.'}</p>
-    `;
+    // --- Populate Header ---
+    document.getElementById('result-title').textContent = data.disease_name_english;
+    const confidenceSpan = document.getElementById('result-confidence');
+    const confidencePercent = (data.confidence_score * 100).toFixed(0);
+    confidenceSpan.textContent = `${confidencePercent}% Confident`;
+    
+    // Set color based on confidence
+    if (data.confidence_score > 0.8) {
+        confidenceSpan.style.backgroundColor = '#d4edda'; // green
+        confidenceSpan.style.color = '#155724';
+    } else if (data.confidence_score > 0.5) {
+        confidenceSpan.style.backgroundColor = '#fff3cd'; // yellow
+        confidenceSpan.style.color = '#856404';
+    } else {
+        confidenceSpan.style.backgroundColor = '#f8d7da'; // red
+        confidenceSpan.style.color = '#721c24';
+    }
 
-    // Make the speak button functional and visible if there's text to speak
-    const textToSpeak = data.remedy_kannada || data.description_kannada;
+    // --- Populate Detail Cards ---
+    document.getElementById('result-severity').textContent = data.severity;
+    document.getElementById('result-risk').textContent = data.contagion_risk;
+    
+    // --- Populate Text Sections ---
+    document.getElementById('result-description').textContent = data.description_kannada;
+    document.getElementById('result-organic').textContent = data.organic_remedy_kannada;
+    document.getElementById('result-chemical').textContent = data.chemical_remedy_kannada;
+
+    // --- Populate Prevention Tips (handle bullet points) ---
+    const preventionDiv = document.getElementById('result-prevention');
+    const tips = data.prevention_tips_kannada.split('*').filter(tip => tip.trim() !== '');
+    if (tips.length > 0) {
+        let tipsHtml = '<ul>';
+        tips.forEach(tip => {
+            tipsHtml += `<li>${tip.trim()}</li>`;
+        });
+        tipsHtml += '</ul>';
+        preventionDiv.innerHTML = tipsHtml;
+    } else {
+        preventionDiv.innerHTML = `<p>${data.prevention_tips_kannada}</p>`;
+    }
+
+
+    // Make the speak button functional and visible
+    const textToSpeak = `The diagnosis is ${data.disease_name_english}. The recommended organic remedy is: ${data.organic_remedy_kannada}`;
     if (textToSpeak) {
         speakButton.classList.remove('hidden');
         speakButton.onclick = () => speakText(textToSpeak);
     }
 }
 
-function hideResults() {
-    resultsContainer.classList.add('hidden');
-    speakButton.classList.add('hidden');
-}
-
 
 // =================================================================
-// 6. TEXT-TO-SPEECH FUNCTIONALITY
+// 7. TEXT-TO-SPEECH FUNCTIONALITY
 // =================================================================
 
 async function speakText(textToSpeak) {

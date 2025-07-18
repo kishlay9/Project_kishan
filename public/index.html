@@ -37,20 +37,42 @@
         </section>
 
         <!-- Status & Results Section -->
-        <section class="status-section">
-            <div id="status-indicator" class="hidden">
-                <div class="spinner"></div>
-                <p id="status-text">Analyzing your image...</p>
+        <div id="status-indicator" class="hidden">
+            <div class="spinner"></div>
+            <p id="status-text">Analyzing your image...</p>
+        </div>
+        <section id="results-container" class="hidden">
+            <div class="result-header">
+                <h3 id="result-title"></h3>
+                <span id="result-confidence"></span>
             </div>
-
-            <div id="results-container" class="hidden">
-                <div id="diagnosis-output">
-                    <!-- AI Results will be injected here -->
+            <div class="result-details-grid">
+                <div class="detail-card">
+                    <h4>Severity</h4>
+                    <p id="result-severity"></p>
                 </div>
-                <button id="speak-button" class="hidden">
-                     <span>Listen to Remedy</span>
-                </button>
+                <div class="detail-card">
+                    <h4>Contagion Risk</h4>
+                    <p id="result-risk"></p>
+                </div>
             </div>
+            <div class="result-section">
+                <h4>Description (Kannada)</h4>
+                <p id="result-description"></p>
+            </div>
+            <div class="result-section">
+                <h4>Organic Remedy (Kannada)</h4>
+                <p id="result-organic"></p>
+            </div>
+            <div class="result-section">
+                <h4>Chemical Remedy (Kannada)</h4>
+                <p id="result-chemical"></p>
+            </div>
+            <div class="result-section">
+                <h4>Prevention Tips (Kannada)</h4>
+                <div id="result-prevention"></div>
+            </div>
+            <button id="speak-button" class="hidden">Listen to Summary</button>
         </section>
 
         <!-- Features Grid -->
