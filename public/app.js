@@ -92,9 +92,37 @@ function listenForDiagnosisResult(diagnosisId) {
         unsubscribe();
     });
 }
-
 // =================================================================
-// 5. FUNCTION TO DISPLAY THE RESULTS (NEW & IMPROVED)
+// 5. UI HELPER FUNCTIONS FOR A CLEANER EXPERIENCE
+// =================================================================
+
+function showStatus(message, isError = false) {
+    statusText.textContent = message;
+    // Safely select the spinner to avoid errors
+    const spinner = statusIndicator.querySelector('.spinner');
+    if (spinner) {
+        spinner.style.borderColor = isError ? '#dc3545' : '#e5e5e5';
+        spinner.style.borderTopColor = isError ? '#dc3545' : '#007AFF';
+    }
+    statusIndicator.classList.remove('hidden');
+    
+    // Animate the main content to focus on the status
+    actionPanel.style.opacity = '0.5';
+    featuresGrid.style.opacity = '0.5';
+}
+
+function hideStatus() {
+    statusIndicator.classList.add('hidden');
+    actionPanel.style.opacity = '1';
+    featuresGrid.style.opacity = '1';
+}
+
+function hideResults() {
+    resultsContainer.classList.add('hidden');
+    speakButton.classList.add('hidden');
+}
+// =================================================================
+// 6. FUNCTION TO DISPLAY THE RESULTS (NEW & IMPROVED)
 // =================================================================
 
 function displayDiagnosisResults(data) {
@@ -155,7 +183,7 @@ function displayDiagnosisResults(data) {
 
 
 // =================================================================
-// 6. TEXT-TO-SPEECH FUNCTIONALITY
+// 7. TEXT-TO-SPEECH FUNCTIONALITY
 // =================================================================
 
 async function speakText(textToSpeak) {
