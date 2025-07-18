@@ -220,3 +220,12 @@ main {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+.action-panel, .features-grid {
+    transition: opacity 0.3s ease;
+}
+
+#speak-button:disabled {
+    background-color: var(--subtle-text);
+    cursor: not-allowed;
+}
