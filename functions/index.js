@@ -1,7 +1,8 @@
 // =================================================================
-// SETUP
+// SETUP (WITH NEW v2 IMPORTS)
 // =================================================================
-const functions = require("firebase-functions");
+const { onObjectFinalized } = require("firebase-functions/v2/storage");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const { logger } = require("firebase-functions");
 const fetch = require("node-fetch");
@@ -20,17 +21,24 @@ const BUCKET_NAME = "project-kisan-new.firebasestorage.app";
 const LOCATION = "asia-south1";
 
 // =================================================================
-// FUNCTION 1: CROP DOCTOR (ANALYZE PLANT IMAGE)
+// FUNCTION 1: CROP DOCTOR (ANALYZE PLANT IMAGE) - USING NEW v2 SYNTAX
 // =================================================================
-exports.analyzePlantImage = functions
-    .region(LOCATION)
-    .runWith({ timeoutSeconds: 300, memory: "2GB" })
-    .storage.object()
-    .onFinalize(async (object) => {
-        const { name: filePath, bucket: bucketName, contentType } = object;
-        if (!filePath || !filePath.startsWith("uploads/")) { return; }
+exports.analyzePlantImage = onObjectFinalized(
+    {
+        region: LOCATION,
+        timeoutSeconds: 300,
+        memory: "2GiB" // Note: v2 uses GiB/MiB
+    },
+    async (event) => {
+        // The event object is slightly different in v2
+        const { name: filePath, bucket: bucketName, contentType } = event.data;
+        if (!filePath || !filePath.startsWith("uploads/")) {
+            logger.info(`Skipping file: ${filePath}`);
+            return;
+        }
 
         try {
+            // ALL OF KISHLAY'S LOGIC REMAINS THE SAME INSIDE HERE
             const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
             const tokenData = await tokenResponse.json();
             const accessToken = tokenData.access_token;
@@ -54,8 +62,6 @@ exports.analyzePlantImage = functions
               "prevention_tips_kannada": ["An array of strings with 2-3 bullet points on how to prevent this issue."]
             }`;
             
-            // --- THIS IS THE FIX ---
-            // The request body now correctly includes "role": "user"
             const requestBody = { 
                 contents: [{ 
                     role: "user", 
@@ -65,8 +71,7 @@ exports.analyzePlantImage = functions
                     ] 
                 }] 
             };
-            // --- END OF FIX ---
-
+            
             const geminiResponse = await fetch(apiEndpoint, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(requestBody) });
             const responseData = await geminiResponse.json();
             logger.info("Full Diagnosis Response:", JSON.stringify(responseData, null, 2));
@@ -93,16 +98,22 @@ exports.analyzePlantImage = functions
         } catch (error) {
             logger.error("!!! CRITICAL ERROR in analysis:", error, { structuredData: true });
         }
-    });
+    }
+);
 
 // =================================================================
-// FUNCTION 2: MARKET ANALYST (SCHEDULED)
+// FUNCTION 2: MARKET ANALYST (SCHEDULED) - USING NEW v2 SYNTAX
 // =================================================================
-exports.proactiveMarketAnalyst = functions
-    .region(LOCATION)
-    .pubsub.schedule("every day 08:00").timeZone("Asia/Kolkata").onRun(async (context) => {
+exports.proactiveMarketAnalyst = onSchedule(
+    {
+        schedule: "every day 08:00",
+        timeZone: "Asia/Kolkata",
+        region: LOCATION,
+    },
+    async (event) => {
         const CROP_NAME = "Tomato";
         try {
+            // THE LOGIC INSIDE IS UNCHANGED
             const todayPrice = 1350;
             const historicalPrices = [1100, 1150, 1250, 1220, 1300];
             const tokenResponse = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', { headers: { 'Metadata-Flavor': 'Google' } });
@@ -121,17 +132,22 @@ exports.proactiveMarketAnalyst = functions
             await firestore.collection("market_analysis").doc(documentId).set(analysisData);
             logger.info(`Successfully wrote market analysis for ${documentId} to Firestore.`);
         } catch (error) { logger.error("!!! CRITICAL ERROR inside Market Analyst function:", error); }
-    });
+    }
+);
 
 // =================================================================
-// FUNCTION 3: KNOWLEDGE BASE UPDATER (THE LIBRARIAN)
+// FUNCTION 3: KNOWLEDGE BASE UPDATER (THE LIBRARIAN) - USING NEW v2 SYNTAX
 // =================================================================
-exports.updateKnowledgeBase = functions
-    .region(LOCATION)
-    .pubsub.schedule("every 24 hours").onRun(async (context) => {
+exports.updateKnowledgeBase = onSchedule(
+    {
+        schedule: "every 24 hours",
+        region: LOCATION,
+    },
+    async (event) => {
         const URL_TO_SCRAPE = "https://pib.gov.in/PressReleasePage.aspx?PRID=1945323";
         const FILE_PATH = "knowledge-base/pib_agri_schemes.txt";
         try {
+            // THE LOGIC INSIDE IS UNCHANGED
             const response = await fetch(URL_TO_SCRAPE);
             if (!response.ok) { logger.error(`Failed to fetch URL with status: ${response.status}`); return; }
             const html = await response.text();
@@ -144,4 +160,5 @@ exports.updateKnowledgeBase = functions
             await file.save(cleanedText);
             logger.info(`Successfully saved updated knowledge to gs://${BUCKET_NAME}/${FILE_PATH}`);
         } catch (error) { logger.error("!!! CRITICAL ERROR inside updateKnowledgeBase function:", error); }
-    });
+    }
+);
