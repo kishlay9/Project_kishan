@@ -1,0 +1,231 @@
+/* --- THEME & FONT SETUP --- */
+:root {
+    --primary-color: #007AFF; /* A modern, trustworthy blue */
+    --accent-color: #34C759; /* A vibrant, positive green */
+    --background-color: #f8f9fa;
+    --card-background: #ffffff;
+    --text-color: #1d1d1f;
+    --subtle-text: #6e6e73;
+    --border-color: #e5e5e5;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 0;
+}
+
+/* --- HEADER --- */
+header {
+    background: var(--card-background);
+    padding: 15px 30px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo {
+    width: 35px;
+    height: 35px;
+}
+
+h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* --- MAIN CONTENT & LAYOUT --- */
+main {
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+/* --- ACTION PANEL --- */
+.action-panel {
+    text-align: center;
+    padding: 30px;
+    background: var(--card-background);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+}
+
+.action-panel h2 {
+    font-size: 2rem;
+    margin: 0 0 10px 0;
+}
+
+.action-panel p {
+    color: var(--subtle-text);
+    margin-bottom: 30px;
+}
+
+.button-group {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+#mic-button, .upload-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 25px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: none;
+}
+
+#mic-button {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.upload-button {
+    background-color: #e9ecef;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+#mic-button:hover, .upload-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.button-group img {
+    width: 20px;
+    height: 20px;
+}
+
+/* --- STATUS & RESULTS --- */
+.status-section {
+    min-height: 100px; /* Reserve space to prevent layout shifts */
+    text-align: center;
+}
+
+#status-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    color: var(--subtle-text);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+#results-container {
+    background: var(--card-background);
+    border-radius: 16px;
+    padding: 25px;
+    text-align: left;
+    border: 1px solid var(--border-color);
+}
+
+#diagnosis-output p {
+    margin: 0 0 12px 0;
+    line-height: 1.6;
+}
+
+#diagnosis-output strong {
+    color: var(--primary-color);
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+#speak-button {
+    margin-top: 20px;
+    background-color: var(--accent-color);
+    color: white;
+    /* ... similar styling to other buttons ... */
+}
+
+/* --- FEATURES GRID --- */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+}
+
+.feature-card {
+    background: var(--card-background);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+}
+
+.feature-card img {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 15px;
+}
+
+.feature-card h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* --- RESPONSIVE DESIGN --- */
+@media (max-width: 600px) {
+    body {
+        padding: 0;
+    }
+    main {
+        margin: 20px auto;
+    }
+    .action-panel h2 {
+        font-size: 1.5rem;
+    }
+    .button-group {
+        flex-direction: column;
+    }
+    .features-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.action-panel, .features-grid {
+    transition: opacity 0.3s ease;
+}
+
+#speak-button:disabled {
+    background-color: var(--subtle-text);
+    cursor: not-allowed;
+}
