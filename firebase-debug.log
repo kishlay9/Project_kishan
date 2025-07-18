@@ -1,0 +1,160 @@
+[debug] [2025-07-18T19:04:03.020Z] ----------------------------------------------------------------------
+[debug] [2025-07-18T19:04:03.021Z] Command:       /Users/laksh/.nvm/versions/node/v23.10.0/bin/node /Users/laksh/.nvm/versions/node/v23.10.0/bin/firebase emulators:start
+[debug] [2025-07-18T19:04:03.022Z] CLI Version:   14.11.0
+[debug] [2025-07-18T19:04:03.022Z] Platform:      darwin
+[debug] [2025-07-18T19:04:03.022Z] Node Version:  v23.10.0
+[debug] [2025-07-18T19:04:03.022Z] Time:          Sat Jul 19 2025 00:34:03 GMT+0530 (India Standard Time)
+[debug] [2025-07-18T19:04:03.022Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-07-18T19:04:03.126Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-18T19:04:03.126Z] > authorizing via signed-in user (llakshaydev@gmail.com)
+[debug] [2025-07-18T19:04:03.150Z] openjdk version "17.0.16" 2025-07-15
+
+[debug] [2025-07-18T19:04:03.151Z] OpenJDK Runtime Environment Homebrew (build 17.0.16+0)
+OpenJDK 64-Bit Server VM Homebrew (build 17.0.16+0, mixed mode, sharing)
+
+[debug] [2025-07-18T19:04:03.153Z] Parsed Java major version: 17
+[info] i  emulators: Starting emulators: functions, firestore, hosting, storage, extensions {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: functions, firestore, hosting, storage, extensions"}}
+[debug] [2025-07-18T19:04:03.154Z] Checked if tokens are valid: false, expires at: 1752865619851
+[debug] [2025-07-18T19:04:03.154Z] Checked if tokens are valid: false, expires at: 1752865619851
+[debug] [2025-07-18T19:04:03.154Z] > refreshing access token with scopes: []
+[debug] [2025-07-18T19:04:03.155Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-07-18T19:04:03.155Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-18T19:04:03.509Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-07-18T19:04:03.509Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-18T19:04:03.521Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/project-kisan-new [none]
+[debug] [2025-07-18T19:04:05.142Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/project-kisan-new 200
+[debug] [2025-07-18T19:04:05.143Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/project-kisan-new {"projectNumber":"176046173818","projectId":"project-kisan-new","lifecycleState":"ACTIVE","name":"Project-Kisan-New","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-07-18T12:21:26.713775Z"}
+[debug] [2025-07-18T19:04:05.586Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-18T19:04:05.586Z] [firestore] Firestore Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-18T19:04:05.586Z] [firestore.websocket] websocket server for firestore only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-18T19:04:05.586Z] [storage] Storage Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[warn] ⚠  hosting: Hosting Emulator unable to start on port 5000, starting on 5002 instead. {"metadata":{"emulator":{"name":"hosting"},"message":"Hosting Emulator unable to start on port 5000, starting on 5002 instead."}}
+[debug] [2025-07-18T19:04:05.587Z] [hosting] Hosting Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-18T19:04:05.587Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"storage":[{"address":"127.0.0.1","family":"IPv4","port":9199}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5002}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2025-07-18T19:04:05.589Z] [hub] writing locator at /var/folders/n0/lmc92k493lscsrnn6smckc8c0000gn/T/hub-project-kisan-new.json
+[debug] [2025-07-18T19:04:05.591Z] [Extensions] Started Extensions emulator, this is a noop.
+[debug] [2025-07-18T19:04:05.759Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-18T19:04:05.759Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-18T19:04:05.759Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-18T19:04:05.759Z] late-assigned ports for functions and eventarc emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"storage":[{"address":"127.0.0.1","family":"IPv4","port":9199}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5002}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
+[warn] ⚠  functions: The following emulators are not running, calls to these services from the Functions emulator will affect production: apphosting, auth, database, pubsub, dataconnect {"metadata":{"emulator":{"name":"functions"},"message":"The following emulators are not running, calls to these services from the Functions emulator will affect production: \u001b[1mapphosting, auth, database, pubsub, dataconnect\u001b[22m"}}
+[debug] [2025-07-18T19:04:05.764Z] defaultcredentials: writing to file /Users/laksh/.config/firebase/llakshaydev_gmail_com_application_default_credentials.json
+[debug] [2025-07-18T19:04:05.765Z] Setting GAC to /Users/laksh/.config/firebase/llakshaydev_gmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to /Users/laksh/.config/firebase/llakshaydev_gmail_com_application_default_credentials.json"}}
+[debug] [2025-07-18T19:04:05.765Z] Checked if tokens are valid: true, expires at: 1752869042509
+[debug] [2025-07-18T19:04:05.765Z] Checked if tokens are valid: true, expires at: 1752869042509
+[debug] [2025-07-18T19:04:05.765Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/project-kisan-new/adminSdkConfig [none]
+[debug] [2025-07-18T19:04:06.725Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/project-kisan-new/adminSdkConfig 200
+[debug] [2025-07-18T19:04:06.725Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/project-kisan-new/adminSdkConfig {"projectId":"project-kisan-new","storageBucket":"project-kisan-new.firebasestorage.app"}
+[debug] [2025-07-18T19:04:06.748Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2025-07-18T19:04:06.748Z] Ignoring unsupported arg: single_project_mode_error {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: single_project_mode_error"}}
+[debug] [2025-07-18T19:04:06.748Z] Starting Firestore Emulator with command {"binary":"java","args":["-Dgoogle.cloud_firestore.debug_log_level=FINE","-Duser.language=en","-jar","/Users/laksh/.cache/firebase/emulators/cloud-firestore-emulator-v1.19.8.jar","--host","127.0.0.1","--port",8080,"--websocket_port",9150,"--project_id","project-kisan-new","--rules","/Users/laksh/Documents/GitHub/Project_kishan/firestore.rules","--single_project_mode",true,"--functions_emulator","127.0.0.1:5001"],"optionalArgs":["port","webchannel_port","host","rules","websocket_port","functions_emulator","seed_from_export","project_id","single_project_mode"],"joinArgs":false,"shell":false,"port":8080} {"metadata":{"emulator":{"name":"firestore"},"message":"Starting Firestore Emulator with command {\"binary\":\"java\",\"args\":[\"-Dgoogle.cloud_firestore.debug_log_level=FINE\",\"-Duser.language=en\",\"-jar\",\"/Users/laksh/.cache/firebase/emulators/cloud-firestore-emulator-v1.19.8.jar\",\"--host\",\"127.0.0.1\",\"--port\",8080,\"--websocket_port\",9150,\"--project_id\",\"project-kisan-new\",\"--rules\",\"/Users/laksh/Documents/GitHub/Project_kishan/firestore.rules\",\"--single_project_mode\",true,\"--functions_emulator\",\"127.0.0.1:5001\"],\"optionalArgs\":[\"port\",\"webchannel_port\",\"host\",\"rules\",\"websocket_port\",\"functions_emulator\",\"seed_from_export\",\"project_id\",\"single_project_mode\"],\"joinArgs\":false,\"shell\":false,\"port\":8080}"}}
+[info] i  firestore: Firestore Emulator logging to firestore-debug.log {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator logging to \u001b[1mfirestore-debug.log\u001b[22m"}}
+[debug] [2025-07-18T19:04:07.181Z] Jul 19, 2025 12:34:07 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
+INFO: Started WebSocket server on ws://127.0.0.1:9150
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 19, 2025 12:34:07 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start\nINFO: Started WebSocket server on ws://127.0.0.1:9150\n"}}
+[debug] [2025-07-18T19:04:07.191Z] API endpoint: http:// {"metadata":{"emulator":{"name":"firestore"},"message":"API endpoint: http://"}}
+[debug] [2025-07-18T19:04:07.191Z] 127.0.0.1:8080
+If you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:
+
+   export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+
+If you are running a Firestore in Datastore Mode project, run:
+
+   export DATASTORE_EMULATOR_HOST=127.0.0.1:8080
+
+Note: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.
+Dev App Server is now running.
+
+ {"metadata":{"emulator":{"name":"firestore"},"message":"127.0.0.1:8080\nIf you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:\n\n   export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080\n\nIf you are running a Firestore in Datastore Mode project, run:\n\n   export DATASTORE_EMULATOR_HOST=127.0.0.1:8080\n\nNote: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.\nDev App Server is now running.\n\n"}}
+[info] ✔  firestore: Firestore Emulator UI websocket is running on 9150. {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator UI websocket is running on 9150."}}
+[debug] [2025-07-18T19:04:07.358Z] Ignoring unsupported arg: port {"metadata":{"emulator":{"name":"storage"},"message":"Ignoring unsupported arg: port"}}
+[debug] [2025-07-18T19:04:07.649Z] Temp file directory for storage emulator: /var/folders/n0/lmc92k493lscsrnn6smckc8c0000gn/T/firebase/storage/blobs {"metadata":{"emulator":{"name":"storage"},"message":"Temp file directory for storage emulator: /var/folders/n0/lmc92k493lscsrnn6smckc8c0000gn/T/firebase/storage/blobs"}}
+[debug] [2025-07-18T19:04:07.651Z] Checked if tokens are valid: true, expires at: 1752869042509
+[debug] [2025-07-18T19:04:07.651Z] Checked if tokens are valid: true, expires at: 1752869042509
+[debug] [2025-07-18T19:04:07.651Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/project-kisan-new/sites 
+[debug] [2025-07-18T19:04:08.875Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/project-kisan-new/sites 200
+[debug] [2025-07-18T19:04:08.875Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/project-kisan-new/sites {"sites":[{"name":"projects/project-kisan-new/sites/project-kisan-new","defaultUrl":"https://project-kisan-new.web.app","appId":"1:176046173818:web:de8fb0e50752c8f62195c3","type":"DEFAULT_SITE"}]}
+[debug] [2025-07-18T19:04:08.875Z] Checked if tokens are valid: true, expires at: 1752869042509
+[debug] [2025-07-18T19:04:08.875Z] Checked if tokens are valid: true, expires at: 1752869042509
+[debug] [2025-07-18T19:04:08.876Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/project-kisan-new/webApps/1:176046173818:web:de8fb0e50752c8f62195c3/config [none]
+[debug] [2025-07-18T19:04:09.750Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/project-kisan-new/webApps/1:176046173818:web:de8fb0e50752c8f62195c3/config 200
+[debug] [2025-07-18T19:04:09.750Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/project-kisan-new/webApps/1:176046173818:web:de8fb0e50752c8f62195c3/config {"projectId":"project-kisan-new","appId":"1:176046173818:web:de8fb0e50752c8f62195c3","storageBucket":"project-kisan-new.firebasestorage.app","apiKey":"AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg","authDomain":"project-kisan-new.firebaseapp.com","messagingSenderId":"176046173818","measurementId":"G-GDJE785E2N"}
+[debug] [2025-07-18T19:04:09.757Z] Checked if tokens are valid: true, expires at: 1752869042509
+[debug] [2025-07-18T19:04:09.757Z] Checked if tokens are valid: true, expires at: 1752869042509
+[debug] [2025-07-18T19:04:09.758Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/project-kisan-new [none]
+[debug] [2025-07-18T19:04:10.133Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/project-kisan-new 200
+[debug] [2025-07-18T19:04:10.133Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/project-kisan-new {"projectId":"project-kisan-new","projectNumber":"176046173818","displayName":"Project-Kisan-New","name":"projects/project-kisan-new","resources":{"hostingSite":"project-kisan-new"},"state":"ACTIVE","etag":"1_2025ca55-9399-4f00-8e5a-3a6253077c38"}
+[info] i  hosting[project-kisan-new]: Serving hosting files from: public {"metadata":{"emulator":{"name":"hosting"},"message":"Serving hosting files from: \u001b[1mpublic\u001b[22m"}}
+[info] ✔  hosting[project-kisan-new]: Local server: http://127.0.0.1:5002 {"metadata":{"emulator":{"name":"hosting"},"message":"Local server: \u001b[4m\u001b[1mhttp://127.0.0.1:5002\u001b[22m\u001b[24m"}}
+[debug] [2025-07-18T19:04:10.183Z] [Extensions] Connecting Extensions emulator, this is a noop.
+[info] i  functions: Watching "/Users/laksh/Documents/GitHub/Project_kishan/functions" for Cloud Functions... {"metadata":{"emulator":{"name":"functions"},"message":"Watching \"/Users/laksh/Documents/GitHub/Project_kishan/functions\" for Cloud Functions..."}}
+[debug] [2025-07-18T19:04:10.186Z] Validating nodejs source
+[warn] ⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] ⚠  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2025-07-18T19:04:10.678Z] > [functions] package.json contents: {
+  "name": "functions",
+  "main": "index.js",
+  "dependencies": {
+    "@google-cloud/aiplatform": "^3.2.0",
+    "cheerio": "^1.1.0",
+    "firebase-admin": "^11.8.0",
+    "firebase-functions": "^4.3.1",
+    "node-fetch": "^2.7.0"
+  },
+  "private": true,
+  "engines": {
+    "node": "18"
+  }
+}
+[debug] [2025-07-18T19:04:10.678Z] Building nodejs source
+[debug] [2025-07-18T19:04:10.678Z] Failed to find version of module node: reached end of search path /Users/laksh/Documents/GitHub/Project_kishan/functions/node_modules
+[warn] ⚠  functions: Your requested "node" version "18" doesn't match your global version "23". Using node@23 from host. 
+[info] i  functions: You are using a version of firebase-functions SDK (4.9.0) that does not have support for the newest Firebase Extensions features. Please update firebase-functions SDK to >=5.1.0 to use them correctly 
+[debug] [2025-07-18T19:04:10.680Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-07-18T19:04:10.682Z] Found firebase-functions binary at '/Users/laksh/Documents/GitHub/Project_kishan/functions/node_modules/.bin/firebase-functions'
+[info] Serving at port 8866
+
+[debug] [2025-07-18T19:04:10.995Z] Got response from /__/functions.yaml {"endpoints":{"analyzePlantImage":{"platform":"gcfv1","availableMemoryMb":1024,"timeoutSeconds":300,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"region":["asia-south1"],"eventTrigger":{"eventType":"google.storage.object.finalize","eventFilters":{"resource":"projects/_/buckets/project-kisan-new.firebasestorage.app"},"retry":false},"labels":{},"entryPoint":"analyzePlantImage"},"proactiveMarketAnalyst":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"region":["asia-south1"],"scheduleTrigger":{"schedule":"every day 08:00","retryConfig":{"retryCount":null,"maxDoublings":null,"maxRetryDuration":null,"maxBackoffDuration":null,"minBackoffDuration":null},"timeZone":"Asia/Kolkata"},"labels":{},"entryPoint":"proactiveMarketAnalyst"},"updateKnowledgeBase":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"region":["asia-south1"],"scheduleTrigger":{"schedule":"every 24 hours","retryConfig":{"retryCount":null,"maxDoublings":null,"maxRetryDuration":null,"maxBackoffDuration":null,"minBackoffDuration":null},"timeZone":null},"labels":{},"entryPoint":"updateKnowledgeBase"}},"specVersion":"v1alpha1","requiredAPIs":[{"api":"cloudscheduler.googleapis.com","reason":"Needed for scheduled functions."}]}
+[info] ✔  functions: Loaded functions definitions from source: analyzePlantImage, proactiveMarketAnalyst, updateKnowledgeBase. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: analyzePlantImage, proactiveMarketAnalyst, updateKnowledgeBase."}}
+[debug] [2025-07-18T19:04:15.014Z] addStorageTrigger {"eventTrigger":{"eventType":"google.storage.object.finalize","resource":"projects/_/buckets/project-kisan-new.firebasestorage.app"}}
+[info] ✔  functions[asia-south1-analyzePlantImage]: storage function initialized. {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mstorage\u001b[22m function initialized."}}
+[info] i  functions[asia-south1-proactiveMarketAnalyst]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[info] i  functions[asia-south1-updateKnowledgeBase]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[debug] [2025-07-18T19:04:15.017Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────┬────────────────┬──────────────────────────────────┐
+│ Emulator   │ Host:Port      │ View in Emulator UI              │
+├────────────┼────────────────┼──────────────────────────────────┤
+│ Functions  │ 127.0.0.1:5001 │ http://127.0.0.1:4000/functions  │
+├────────────┼────────────────┼──────────────────────────────────┤
+│ Firestore  │ 127.0.0.1:8080 │ http://127.0.0.1:4000/firestore  │
+├────────────┼────────────────┼──────────────────────────────────┤
+│ Hosting    │ 127.0.0.1:5002 │ n/a                              │
+├────────────┼────────────────┼──────────────────────────────────┤
+│ Storage    │ 127.0.0.1:9199 │ http://127.0.0.1:4000/storage    │
+├────────────┼────────────────┼──────────────────────────────────┤
+│ Extensions │ 127.0.0.1:5001 │ http://127.0.0.1:4000/extensions │
+└────────────┴────────────────┴──────────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500, 9150
+┌─────────────────────────┬───────────────┬─────────────────────┐
+│ Extension Instance Name │ Extension Ref │ View in Emulator UI │
+└─────────────────────────┴───────────────┴─────────────────────┘
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[debug] [2025-07-18T19:04:18.582Z] Jul 19, 2025 12:34:18 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler initChannel
+INFO: Connected to new websocket client
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 19, 2025 12:34:18 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler initChannel\nINFO: Connected to new websocket client\n"}}
+[info] i  hosting: 127.0.0.1 - - [18/Jul/2025:19:04:22 +0000] "GET / HTTP/1.1" 200 - "http://127.0.0.1:4000/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15" {"metadata":{"emulator":{"name":"hosting"},"message":"127.0.0.1 - - [18/Jul/2025:19:04:22 +0000] \"GET / HTTP/1.1\" 200 - \"http://127.0.0.1:4000/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15\""}}
+[info] i  hosting: 127.0.0.1 - - [18/Jul/2025:19:04:22 +0000] "GET /style.css HTTP/1.1" 200 - "http://127.0.0.1:5002/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15" {"metadata":{"emulator":{"name":"hosting"},"message":"127.0.0.1 - - [18/Jul/2025:19:04:22 +0000] \"GET /style.css HTTP/1.1\" 200 - \"http://127.0.0.1:5002/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15\""}}
+[info] i  hosting: 127.0.0.1 - - [18/Jul/2025:19:04:22 +0000] "GET /app.js HTTP/1.1" 200 - "http://127.0.0.1:5002/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15" {"metadata":{"emulator":{"name":"hosting"},"message":"127.0.0.1 - - [18/Jul/2025:19:04:22 +0000] \"GET /app.js HTTP/1.1\" 200 - \"http://127.0.0.1:5002/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15\""}}
+[info] i  hosting: 127.0.0.1 - - [18/Jul/2025:19:04:35 +0000] "GET / HTTP/1.1" 200 - "http://127.0.0.1:4000/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15" {"metadata":{"emulator":{"name":"hosting"},"message":"127.0.0.1 - - [18/Jul/2025:19:04:35 +0000] \"GET / HTTP/1.1\" 200 - \"http://127.0.0.1:4000/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15\""}}
+[info] i  hosting: 127.0.0.1 - - [18/Jul/2025:19:04:35 +0000] "GET /app.js HTTP/1.1" 200 - "http://127.0.0.1:5002/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15" {"metadata":{"emulator":{"name":"hosting"},"message":"127.0.0.1 - - [18/Jul/2025:19:04:35 +0000] \"GET /app.js HTTP/1.1\" 200 - \"http://127.0.0.1:5002/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15\""}}
+[info] i  hosting: 127.0.0.1 - - [18/Jul/2025:19:04:35 +0000] "GET /style.css HTTP/1.1" 200 - "http://127.0.0.1:5002/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15" {"metadata":{"emulator":{"name":"hosting"},"message":"127.0.0.1 - - [18/Jul/2025:19:04:35 +0000] \"GET /style.css HTTP/1.1\" 200 - \"http://127.0.0.1:5002/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15\""}}
+[info] i  hosting: 127.0.0.1 - - [18/Jul/2025:19:04:35 +0000] "GET /favicon.ico HTTP/1.1" 200 - "http://127.0.0.1:5002/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15" {"metadata":{"emulator":{"name":"hosting"},"message":"127.0.0.1 - - [18/Jul/2025:19:04:35 +0000] \"GET /favicon.ico HTTP/1.1\" 200 - \"http://127.0.0.1:5002/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15\""}}
