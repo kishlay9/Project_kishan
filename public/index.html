@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Kisan</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <img src="images/logo.png" alt="Project Kisan Logo" class="logo">
+            <h1>Project Kisan</h1>
+        </div>
+    </header>
+
+    <main>
+        <!-- Main Action Section -->
+        <section class="action-panel">
+            <h2>Your AI Farming Assistant</h2>
+            <p>Ask a question in your language or upload a photo to get instant help.</p>
+            <div class="button-group">
+                <button id="mic-button">
+                    <img src="images/mic.png" alt="Microphone Icon">
+                    <span>Ask a Question</span>
+                </button>
+                <label for="image-upload-input" class="upload-button">
+                    <img src="images/diagnose-crop.svg" alt="Diagnose Icon">
+                    <span>Diagnose Crop</span>
+                </label>
+                <input type="file" id="image-upload-input" accept="image/*" hidden>
+            </div>
+        </section>
+
+        <!-- Status & Results Section -->
+        <section class="status-section">
+            <div id="status-indicator" class="hidden">
+                <div class="spinner"></div>
+                <p id="status-text">Analyzing your image...</p>
+            </div>
+
+            <div id="results-container" class="hidden">
+                <div id="diagnosis-output">
+                    <!-- AI Results will be injected here -->
+                </div>
+                <button id="speak-button" class="hidden">
+                     <span>Listen to Remedy</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Features Grid -->
+        <section class="features-grid">
+            <div class="feature-card">
+                <img src="images/marketshop.svg" alt="Market Icon">
+                <h3>Market Prices</h3>
+            </div>
+            <div class="feature-card">
+                <img src="images/scheme.svg" alt="Schemes Icon">
+                <h3>Govt. Schemes</h3>
+            </div>
+            <div class="feature-card">
+                <img src="images/pesticide-execution.png" alt="Yield Maximizer">
+                <h3>Yield Console</h3>
+            </div>
+            <div class="feature-card">
+                <img src="images/ai-guardian.svg" alt="Guardian Icon">
+                <h3>Guardian AI</h3>
+            </div>
+        </section>
+
+    </main>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+    
+    <!-- Your App's Logic -->
+    <script src="app.js"></script>
+
+</body>
+</html>
