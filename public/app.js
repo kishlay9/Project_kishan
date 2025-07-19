@@ -93,10 +93,9 @@ function listenForDiagnosisResult(diagnosisId) {
     });
 }
 // =================================================================
-// 5. FUNCTION TO DISPLAY THE RESULTS (NEW & IMPROVED)
+// 5. UI HELPER FUNCTIONS FOR A CLEANER EXPERIENCE
 // =================================================================
 
-<<<<<<< HEAD
 function showStatus(message, isError = false) {
     statusText.textContent = message;
     // Safely select the spinner to avoid errors
@@ -126,8 +125,6 @@ function hideResults() {
 // 6. FUNCTION TO DISPLAY THE RESULTS (NEW & IMPROVED)
 // =================================================================
 
-=======
->>>>>>> 911e402 (v.1.0.0)
 function displayDiagnosisResults(data) {
     // Hide the main status loader
     hideStatus();
