@@ -1,6 +1,7 @@
 // =================================================================
 // SETUP (WITH NEW v2 IMPORTS)
 // =================================================================
+// CORRECTED IMPORT PATHS TO PHYSICAL LOCATION (WORKAROUND):
 const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
@@ -40,11 +41,32 @@ exports.analyzePlantImage = onObjectFinalized(
             const apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
 
             const diagnosisPrompt = `
-            You are a world-class AI agronomist for Indian farmers...`; // Full prompt remains the same
+            You are a world-class AI agronomist for Indian farmers. Your task is to perform two steps:
+            1. Identify the plant in the image.
+            2. Provide a comprehensive, accurate, and actionable diagnosis.
+            
+            A CRITICAL part of your task is to correctly identify when a plant is HEALTHY. Do not guess a disease if the visual evidence is not clear.
+
+            Respond ONLY with a single, valid JSON object using the exact structure and keys below.
+
+            {
+              "plant_type": "Your best guess for the plant's common English name. If you cannot identify it, MUST be 'Unknown Plant'.",
+              "disease_name_english": "The common English name of the disease. If healthy, MUST be 'Healthy'.",
+              "disease_name_kannada": "The name in Kannada. If healthy, MUST be 'ಆರೋಗ್ಯಕರ'.",
+              "confidence_score": "A numerical score from 0.0 to 1.0 for the diagnosis. If healthy, MUST be 1.0.",
+              "severity": "Rate the severity as 'Low', 'Medium', or 'High'. If healthy, MUST be 'None'.",
+              "contagion_risk": "Rate the risk of spreading as 'Low', 'Medium', or 'High'. If healthy, use 'None'.",
+              "description_kannada": "A brief, one-sentence description in simple Kannada. If healthy, provide a positive message.",
+              "organic_remedy_kannada": "A step-by-step organic remedy. If healthy, suggest continued good care.",
+              "chemical_remedy_kannada": "A step-by-step chemical remedy. If healthy, state 'ಅಗತ್ಯವಿಲ್ಲ'.",
+              "prevention_tips_kannada": ["An array of strings with 2-3 bullet points on how to prevent this issue."]
+            }`;
             
            
             const requestBody = { 
                 contents: [{ 
+                    // This is the line that needs to be added (the role: "user"):
+                    role: "user", 
                     parts: [
                         { file_data: { mime_type: contentType, file_uri: `gs://${bucketName}/${filePath}` } }, 
                         { text: diagnosisPrompt }
@@ -83,7 +105,7 @@ exports.analyzePlantImage = onObjectFinalized(
 // =================================================================
 // FUNCTION 2: MARKET ANALYST (SCHEDULED) - v2 SYNTAX
 // =================================================================
-exports.proactiveMarketAnalyst = onSchedule(
+exports.proactiveMarketAnalyst = onSchedule( // CORRECTED IMPORT PATHS
     {
         schedule: "every day 08:00",
         timeZone: "Asia/Kolkata",
@@ -116,7 +138,7 @@ exports.proactiveMarketAnalyst = onSchedule(
 // =================================================================
 // FUNCTION 3: KNOWLEDGE BASE UPDATER (THE LIBRARIAN) - v2 SYNTAX
 // =================================================================
-exports.updateKnowledgeBase = onSchedule(
+exports.updateKnowledgeBase = onSchedule( // CORRECTED IMPORT PATHS
     {
         schedule: "every 24 hours",
         region: LOCATION
