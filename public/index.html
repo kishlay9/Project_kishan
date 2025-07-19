@@ -41,11 +41,16 @@
             <div class="spinner"></div>
             <p id="status-text">Analyzing your image...</p>
         </div>
+        <!-- Replace your old results-container with this one -->
         <section id="results-container" class="hidden">
             <div class="result-header">
-                <h3 id="result-title"></h3>
+                <div>
+                    <h3 id="result-title-english"></h3>
+                    <p id="result-plant-type" class="plant-type"></p>
+                </div>
                 <span id="result-confidence"></span>
             </div>
+
             <div class="result-details-grid">
                 <div class="detail-card">
                     <h4>Severity</h4>
@@ -56,22 +61,32 @@
                     <p id="result-risk"></p>
                 </div>
             </div>
+
             <div class="result-section">
-                <h4>Description (Kannada)</h4>
-                <p id="result-description"></p>
+                <h4>Description (English & Kannada)</h4>
+                <p id="result-description-english"></p>
+                <p id="result-description-kannada" class="kannada-text"></p>
             </div>
+
             <div class="result-section">
-                <h4>Organic Remedy (Kannada)</h4>
-                <p id="result-organic"></p>
+                <h4>Organic Remedy (English & Kannada)</h4>
+                <p id="result-organic-english"></p>
+                <p id="result-organic-kannada" class="kannada-text"></p>
             </div>
+
             <div class="result-section">
-                <h4>Chemical Remedy (Kannada)</h4>
-                <p id="result-chemical"></p>
+                <h4>Chemical Remedy (English & Kannada)</h4>
+                <p id="result-chemical-english"></p>
+                <p id="result-chemical-kannada" class="kannada-text"></p>
             </div>
+
             <div class="result-section">
-                <h4>Prevention Tips (Kannada)</h4>
+                <h4>Prevention Tips</h4>
                 <div id="result-prevention"></div>
             </div>
+            
+            <!-- This audio element will be used to play the AI's voice -->
+            <audio id="remedy-audio" class="hidden"></audio>
             <button id="speak-button" class="hidden">Listen to Summary</button>
         </section>
 

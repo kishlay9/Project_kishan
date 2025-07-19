@@ -308,3 +308,26 @@ main {
 #result-prevention ul {
     padding-left: 20px; /* Indent for bullet points */
 }
+#result-plant-type {
+    font-size: 1rem;
+    color: var(--subtle-text);
+    font-weight: 600;
+    margin-left: 15px; /* Adds some space */
+    flex-grow: 1; /* Pushes the confidence span to the right */
+    text-align: left;
+}
+/* Add these to the bottom of style.css */
+.result-header > div {
+    text-align: left;
+}
+.plant-type {
+    margin: 4px 0 0 0;
+    font-size: 1rem;
+    color: var(--subtle-text);
+    font-weight: 600;
+}
+.kannada-text {
+    font-size: 1.1rem; /* Make Kannada text slightly larger */
+    margin-top: 8px;
+    background-color: #f0f0f0 !important;
+}

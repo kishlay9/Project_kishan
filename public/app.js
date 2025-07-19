@@ -2,16 +2,13 @@
 // 1. FIREBASE CONFIGURATION
 // =================================================================
 
-// TODO: Replace this with your project's actual Firebase configuration!
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg",
-  authDomain: "project-kisan-new.firebaseapp.com",
-  projectId: "project-kisan-new",
-  storageBucket: "project-kisan-new.firebasestorage.app",
-  messagingSenderId: "176046173818",
-  appId: "1:176046173818:web:de8fb0e50752c8f62195c3",
-  measurementId: "G-GDJE785E2N"
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "project-kisan-new",
+    storageBucket: "project-kisan-new.firebasestorage.app",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -19,6 +16,13 @@ firebase.initializeApp(firebaseConfig);
 const storage = firebase.storage();
 const firestore = firebase.firestore();
 
+// --- ADD THIS ENTIRE BLOCK ---
+if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    console.log("LOCALHOST DETECTED: Forcing connection to local emulators...");
+    firestore.useEmulator("localhost", 8080);
+    storage.useEmulator("localhost", 9199);
+}
+// --- END OF BLOCK ---
 // =================================================================
 // 2. DOM ELEMENT REFERENCES
 // =================================================================
@@ -27,11 +31,9 @@ const imageUploadInput = document.getElementById('image-upload-input');
 const statusIndicator = document.getElementById('status-indicator');
 const statusText = document.getElementById('status-text');
 const resultsContainer = document.getElementById('results-container');
-const diagnosisOutput = document.getElementById('diagnosis-output');
 const speakButton = document.getElementById('speak-button');
 const actionPanel = document.querySelector('.action-panel');
 const featuresGrid = document.querySelector('.features-grid');
-
 
 // =================================================================
 // 3. EVENT LISTENER FOR IMAGE UPLOAD
@@ -41,15 +43,12 @@ imageUploadInput.addEventListener('change', (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // --- UI Update: Start a new analysis ---
-    hideResults(); // Clear any previous results and hide the container
+    hideResults();
     showStatus(`Uploading ${file.name}...`);
 
     const uniqueFileName = `image_${Date.now()}_${file.name}`;
     const storagePath = `uploads/${uniqueFileName}`;
     const storageRef = storage.ref(storagePath);
-    
-    // --- Upload Process with Progress ---
     const uploadTask = storageRef.put(file);
 
     uploadTask.on('state_changed', 
@@ -69,22 +68,18 @@ imageUploadInput.addEventListener('change', (event) => {
     );
 });
 
-
 // =================================================================
 // 4. REAL-TIME LISTENER FOR DIAGNOSIS RESULTS
 // =================================================================
 
 function listenForDiagnosisResult(diagnosisId) {
     const docRef = firestore.collection("diagnoses").doc(diagnosisId);
-
     const unsubscribe = docRef.onSnapshot((doc) => {
         if (doc.exists) {
             console.log("Diagnosis data received:", doc.data());
-            
             const data = doc.data();
             displayDiagnosisResults(data);
-
-            unsubscribe(); // Stop listening to this document
+            unsubscribe();
         }
     }, (error) => {
         console.error("Error listening to Firestore:", error);
@@ -92,21 +87,19 @@ function listenForDiagnosisResult(diagnosisId) {
         unsubscribe();
     });
 }
+
 // =================================================================
-// 5. UI HELPER FUNCTIONS FOR A CLEANER EXPERIENCE
+// 5. UI HELPER FUNCTIONS
 // =================================================================
 
 function showStatus(message, isError = false) {
     statusText.textContent = message;
-    // Safely select the spinner to avoid errors
     const spinner = statusIndicator.querySelector('.spinner');
     if (spinner) {
         spinner.style.borderColor = isError ? '#dc3545' : '#e5e5e5';
         spinner.style.borderTopColor = isError ? '#dc3545' : '#007AFF';
     }
     statusIndicator.classList.remove('hidden');
-    
-    // Animate the main content to focus on the status
     actionPanel.style.opacity = '0.5';
     featuresGrid.style.opacity = '0.5';
 }
@@ -120,96 +113,111 @@ function hideStatus() {
 function hideResults() {
     resultsContainer.classList.add('hidden');
     speakButton.classList.add('hidden');
+    // Stop any currently playing audio
+    if (window.speechSynthesis && window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+    }
 }
+
 // =================================================================
-// 6. FUNCTION TO DISPLAY THE RESULTS (NEW & IMPROVED)
+// 6. FUNCTION TO DISPLAY THE RESULTS (UPGRADED FOR NEW BACKEND)
 // =================================================================
 
 function displayDiagnosisResults(data) {
-    // Hide the main status loader
     hideStatus();
-    // Make the results container visible
     resultsContainer.classList.remove('hidden');
 
     // --- Populate Header ---
-    document.getElementById('result-title').textContent = data.disease_name_english;
+    document.getElementById('result-title-english').textContent = data.disease_name_english || 'N/A';
+    document.getElementById('result-plant-type').textContent = `(${data.plant_type || data.object_category || 'Object'})`;
+    
     const confidenceSpan = document.getElementById('result-confidence');
     const confidencePercent = (data.confidence_score * 100).toFixed(0);
     confidenceSpan.textContent = `${confidencePercent}% Confident`;
     
-    // Set color based on confidence
-    if (data.confidence_score > 0.8) {
-        confidenceSpan.style.backgroundColor = '#d4edda'; // green
+    // Confidence Colors (0-51 red, 52-74 yellow, 75+ green)
+    if (confidencePercent >= 75) {
+        confidenceSpan.style.backgroundColor = '#d4edda';
         confidenceSpan.style.color = '#155724';
-    } else if (data.confidence_score > 0.5) {
-        confidenceSpan.style.backgroundColor = '#fff3cd'; // yellow
+    } else if (confidencePercent >= 52) {
+        confidenceSpan.style.backgroundColor = '#fff3cd';
         confidenceSpan.style.color = '#856404';
     } else {
-        confidenceSpan.style.backgroundColor = '#f8d7da'; // red
+        confidenceSpan.style.backgroundColor = '#f8d7da';
         confidenceSpan.style.color = '#721c24';
     }
 
     // --- Populate Detail Cards ---
-    document.getElementById('result-severity').textContent = data.severity;
-    document.getElementById('result-risk').textContent = data.contagion_risk;
+    document.getElementById('result-severity').textContent = data.severity || 'N/A';
+    document.getElementById('result-risk').textContent = data.contagion_risk || 'N/A';
     
-    // --- Populate Text Sections ---
-    document.getElementById('result-description').textContent = data.description_kannada;
-    document.getElementById('result-organic').textContent = data.organic_remedy_kannada;
-    document.getElementById('result-chemical').textContent = data.chemical_remedy_kannada;
+    // --- Populate Text Sections using the ENGLISH fields from the new backend ---
+    document.getElementById('result-description-english').textContent = data.description_english || 'No description available.';
+    document.getElementById('result-description-kannada').textContent = ""; // Clear Kannada field as it's not provided now
+    
+    document.getElementById('result-organic-english').textContent = data.organic_remedy_english || 'No organic remedy suggested.';
+    document.getElementById('result-organic-kannada').textContent = "";
 
-    // --- Populate Prevention Tips (handle bullet points) ---
+    document.getElementById('result-chemical-english').textContent = data.chemical_remedy_english || 'No chemical remedy suggested.';
+    document.getElementById('result-chemical-kannada').textContent = "";
+
+    // --- Populate Prevention Tips ---
     const preventionDiv = document.getElementById('result-prevention');
-    const tips = data.prevention_tips_kannada.split('*').filter(tip => tip.trim() !== '');
-    if (tips.length > 0) {
+    const tipsArray = data.prevention_tips_english || [];
+    if (tipsArray.length > 0) {
         let tipsHtml = '<ul>';
-        tips.forEach(tip => {
+        tipsArray.forEach(tip => {
             tipsHtml += `<li>${tip.trim()}</li>`;
         });
         tipsHtml += '</ul>';
         preventionDiv.innerHTML = tipsHtml;
     } else {
-        preventionDiv.innerHTML = `<p>${data.prevention_tips_kannada}</p>`;
+        preventionDiv.innerHTML = `<p>No prevention tips available.</p>`;
     }
 
-
-    // Make the speak button functional and visible
-    const textToSpeak = `The diagnosis is ${data.disease_name_english}. The recommended organic remedy is: ${data.organic_remedy_kannada}`;
-    if (textToSpeak) {
+    // --- Automatically play the pre-generated audio ---
+    if (data.audio_remedy_url) {
+        speakAudioFromUrl(data.audio_remedy_url);
         speakButton.classList.remove('hidden');
-        speakButton.onclick = () => speakText(textToSpeak);
+        speakButton.onclick = () => speakAudioFromUrl(data.audio_remedy_url);
     }
 }
 
-
 // =================================================================
-// 7. TEXT-TO-SPEECH FUNCTIONALITY
+// 7. TEXT-TO-SPEECH FUNCTIONALITY (UPGRADED)
 // =================================================================
 
-async function speakText(textToSpeak) {
-    if (!textToSpeak) return;
-
-    // TODO: This part will be replaced with a call to a new Cloud Function
-    // For now, we use the browser's built-in speech synthesis for a quick demo.
+function speakText(textToSpeak) {
+    if (!textToSpeak || typeof textToSpeak !== 'string') return;
     
+    // Stop any previous speech before starting new speech
+    if (window.speechSynthesis && window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+    }
+
     speakButton.textContent = 'Speaking...';
     speakButton.disabled = true;
 
     if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        // We'll need to find the correct voice for Kannada.
-        // For the demo, the default might work, or it might be in English.
-        utterance.lang = 'kn-IN'; 
+        utterance.lang = 'kn-IN'; // Set language to Kannada
         
         utterance.onend = () => {
-            speakButton.textContent = 'Listen to Remedy';
+            speakButton.textContent = 'Listen to Summary';
+            speakButton.disabled = false;
+        };
+        
+        utterance.onerror = (event) => {
+            console.error('SpeechSynthesisUtterance.onerror', event);
+            alert('Sorry, an error occurred during speech playback.');
+            speakButton.textContent = 'Listen to Summary';
             speakButton.disabled = false;
         };
 
         window.speechSynthesis.speak(utterance);
     } else {
         alert("Sorry, your browser doesn't support Text-to-Speech.");
-        speakButton.textContent = 'Listen to Remedy';
+        speakButton.textContent = 'Listen to Summary';
         speakButton.disabled = false;
     }
 }
