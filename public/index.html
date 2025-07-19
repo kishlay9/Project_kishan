@@ -37,15 +37,23 @@
         </section>
 
         <!-- Status & Results Section -->
-        <section class="status-section">
-            <div id="status-indicator" class="hidden">
-                <div class="spinner"></div>
-                <p id="status-text">Analyzing your image...</p>
+        <div id="status-indicator" class="hidden">
+            <div class="spinner"></div>
+            <p id="status-text">Analyzing your image...</p>
+        </div>
+        <section id="results-container" class="hidden">
+            <div class="result-header">
+                <h3 id="result-title"></h3>
+                <span id="result-confidence"></span>
             </div>
-
-            <div id="results-container" class="hidden">
-                <div id="diagnosis-output">
-                    <!-- AI Results will be injected here -->
+            <div class="result-details-grid">
+                <div class="detail-card">
+                    <h4>Severity</h4>
+                    <p id="result-severity"></p>
+                </div>
+                <div class="detail-card">
+                    <h4>Contagion Risk</h4>
+                    <p id="result-risk"></p>
                 </div>
             </div>
             <div class="result-section">
