@@ -7,15 +7,19 @@
 // The import paths below are the officially correct v2 paths.
 const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { logger } = require("firebase-functions");
 const fetch = require("node-fetch");
-const cheerio = require("cheerio");
+const cheerio = require("cheerio"); // Still needed for Knowledge Base Updater
 const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
+const csv = require('csv-parser');
+const { Storage } = require('@google-cloud/storage');
 
 admin.initializeApp();
 const firestore = admin.firestore();
 const ttsClient = new TextToSpeechClient();
+const gcsClient = new Storage();
 
 // =================================================================
 // CONFIGURATION
@@ -23,6 +27,28 @@ const ttsClient = new TextToSpeechClient();
 const PROJECT_ID = "project-kisan-new";
 const BUCKET_NAME = "project-kisan-new.firebasestorage.app";
 const LOCATION = "asia-south1";
+
+// =================================================================
+// KAGGLE DATASET CONFIGURATION
+// =================================================================
+const KAGGLE_CSV_CONFIG = {
+    gcsFolder: "kaggle-mandi-data", // Folder in your GCS bucket where you uploaded the CSVs
+    csvColumnMapping: {
+        // EXACT COLUMN HEADERS FROM YOUR CSV FILES (based on image provided)
+        stateName: "State Name",
+        districtName: "District Name",
+        marketName: "Market Name",
+        variety: "Variety",
+        group: "Group", // This is the commodity/crop name in the CSV data
+        arrivals: "Arrivals (Tonnes)",
+        minPrice: "Min Price (Rs./Quintal)",
+        maxPrice: "Max Price (Rs./Quintal)",
+        modalPrice: "Modal Price (Rs./Quintal)",
+        reportedDate: "Reported Date", // The date column
+    },
+    // The exact date format from your CSV files for parsing: "DD Mon YYYY"
+    csvDateFormat: "DD Mon YYYY", 
+};
 
 // =================================================================
 // FUNCTION 1: CROP DOCTOR (ANALYZE PLANT IMAGE) - v2 SYNTAX
@@ -163,45 +189,356 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
 );
 
 // =================================================================
-// FUNCTION 2: MARKET ANALYST (SCHEDULED) - v2 SYNTAX
+// HIGHLIGHTED CHANGE: FUNCTION 2: PROACTIVE MARKET ANALYST (Kaggle CSV Ingestion)
 // =================================================================
+// This function will iterate through all CSVs in the specified GCS folder
+// and ingest them into Firestore. It's intended for a bulk, one-time operation
+// to populate historical data.
 exports.proactiveMarketAnalyst = onSchedule(
     {
         schedule: "every day 08:00",
         timeZone: "Asia/Kolkata",
-        region: LOCATION
+        region: LOCATION,
+        // --- THESE ARE THE INCREASED LIMITS ---
+        timeoutSeconds: 3600, // 1 hour
+        memory: "4GiB"       // 4 Gigabytes
     },
     async (event) => {
-        const CROP_NAME = "Tomato";
-        try {
-            const todayPrice = 1350;
-            const historicalPrices = [1100, 1150, 1250, 1220, 1300];
-            const tokenResponse = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', { headers: { 'Metadata-Flavor': 'Google' } });
-            const tokenData = await tokenResponse.json();
-            const accessToken = tokenData.access_token;
-            // Current model for Market Analyst remains Gemini 1.0 Pro
-            const prompt = `Analyze the price trend for ${CROP_NAME} based on today's price of ${todayPrice} INR and historical prices from the last 5 days: ${historicalPrices.join(", ")} INR. Provide an analysis for Indian farmers, including price trend (e.g., "rising", "falling", "stable"), key factors influencing the trend, and actionable advice. Respond ONLY with a single, valid JSON object using the exact structure and keys below.
+        logger.info("[Market Analyst - Ingestion] Starting Kaggle CSV data ingestion.");
 
-            {
-              "crop_name": "Tomato",
-              "date": "YYYY-MM-DD",
-              "current_price_inr": 1350,
-              "price_trend": "Rising/Falling/Stable",
-              "factors_influencing_trend": ["Factor 1", "Factor 2"],
-              "actionable_advice": ["Advice 1", "Advice 2"]
-            }`;
-            const requestBody = { contents: [{ parts: [{ text: prompt }] }] };
-            const apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.0-pro:generateContent`;
-            const geminiResponse = await fetch(apiEndpoint, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
-            const responseData = await geminiResponse.json();
-            const modelResponseText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!modelResponseText) { logger.error("Could not find text in Market Analyst response.", responseData); return; }
-            const analysisData = JSON.parse(modelResponseText);
-            const today = new Date().toISOString().slice(0, 10);
-            const documentId = `${CROP_NAME}-${today}`;
-            await firestore.collection("market_analysis").doc(documentId).set(analysisData);
-            logger.info(`Successfully wrote market analysis for ${documentId} to Firestore.`);
-        } catch (error) { logger.error("!!! CRITICAL ERROR inside Market Analyst function:", error); }
+        const bucket = gcsClient.bucket(BUCKET_NAME);
+        // List all files in the configured GCS folder
+        const [files] = await bucket.getFiles({ prefix: `${KAGGLE_CSV_CONFIG.gcsFolder}/` });
+
+        if (files.length === 0) {
+            logger.warn(`[Market Analyst - Ingestion] No CSV files found in gs://${BUCKET_NAME}/${KAGGLE_CSV_CONFIG.gcsFolder}/. Skipping ingestion.`);
+            return;
+        }
+
+        let ingestedCount = 0;
+        let errorCount = 0;
+
+        for (const file of files) {
+            // Only process CSV files
+            if (!file.name.endsWith('.csv')) {
+                logger.info(`[Market Analyst - Ingestion] Skipping non-CSV file: ${file.name}`);
+                continue;
+            }
+
+            // --- HIGHLIGHTED CHANGE: Derive cropName from filename ---
+            // Example: "kaggle-mandi-data/Dry Chillies.csv" -> "Dry Chillies"
+            const fileNameWithoutExtension = file.name.split('/').pop().replace(/\.csv$/, '');
+            const cropName = fileNameWithoutExtension.trim(); // This is the commodity/crop name for Firestore
+
+            logger.info(`[Market Analyst - Ingestion] Processing file: ${file.name} for crop: "${cropName}"`);
+            
+            try {
+                const stream = file.createReadStream();
+                const records = [];
+
+                // Using Promise to await the stream processing
+                await new Promise((resolve, reject) => {
+                    stream
+                        .pipe(csv()) // Use csv-parser to parse CSV data
+                        .on('data', (data) => records.push(data))
+                        .on('end', async () => {
+                            logger.info(`[Market Analyst - Ingestion] Found ${records.length} records in ${file.name}.`);
+                            
+                            // Process records in batches for Firestore
+                            const batchSize = 400; // Max 500 writes per batch for Firestore batches
+                            for (let i = 0; i < records.length; i += batchSize) {
+                                const batch = firestore.batch();
+                                const currentBatchRecords = records.slice(i, i + batchSize);
+
+                                for (const record of currentBatchRecords) {
+                                    // HIGHLIGHTED CHANGE: Map CSV columns to standardized Firestore fields
+                                    // Using KAGGLE_CSV_CONFIG.csvColumnMapping for exact header names
+                                    const stateName = record[KAGGLE_CSV_CONFIG.csvColumnMapping.stateName];
+                                    const districtName = record[KAGGLE_CSV_CONFIG.csvColumnMapping.districtName];
+                                    const marketName = record[KAGGLE_CSV_CONFIG.csvColumnMapping.marketName];
+                                    const dateRaw = record[KAGGLE_CSV_CONFIG.csvColumnMapping.reportedDate]; 
+                                    const modalPriceRaw = record[KAGGLE_CSV_CONFIG.csvColumnMapping.modalPrice];
+                                    const minPriceRaw = record[KAGGLE_CSV_CONFIG.csvColumnMapping.minPrice];
+                                    const maxPriceRaw = record[KAGGLE_CSV_CONFIG.csvColumnMapping.maxPrice];
+                                    const arrivalsRaw = record[KAGGLE_CSV_CONFIG.csvColumnMapping.arrivals];
+                                    const varietyName = record[KAGGLE_CSV_CONFIG.csvColumnMapping.variety];
+                                    const groupInCsv = record[KAGGLE_CSV_CONFIG.csvColumnMapping.group]; 
+
+                                    // --- HIGHLIGHTED CHANGE: Date Parsing for "DD Mon YYYY" ---
+                                    let dateFormatted = null;
+                                    try {
+                                        // JavaScript's Date constructor can often parse "DD Mon YYYY" (e.g., "09 Feb 2006")
+                                        const parsedDate = new Date(dateRaw);
+                                        if (!isNaN(parsedDate.getTime())) { // Check if the parsed date is valid
+                                            dateFormatted = parsedDate.toISOString().slice(0, 10); // Convert to YYYY-MM-DD format
+                                        } else {
+                                            logger.warn(`[Market Analyst - Ingestion Warning] Invalid date format "${dateRaw}" in file ${file.name}. Skipping record: ${JSON.stringify(record)}`);
+                                            continue; // Skip record if date is invalid
+                                        }
+                                    } catch (e) {
+                                        logger.warn(`[Market Analyst - Ingestion Warning] Error parsing date "${dateRaw}" in file ${file.name}: ${e.message}. Skipping record: ${JSON.stringify(record)}`);
+                                        continue;
+                                    }
+
+                                    // Parse price and arrivals data, defaulting to 0 if null/empty/invalid
+                                    const modalPrice = parseFloat(modalPriceRaw || 0); 
+                                    const minPrice = parseFloat(minPriceRaw || 0);
+                                    const maxPrice = parseFloat(maxPriceRaw || 0);
+                                    const arrivals = parseFloat(arrivalsRaw || 0);
+
+                                    // Basic validation for critical fields before writing to Firestore
+                                    if (!cropName || !stateName || !marketName || !dateFormatted || isNaN(modalPrice) || modalPrice <= 0) {
+                                        logger.warn(`[Market Analyst - Ingestion Warning] Skipping incomplete/invalid record for "${cropName}" in ${file.name}: ${JSON.stringify(record)}`);
+                                        continue;
+                                    }
+
+                                    // Create slugs for Firestore document IDs
+                                    const cropSlug = String(cropName).toLowerCase().replace(/\s+/g, '-');
+                                    const stateSlug = String(stateName).toLowerCase().replace(/\s+/g, '-');
+                                    const marketSlug = String(marketName).toLowerCase().replace(/\s+/g, '-');
+
+                                    // --- HIGHLIGHTED CHANGE: Firestore Document ID uses crop_market_state for uniqueness ---
+                                    const firestoreDocId = `${cropSlug}_${marketSlug}_${stateSlug}`; 
+                                    
+                                    const marketData = {
+                                        crop_name: cropName, // Derived from filename
+                                        market_name: marketName,
+                                        district_name: districtName, 
+                                        state_name: stateName,
+                                        variety: varietyName, // Store variety
+                                        group_in_csv: groupInCsv, // Store the 'Group' field from CSV (e.g., "Spices")
+                                        date: dateFormatted, // Standardized date (YYYY-MM-DD)
+                                        price_modal: modalPrice,
+                                        price_min: minPrice,
+                                        price_max: maxPrice,
+                                        arrival_quantity_tonnes: arrivals,
+                                        price_unit: "Rs./Quintal", // Explicitly state unit
+                                        source_file: file.name, // Track source CSV file
+                                        ingested_at: admin.firestore.FieldValue.serverTimestamp(),
+                                    };
+
+                                    // Reference to the main document for this crop/market/state
+                                    const docRef = firestore.collection("market_prices").doc(firestoreDocId);
+                                    // Reference to the daily historical record within the subcollection
+                                    const historicalDocRef = docRef.collection("historical_prices").doc(dateFormatted); 
+
+                                    // Add the daily record to the batch
+                                    batch.set(historicalDocRef, marketData);
+                                    
+                                    // IMPORTANT for bulk ingestion:
+                                    // We are NOT updating a `latest_summary` in the parent document inside this loop.
+                                    // Doing so for every record in a batch would be inefficient and might cause contention.
+                                    // The `getMarketAnalysis` function will find the latest price by querying `historical_prices`.
+                                }
+                                // Commit the batch of writes to Firestore
+                                await batch.commit();
+                                ingestedCount += currentBatchRecords.length;
+                                logger.info(`[Market Analyst - Ingestion] Batch committed for ${file.name}, records processed: ${ingestedCount}.`);
+                            }
+                            resolve(); // Resolve the promise once all data from the file is processed
+                        })
+                        .on('error', (err) => {
+                            logger.error(`[Market Analyst - Ingestion Error] Error reading CSV file ${file.name}:`, err);
+                            errorCount++;
+                            reject(err); // Reject the promise on stream error
+                        });
+                });
+            } catch (err) {
+                logger.error(`[Market Analyst - Ingestion Error] Failed to process CSV file ${file.name}:`, err, { structuredData: true });
+                errorCount++;
+            }
+        }
+        logger.info(`[Market Analyst - Ingestion] Kaggle CSV data ingestion completed. Total ingested: ${ingestedCount}, Errors: ${errorCount}.`);
+    }
+);
+
+// =================================================================
+// HIGHLIGHTED CHANGE: New HTTP-triggered function for On-Demand Market Analysis (Function 4)
+// =================================================================
+exports.getMarketAnalysis = onRequest(
+    {
+        region: LOCATION,
+        timeoutSeconds: 60, 
+        memory: "1GiB" 
+    },
+    async (request, response) => {
+        response.set('Access-Control-Allow-Origin', '*'); 
+        if (request.method === 'OPTIONS') {
+            response.set('Access-Control-Allow-Methods', 'GET, POST');
+            response.set('Access-Control-Allow-Headers', 'Content-Type');
+            response.status(204).send('');
+            return;
+        }
+
+        const cropName = request.query.cropName || request.body.cropName;
+        const stateName = request.query.stateName || request.body.stateName;
+        const marketName = request.query.marketName || request.body.marketName; 
+
+        logger.info(`[Market Analysis - OnDemand] Received request for Crop: "${cropName}", State: "${stateName}", Market: "${marketName || 'any'}"`);
+
+        if (!cropName || !stateName || !marketName) {
+            response.status(400).json({ error: "Missing 'cropName', 'stateName', or 'marketName' in request. All are now required for specific lookup." });
+            return;
+        }
+
+        const cropSlug = String(cropName).toLowerCase().replace(/\s+/g, '-');
+        const stateSlug = String(stateName).toLowerCase().replace(/\s+/g, '-');
+        const marketSlug = String(marketName).toLowerCase().replace(/\s+/g, '-');
+        
+        const firestoreDocId = `${cropSlug}_${marketSlug}_${stateSlug}`;
+
+        const today = new Date();
+        const todayStr = today.toISOString().slice(0, 10);
+        
+        const ninetyDaysAgo = new Date(today);
+        ninetyDaysAgo.setDate(today.getDate() - 90); 
+        const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().slice(0, 10);
+
+        const lastYearStart = new Date(today);
+        lastYearStart.setFullYear(today.getFullYear() - 1);
+        lastYearStart.setDate(today.getDate() - 90); 
+        const lastYearStartStr = lastYearStart.toISOString().slice(0, 10);
+
+        const lastYearEnd = new Date(today);
+        lastYearEnd.setFullYear(today.getFullYear() - 1);
+        const lastYearEndStr = lastYearEnd.toISOString().slice(0, 10);
+
+        let allRelevantData = []; 
+        let dataCompleteness = "Complete"; 
+
+        try {
+            const historicalPricesRef = firestore.collection("market_prices").doc(firestoreDocId).collection("historical_prices");
+            
+            const currentPeriodSnapshot = await historicalPricesRef
+                .where('date', '>=', ninetyDaysAgoStr) 
+                .orderBy('date', 'asc')
+                .get();
+            allRelevantData = currentPeriodSnapshot.docs.map(doc => doc.data());
+            
+            if (allRelevantData.length === 0 || new Date(allRelevantData[0].date).getFullYear() > today.getFullYear() - 1) {
+                 const lastYearSnapshot = await historicalPricesRef
+                    .where('date', '>=', lastYearStartStr)
+                    .where('date', '<=', lastYearEndStr)
+                    .orderBy('date', 'asc')
+                    .get();
+                 allRelevantData = allRelevantData.concat(lastYearSnapshot.docs.map(doc => doc.data()));
+            }
+
+            logger.info(`[Market Analysis - OnDemand] Fetched ${allRelevantData.length} relevant records for ${cropName} in ${marketName} (${stateName}) from Firestore.`);
+
+            if (allRelevantData.length === 0) {
+                dataCompleteness = "Missing (No data found in Firestore for this crop/market/state combination)";
+                logger.warn(`[Market Analysis - OnDemand] No data found in Firestore for ${cropName} at ${marketName} (${stateName}).`);
+            } else if (allRelevantData.length < 60) {
+                 dataCompleteness = "Partial (Limited historical data)";
+            }
+
+            let currentYearRecentDataStr = "";
+            let previousYearComparativeDataStr = "";
+            let chartDataArray = []; 
+
+            const thirtyDaysAgo = new Date(today); 
+            thirtyDaysAgo.setDate(today.getDate() - 30); 
+
+            // HIGHLIGHTED CHANGE: Get district name from fetched data for prompt
+            const districtNameForPrompt = allRelevantData.length > 0 ? allRelevantData[0].district_name : 'N/A';
+
+            allRelevantData.forEach(item => {
+                const itemDate = new Date(item.date);
+                
+                chartDataArray.push({
+                    date: item.date,
+                    price_modal: item.price_modal,
+                    price_min: item.price_min,
+                    price_max: item.price_max,
+                    year: itemDate.getFullYear()
+                });
+
+                if (itemDate.getFullYear() === today.getFullYear() && itemDate >= thirtyDaysAgo) {
+                    currentYearRecentDataStr += `${item.date}: ${item.price_modal} INR\n`;
+                }
+                
+                const comparableDateLastYear = new Date(item.date);
+                comparableDateLastYear.setFullYear(today.getFullYear()); 
+                
+                if (itemDate.getFullYear() === today.getFullYear() - 1 &&
+                    comparableDateLastYear >= thirtyDaysAgo && 
+                    comparableDateLastYear <= today) {
+                        previousYearComparativeDataStr += `${item.date}: ${item.price_modal} INR\n`;
+                }
+            });
+
+            chartDataArray.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const currentPriceForAI = chartDataArray.length > 0 ? 
+                                      chartDataArray[chartDataArray.length - 1].price_modal : 'N/A'; 
+
+            const analysisPrompt = `You are a world-class AI market analyst for Indian farmers. Analyze the provided crop price data and offer actionable advice.
+
+Crop: ${cropName}
+Market: ${marketName} (District: ${districtNameForPrompt}, State: ${stateName})
+Analysis Date: ${todayStr}
+
+Current Price (latest available from provided data): ${currentPriceForAI} INR
+
+Recent Prices (last 30 days of current year from provided data):
+${currentYearRecentDataStr || "No recent data available from Firestore for current year."}
+
+Prices Same Period Last Year (data from corresponding period last year):
+${previousYearComparativeDataStr || "No data available from Firestore for the same period last year."}
+
+Based on this data:
+1. Describe the current price trend (rising, falling, stable) compared to the last 30 days of available data.
+2. Compare the current price and recent trend to prices in the same period last year. Is it significantly higher, lower, or similar? By what percentage approximately?
+3. Identify potential general factors (e.g., weather, supply, demand, local events, government policies) that might be influencing any significant price changes or trends you observe.
+4. Provide clear, actionable advice and an opinion for farmers regarding selling or holding their crop.
+5. Provide a qualitative outlook for price movement in the next 7-15 days based on historical patterns and trends (e.g., 'Prices are likely to rise', 'Expect stabilization', 'Possible slight dip').
+6. If data for a specific period is stated as "No data available" above, clearly mention this limitation in your analysis and provide a general outlook based on general agricultural market knowledge for this crop/region if possible.
+
+Respond ONLY with a single, valid JSON object with the exact structure and keys below. All responses must be in English. The 'chart_data' array should be populated directly from the raw data provided to the AI, maintaining the 'date', 'price_modal', 'price_min', 'price_max', and 'year' fields for all relevant data points.
+
+{
+  "crop_name": "${cropName}",
+  "market_name": "${marketName}",
+  "state_name": "${stateName}",
+  "analysis_date": "${todayStr}",
+  "current_price_inr": ${currentPriceForAI},
+  "price_trend_description": "A concise description of the current trend (e.g., 'Prices are moderately rising, up 5% in the last 7 days.').",
+  "comparison_to_last_year": "A comparison with last year (e.g., 'Current prices are 15% higher than the same period last year, which averaged 1150 INR.').",
+  "influencing_factors": ["Factor 1 (e.g., 'Monsoon rains improving yield expectation.')", "Factor 2 (e.g., 'Increased demand for local festivals.')"],
+  "farmer_opinion_and_advice": "Actionable advice for farmers (e.g., 'Consider holding stock as prices are expected to rise further due to...').",
+  "price_outlook_short_term": "A qualitative outlook for price movement in the next 7-15 days (e.g., 'Prices are likely to rise', 'Expect stabilization', 'Possible slight dip').",
+  "chart_data": ${JSON.stringify(chartDataArray)}, 
+  "data_completeness": "${dataCompleteness}"
+}`;
+            
+            const geminiApiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
+            const geminiRequestBody = { contents: [{ parts: [{ text: analysisPrompt }], role: "user" }] };
+            
+            logger.info("[AI] Sending analysis request to Gemini API...");
+            const geminiResponse = await fetch(geminiApiEndpoint, { 
+                method: "POST", 
+                headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, 
+                body: JSON.stringify(geminiRequestBody) 
+            });
+            const geminiResponseData = await geminiResponse.json();
+            logger.info("Full Gemini Analysis Response:", JSON.stringify(geminiResponseData, null, 2));
+
+            const modelResponseText = geminiResponseData?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!modelResponseText) { 
+                logger.error("[Gemini Error] Did not receive valid analysis from AI.", { response: geminiResponseData });
+                response.status(500).json({ error: "Could not generate market analysis from AI." });
+                return;
+            }
+            const analysisData = JSON.parse(modelResponseText.replace(/^```json\s*|```\s*$/g, ""));
+            logger.info("Market Analysis received:", analysisData);
+            
+            response.status(200).json(analysisData);
+
+        } catch (error) {
+            logger.error(`[CRITICAL Market Analysis - OnDemand] Error processing request for ${cropName} in ${marketName} (${stateName}):`, error, { structuredData: true });
+            response.status(500).json({ error: "Failed to generate market analysis.", details: error.message });
+        }
     }
 );
 
