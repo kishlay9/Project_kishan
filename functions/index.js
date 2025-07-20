@@ -1,25 +1,23 @@
 // =================================================================
 // SETUP (WITH NEW v2 IMPORTS)
 // =================================================================
-// NOTE: Removed duplicate SETUP block comment.
-// IMPORTANT: If you are still getting local deployment errors (ReferenceError or ERR_PACKAGE_PATH_NOT_EXPORTED),
-// you might need to manually apply the symlink or direct copy workaround as discussed.
-// The import paths below are the officially correct v2 paths.
 const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
-const { logger } = require("firebase-functions");
+const { logger, config } = require("firebase-functions");
 const fetch = require("node-fetch");
-const cheerio = require("cheerio"); // Still needed for Knowledge Base Updater
+const cheerio = require("cheerio"); // Still needed for Knowledge Base Updater (Function 3)
 const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
-const csv = require('csv-parser');
-const { Storage } = require('@google-cloud/storage');
+// HIGHLIGHTED CHANGE: csv and Storage client imports are removed as Kaggle CSV ingestion is removed.
+// const csv = require('csv-parser'); 
+// const { Storage } = require('@google-cloud/storage');
 
 admin.initializeApp();
 const firestore = admin.firestore();
 const ttsClient = new TextToSpeechClient();
-const gcsClient = new Storage();
+// HIGHLIGHTED CHANGE: gcsClient initialization is removed as Kaggle CSV ingestion is removed.
+// const gcsClient = new Storage(); 
 
 // =================================================================
 // CONFIGURATION
@@ -28,36 +26,25 @@ const PROJECT_ID = "project-kisan-new";
 const BUCKET_NAME = "project-kisan-new.firebasestorage.app";
 const LOCATION = "asia-south1";
 
-// =================================================================
-// KAGGLE DATASET CONFIGURATION
-// =================================================================
-const KAGGLE_CSV_CONFIG = {
-    gcsFolder: "kaggle-mandi-data", // Folder in your GCS bucket where you uploaded the CSVs
-    csvColumnMapping: {
-        // EXACT COLUMN HEADERS FROM YOUR CSV FILES (based on image provided)
-        stateName: "State Name",
-        districtName: "District Name",
-        marketName: "Market Name",
-        variety: "Variety",
-        group: "Group", // This is the commodity/crop name in the CSV data
-        arrivals: "Arrivals (Tonnes)",
-        minPrice: "Min Price (Rs./Quintal)",
-        maxPrice: "Max Price (Rs./Quintal)",
-        modalPrice: "Modal Price (Rs./Quintal)",
-        reportedDate: "Reported Date", // The date column
-    },
-    // The exact date format from your CSV files for parsing: "DD Mon YYYY"
-    csvDateFormat: "DD Mon YYYY", 
-};
+// --- HIGHLIGHTED CHANGE: OGD API Key (Accessed from Firebase Functions Config) ---
+// YOU MUST SET THIS VIA: firebase functions:config:set ogd.api_key="579b464db66ec23bdd000001c495c37445694fce75e978eb67a15b4f"
+
+
+// --- HIGHLIGHTED CHANGE: OGD API Base URL with specific RESOURCE_ID ---
+const OGD_RESOURCE_ID = "9ef84268-d588-465a-a308-a864a43d0070";
+const OGD_API_BASE_URL = `https://api.data.gov.in/resource/${OGD_RESOURCE_ID}`;
+
+// --- HIGHLIGHTED CHANGE: Removed KAGGLE_CSV_CONFIG as Kaggle CSV ingestion is removed ---
 
 // =================================================================
 // FUNCTION 1: CROP DOCTOR (ANALYZE PLANT IMAGE) - v2 SYNTAX
+// (This function remains UNCHANGED - as per your request, it continues to use gemini-1.5-pro-002)
 // =================================================================
 exports.analyzePlantImage = onObjectFinalized(
     {
         region: LOCATION,
         timeoutSeconds: 300,
-        memory: "2GiB" // v2 syntax for memory
+        memory: "2GiB"
     },
     async (event) => {
         const { name: filePath, bucket: bucketName, contentType } = event.data;
@@ -69,7 +56,7 @@ exports.analyzePlantImage = onObjectFinalized(
             return;
         }
 
-        let apiEndpoint; // Declare here for broader scope
+        let apiEndpoint; 
         
         try {
             logger.info("[Auth] Fetching service account token from metadata server...");
@@ -85,10 +72,9 @@ exports.analyzePlantImage = onObjectFinalized(
             const accessToken = tokenData.access_token;
             logger.info(`[Auth] Access token fetched. Token expires in: ${tokenData.expires_in}s`);
 
-            // --- HIGHLIGHTED CHANGE: Update to Gemini 2.5 Pro model ---
             apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
+            logger.info(`[AI] Using API endpoint: ${apiEndpoint}`);
 
-            // --- HIGHLIGHTED CHANGE: Advanced Prompt for Object Category and English-Only Output ---
             const diagnosisPrompt = `You are a world-class AI agronomist for Indian farmers. Your primary task is to determine if the image contains a plant or plant part. If it does, then proceed with plant identification and diagnosis.
 
 A CRITICAL part of your task is to correctly identify when a plant is HEALTHY. Do not guess a disease if the visual evidence is not clear.
@@ -134,20 +120,18 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
             const diagnosisData = JSON.parse(modelResponseText.replace(/^```json\s*|```\s*$/g, ""));
             logger.info("Diagnosis received:", diagnosisData);
 
-            // --- HIGHLIGHTED CHANGE: Text-to-Speech Generation adapted for Object Category and English ---
             let textToSpeak = "";
             if (diagnosisData.object_category === "Plant") {
                 textToSpeak = `Plant Type: ${diagnosisData.plant_type}. Diagnosis: ${diagnosisData.diagnosis_status}. Disease: ${diagnosisData.disease_name_english}. Description: ${diagnosisData.description_english}. Organic Remedy: ${diagnosisData.organic_remedy_english}.`;
             } else if (diagnosisData.object_category === "Non-Plant Object") {
                 textToSpeak = `This appears to be a non-plant object. Description: ${diagnosisData.description_english}. Please upload an image of a plant for diagnosis.`;
-            } else { // Ambiguous/Unclear
+            } else { 
                 textToSpeak = `The object in the image is ambiguous or unclear. Description: ${diagnosisData.description_english}. Please ensure the image clearly shows a plant.`;
             }
             
-            // Change the TTS voice to an English one
             const ttsRequest = { 
                 input: { text: textToSpeak }, 
-                voice: { languageCode: 'en-US', name: 'en-US-Wavenet-A' }, // Example: US English Wavenet voice
+                voice: { languageCode: 'en-US', name: 'en-US-Wavenet-A' }, 
                 audioConfig: { audioEncoding: 'MP3' } 
             };
             
@@ -156,32 +140,26 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
             logger.info(`[TTS] Speech synthesis successful. Audio content length: ${ttsResponse.audioContent.length} bytes.`);
 
 
-            // --- THIS IS THE NEW, CORRECTED BLOCK ---
+            const diagnosisId = filePath.split('/').pop();
+            if (!diagnosisId) {
+                logger.error(`Could not extract filename (diagnosisId) from path: ${filePath}. Aborting.`);
+                return;
+            }
 
-        // 1. Get the full filename from the path. This is what the frontend uses as the document ID.
-        const diagnosisId = filePath.split('/').pop();
-        if (!diagnosisId) {
-            logger.error(`Could not extract filename (diagnosisId) from path: ${filePath}. Aborting.`);
-            return;
-        }
+            const baseFileNameForAudio = diagnosisId.replace(/\.[^/.]+$/, "");
+            const audioFileName = `${baseFileNameForAudio}.mp3`;
 
-        // 2. Create a base name for the AUDIO file by removing the original image extension.
-        const baseFileNameForAudio = diagnosisId.replace(/\.[^/.]+$/, "");
-        const audioFileName = `${baseFileNameForAudio}.mp3`;
+            logger.info(`[AudioFile] Attempting to save audio to: audio-output/${audioFileName}`);
+            const audioFile = admin.storage().bucket(bucketName).file(`audio-output/${audioFileName}`);
+            await audioFile.save(ttsResponse.audioContent);
+            await audioFile.makePublic();
+            const audioUrl = audioFile.publicUrl();
+            logger.info(`[AudioFile] Audio file created: ${audioUrl}`);
 
-        logger.info(`[AudioFile] Attempting to save audio to: audio-output/${audioFileName}`);
-        const audioFile = admin.storage().bucket(bucketName).file(`audio-output/${audioFileName}`);
-        await audioFile.save(ttsResponse.audioContent);
-        await audioFile.makePublic();
-        const audioUrl = audioFile.publicUrl();
-        logger.info(`[AudioFile] Audio file created: ${audioUrl}`);
-
-        // 3. Add the audio URL to the data payload.
-        diagnosisData.audio_remedy_url = audioUrl;
-
-        // 4. Use the CORRECT diagnosisId (with the file extension) to write to Firestore.
-        await firestore.collection("diagnoses").doc(diagnosisId).set(diagnosisData);
-        logger.info(`[Firestore] Successfully wrote complete diagnosis with audio to Firestore (ID: ${diagnosisId}).`);
+            diagnosisData.audio_remedy_url = audioUrl;
+            
+            await firestore.collection("diagnoses").doc(diagnosisId).set(diagnosisData); 
+            logger.info(`[Firestore] Successfully wrote complete diagnosis with audio to Firestore (ID: ${diagnosisId}).`);
         } catch (error) {
             logger.error(`!!! CRITICAL ERROR in analysis for file "${filePath}":`, error, { structuredData: true });
         }
@@ -189,171 +167,178 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
 );
 
 // =================================================================
-// HIGHLIGHTED CHANGE: FUNCTION 2: PROACTIVE MARKET ANALYST (Kaggle CSV Ingestion)
+// HIGHLIGHTED CHANGE: FUNCTION 2: PROACTIVE MARKET ANALYST (Daily OGD API Ingestion for ALL Records)
 // =================================================================
-// This function will iterate through all CSVs in the specified GCS folder
-// and ingest them into Firestore. It's intended for a bulk, one-time operation
-// to populate historical data.
 exports.proactiveMarketAnalyst = onSchedule(
     {
-        schedule: "every day 08:00",
+        schedule: "every day 08:00", // Daily at 8 AM IST
         timeZone: "Asia/Kolkata",
         region: LOCATION,
-        // --- THESE ARE THE INCREASED LIMITS ---
-        timeoutSeconds: 3600, // 1 hour
-        memory: "4GiB"       // 4 Gigabytes
+        timeoutSeconds: 3600, // 1 hour for potentially large ingestion from API
+        memory: "1GiB"       // 1 GB should be sufficient for API response and batching
     },
     async (event) => {
-        logger.info("[Market Analyst - Ingestion] Starting Kaggle CSV data ingestion.");
+        // --- HIGHLIGHTED CHANGE: Move config loading inside the function ---
+        const OGD_API_KEY = functions.config().ogd?.api_key;
 
-        const bucket = gcsClient.bucket(BUCKET_NAME);
-        // List all files in the configured GCS folder
-        const [files] = await bucket.getFiles({ prefix: `${KAGGLE_CSV_CONFIG.gcsFolder}/` });
+        logger.info("[Market Analyst - Ingestion] Starting daily market data collection from OGD API.");
 
-        if (files.length === 0) {
-            logger.warn(`[Market Analyst - Ingestion] No CSV files found in gs://${BUCKET_NAME}/${KAGGLE_CSV_CONFIG.gcsFolder}/. Skipping ingestion.`);
-            return;
+        if (!OGD_API_KEY) {
+            logger.error("[Market Analyst - Ingestion] OGD_API_KEY is not configured. Cannot fetch market data.");
+            return; // Exit the function gracefully
         }
 
-        let ingestedCount = 0;
-        let errorCount = 0;
+        const today = new Date();
+        // The API uses DD/MM/YYYY for arrival_date in its records, so format the query date as such.
+        const todayStrForAPI = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+        const todayStrForFirestore = today.toISOString().slice(0, 10); // YYYY-MM-DD for Firestore document ID
 
-        for (const file of files) {
-            // Only process CSV files
-            if (!file.name.endsWith('.csv')) {
-                logger.info(`[Market Analyst - Ingestion] Skipping non-CSV file: ${file.name}`);
-                continue;
-            }
-
-            // --- HIGHLIGHTED CHANGE: Derive cropName from filename ---
-            // Example: "kaggle-mandi-data/Dry Chillies.csv" -> "Dry Chillies"
-            const fileNameWithoutExtension = file.name.split('/').pop().replace(/\.csv$/, '');
-            const cropName = fileNameWithoutExtension.trim(); // This is the commodity/crop name for Firestore
-
-            logger.info(`[Market Analyst - Ingestion] Processing file: ${file.name} for crop: "${cropName}"`);
+        let offset = 0;
+        const limit = 100; // HIGHLIGHTED CHANGE: Using limit of 100 as per your test
+        let totalRecords = 0;
+        let recordsProcessed = 0;
+        
+        try {
+            // --- HIGHLIGHTED CHANGE: Initial API call to get total records and first batch ---
+            logger.info(`[Market Analyst - Ingestion] Fetching initial page from OGD API for ${todayStrForAPI}...`);
+            let queryParams = new URLSearchParams({
+                'api-key': OGD_API_KEY,
+                'format': 'json',
+                'filters[arrival_date]': todayStrForAPI,
+                'limit': limit.toString(),
+                'offset': offset.toString()
+            });
+            let ogdApiUrl = `${OGD_API_BASE_URL}?${queryParams.toString()}`;
             
-            try {
-                const stream = file.createReadStream();
-                const records = [];
+            let response = await fetch(ogdApiUrl);
+            let responseData = await response.json();
 
-                // Using Promise to await the stream processing
-                await new Promise((resolve, reject) => {
-                    stream
-                        .pipe(csv()) // Use csv-parser to parse CSV data
-                        .on('data', (data) => records.push(data))
-                        .on('end', async () => {
-                            logger.info(`[Market Analyst - Ingestion] Found ${records.length} records in ${file.name}.`);
-                            
-                            // Process records in batches for Firestore
-                            const batchSize = 400; // Max 500 writes per batch for Firestore batches
-                            for (let i = 0; i < records.length; i += batchSize) {
-                                const batch = firestore.batch();
-                                const currentBatchRecords = records.slice(i, i + batchSize);
-
-                                for (const record of currentBatchRecords) {
-                                    // HIGHLIGHTED CHANGE: Map CSV columns to standardized Firestore fields
-                                    // Using KAGGLE_CSV_CONFIG.csvColumnMapping for exact header names
-                                    const stateName = record[KAGGLE_CSV_CONFIG.csvColumnMapping.stateName];
-                                    const districtName = record[KAGGLE_CSV_CONFIG.csvColumnMapping.districtName];
-                                    const marketName = record[KAGGLE_CSV_CONFIG.csvColumnMapping.marketName];
-                                    const dateRaw = record[KAGGLE_CSV_CONFIG.csvColumnMapping.reportedDate]; 
-                                    const modalPriceRaw = record[KAGGLE_CSV_CONFIG.csvColumnMapping.modalPrice];
-                                    const minPriceRaw = record[KAGGLE_CSV_CONFIG.csvColumnMapping.minPrice];
-                                    const maxPriceRaw = record[KAGGLE_CSV_CONFIG.csvColumnMapping.maxPrice];
-                                    const arrivalsRaw = record[KAGGLE_CSV_CONFIG.csvColumnMapping.arrivals];
-                                    const varietyName = record[KAGGLE_CSV_CONFIG.csvColumnMapping.variety];
-                                    const groupInCsv = record[KAGGLE_CSV_CONFIG.csvColumnMapping.group]; 
-
-                                    // --- HIGHLIGHTED CHANGE: Date Parsing for "DD Mon YYYY" ---
-                                    let dateFormatted = null;
-                                    try {
-                                        // JavaScript's Date constructor can often parse "DD Mon YYYY" (e.g., "09 Feb 2006")
-                                        const parsedDate = new Date(dateRaw);
-                                        if (!isNaN(parsedDate.getTime())) { // Check if the parsed date is valid
-                                            dateFormatted = parsedDate.toISOString().slice(0, 10); // Convert to YYYY-MM-DD format
-                                        } else {
-                                            logger.warn(`[Market Analyst - Ingestion Warning] Invalid date format "${dateRaw}" in file ${file.name}. Skipping record: ${JSON.stringify(record)}`);
-                                            continue; // Skip record if date is invalid
-                                        }
-                                    } catch (e) {
-                                        logger.warn(`[Market Analyst - Ingestion Warning] Error parsing date "${dateRaw}" in file ${file.name}: ${e.message}. Skipping record: ${JSON.stringify(record)}`);
-                                        continue;
-                                    }
-
-                                    // Parse price and arrivals data, defaulting to 0 if null/empty/invalid
-                                    const modalPrice = parseFloat(modalPriceRaw || 0); 
-                                    const minPrice = parseFloat(minPriceRaw || 0);
-                                    const maxPrice = parseFloat(maxPriceRaw || 0);
-                                    const arrivals = parseFloat(arrivalsRaw || 0);
-
-                                    // Basic validation for critical fields before writing to Firestore
-                                    if (!cropName || !stateName || !marketName || !dateFormatted || isNaN(modalPrice) || modalPrice <= 0) {
-                                        logger.warn(`[Market Analyst - Ingestion Warning] Skipping incomplete/invalid record for "${cropName}" in ${file.name}: ${JSON.stringify(record)}`);
-                                        continue;
-                                    }
-
-                                    // Create slugs for Firestore document IDs
-                                    const cropSlug = String(cropName).toLowerCase().replace(/\s+/g, '-');
-                                    const stateSlug = String(stateName).toLowerCase().replace(/\s+/g, '-');
-                                    const marketSlug = String(marketName).toLowerCase().replace(/\s+/g, '-');
-
-                                    // --- HIGHLIGHTED CHANGE: Firestore Document ID uses crop_market_state for uniqueness ---
-                                    const firestoreDocId = `${cropSlug}_${marketSlug}_${stateSlug}`; 
-                                    
-                                    const marketData = {
-                                        crop_name: cropName, // Derived from filename
-                                        market_name: marketName,
-                                        district_name: districtName, 
-                                        state_name: stateName,
-                                        variety: varietyName, // Store variety
-                                        group_in_csv: groupInCsv, // Store the 'Group' field from CSV (e.g., "Spices")
-                                        date: dateFormatted, // Standardized date (YYYY-MM-DD)
-                                        price_modal: modalPrice,
-                                        price_min: minPrice,
-                                        price_max: maxPrice,
-                                        arrival_quantity_tonnes: arrivals,
-                                        price_unit: "Rs./Quintal", // Explicitly state unit
-                                        source_file: file.name, // Track source CSV file
-                                        ingested_at: admin.firestore.FieldValue.serverTimestamp(),
-                                    };
-
-                                    // Reference to the main document for this crop/market/state
-                                    const docRef = firestore.collection("market_prices").doc(firestoreDocId);
-                                    // Reference to the daily historical record within the subcollection
-                                    const historicalDocRef = docRef.collection("historical_prices").doc(dateFormatted); 
-
-                                    // Add the daily record to the batch
-                                    batch.set(historicalDocRef, marketData);
-                                    
-                                    // IMPORTANT for bulk ingestion:
-                                    // We are NOT updating a `latest_summary` in the parent document inside this loop.
-                                    // Doing so for every record in a batch would be inefficient and might cause contention.
-                                    // The `getMarketAnalysis` function will find the latest price by querying `historical_prices`.
-                                }
-                                // Commit the batch of writes to Firestore
-                                await batch.commit();
-                                ingestedCount += currentBatchRecords.length;
-                                logger.info(`[Market Analyst - Ingestion] Batch committed for ${file.name}, records processed: ${ingestedCount}.`);
-                            }
-                            resolve(); // Resolve the promise once all data from the file is processed
-                        })
-                        .on('error', (err) => {
-                            logger.error(`[Market Analyst - Ingestion Error] Error reading CSV file ${file.name}:`, err);
-                            errorCount++;
-                            reject(err); // Reject the promise on stream error
-                        });
-                });
-            } catch (err) {
-                logger.error(`[Market Analyst - Ingestion Error] Failed to process CSV file ${file.name}:`, err, { structuredData: true });
-                errorCount++;
+            if (!response.ok || responseData.status !== "ok") {
+                const errorDetails = response.ok ? JSON.stringify(responseData) : await response.text();
+                logger.error(`[Market Analyst - Ingestion Error] Failed initial fetch from OGD API. Status: ${response.status}, Details: ${errorDetails}`);
+                throw new Error("Failed initial OGD API data fetch.");
             }
+            
+            totalRecords = parseInt(responseData.total || '0', 10);
+            logger.info(`[Market Analyst - Ingestion] Total records for ${todayStrForAPI}: ${totalRecords}`);
+
+            if (totalRecords === 0) {
+                logger.warn(`[Market Analyst - Ingestion Warning] No records found for ${todayStrForAPI} from OGD API.`);
+                return; // Exit if no records for today
+            }
+
+            // --- HIGHLIGHTED CHANGE: Pagination Loop ---
+            while (recordsProcessed < totalRecords) {
+                const batch = firestore.batch();
+                let batchCount = 0;
+                
+                if (recordsProcessed > 0) { // Fetch next page if not the first one
+                    queryParams = new URLSearchParams({
+                        'api-key': OGD_API_KEY,
+                        'format': 'json',
+                        'filters[arrival_date]': todayStrForAPI,
+                        'limit': limit.toString(),
+                        'offset': offset.toString()
+                    });
+                    ogdApiUrl = `${OGD_API_BASE_URL}?${queryParams.toString()}`;
+                    
+                    response = await fetch(ogdApiUrl);
+                    responseData = await response.json();
+
+                    if (!response.ok || responseData.status !== "ok") {
+                        const errorDetails = response.ok ? JSON.stringify(responseData) : await response.text();
+                        logger.error(`[Market Analyst - Ingestion Error] Failed to fetch page at offset ${offset}. Status: ${response.status}, Details: ${errorDetails}`);
+                        break; // Exit loop if page fetch fails
+                    }
+                }
+
+                if (!responseData.records || responseData.records.length === 0) {
+                    logger.warn(`[Market Analyst - Ingestion Warning] No more records received from OGD API at offset ${offset}. Expected ${totalRecords}, processed ${recordsProcessed}. Exiting loop.`);
+                    break; // No more records to process
+                }
+
+                for (const record of responseData.records) {
+                    // --- HIGHLIGHTED CHANGE: Extract data using actual OGD API response field names ---
+                    const commodity = record.commodity;
+                    const market = record.market;
+                    const state = record.state;
+                    const district = record.district; // From API record
+                    const variety = record.variety; // From API record
+                    const grade = record.grade;     // From API record
+
+                    const priceModal = parseFloat(record.modal_price || 0); 
+                    const priceMin = parseFloat(record.min_price || 0);
+                    const priceMax = parseFloat(record.max_price || 0);
+                    const arrivalDateApi = record.arrival_date; 
+
+                    // Validate extracted data before adding to batch
+                    if (!commodity || !state || !market || !arrivalDateApi || isNaN(priceModal) || priceModal <= 0) {
+                        logger.warn(`[Market Analyst - Ingestion Warning] Skipping incomplete/invalid record: ${JSON.stringify(record)}`);
+                        continue; 
+                    }
+
+                    // Convert API date (DD/MM/YYYY) to YYYY-MM-DD for Firestore
+                    let firestoreDate = todayStrForFirestore; 
+                    try {
+                        const parts = arrivalDateApi.split('/'); 
+                        if (parts.length === 3) {
+                            const parsedDate = new Date(`${parts[1]}/${parts[0]}/${parts[2]}`); 
+                            if (!isNaN(parsedDate.getTime())) {
+                                firestoreDate = parsedDate.toISOString().slice(0, 10); 
+                            }
+                        }
+                    } catch (e) {
+                        logger.warn(`[Market Analyst - Ingestion Warning] Error parsing API date "${arrivalDateApi}": ${e.message}. Using today's date for record: ${JSON.stringify(record)}.`);
+                    }
+
+                    const cropSlug = String(commodity).toLowerCase().replace(/\s+/g, '-');
+                    const stateSlug = String(state).toLowerCase().replace(/\s+/g, '-');
+                    const marketSlug = String(market).toLowerCase().replace(/\s+/g, '-');
+                    const firestoreDocId = `${cropSlug}_${marketSlug}_${stateSlug}`; 
+                    
+                    const marketData = {
+                        crop_name: commodity, 
+                        market_name: market,
+                        district_name: district, 
+                        state_name: state,
+                        variety: variety, 
+                        grade: grade, 
+                        date: firestoreDate, 
+                        price_modal: priceModal,
+                        price_min: priceMin,
+                        price_max: priceMax,
+                        // arrival_quantity_tonnes: ?, // Not in API response, remove or add if you find it
+                        price_unit: "Rs./Quintal", 
+                        source_api: `data.gov.in (Resource ID: ${OGD_RESOURCE_ID})`, 
+                        ingested_at: admin.firestore.FieldValue.serverTimestamp(),
+                    };
+
+                    const docRef = firestore.collection("market_prices").doc(firestoreDocId);
+                    const historicalDocRef = docRef.collection("historical_prices").doc(firestoreDate); 
+
+                    batch.set(historicalDocRef, marketData);
+                    batchCount++;
+                    recordsProcessed++;
+                }
+
+                if (batchCount > 0) {
+                    await batch.commit();
+                    logger.info(`[Market Analyst - Ingestion] Batch committed. Processed ${batchCount} records. Total processed: ${recordsProcessed} of ${totalRecords}.`);
+                }
+                
+                offset += limit; // Move to the next offset for the next API call
+            } // End while loop
+
+        } catch (error) {
+            logger.error(`[CRITICAL Market Analyst - Ingestion Error] Failed to complete OGD API ingestion for ${todayStrForAPI}:`, error, { structuredData: true });
         }
-        logger.info(`[Market Analyst - Ingestion] Kaggle CSV data ingestion completed. Total ingested: ${ingestedCount}, Errors: ${errorCount}.`);
+        logger.info(`[Market Analyst - Ingestion] Daily OGD API data ingestion completed. Total records processed: ${recordsProcessed}.`);
     }
 );
 
 // =================================================================
-// HIGHLIGHTED CHANGE: New HTTP-triggered function for On-Demand Market Analysis (Function 4)
+// New HTTP-triggered function for On-Demand Market Analysis (Function 4)
+// (This function queries standardized Firestore data and uses Gemini 1.5 Pro)
 // =================================================================
 exports.getMarketAnalysis = onRequest(
     {
@@ -374,7 +359,7 @@ exports.getMarketAnalysis = onRequest(
         const stateName = request.query.stateName || request.body.stateName;
         const marketName = request.query.marketName || request.body.marketName; 
 
-        logger.info(`[Market Analysis - OnDemand] Received request for Crop: "${cropName}", State: "${stateName}", Market: "${marketName || 'any'}"`);
+        logger.info(`[Market Analysis - OnDemand] Received request for Crop: "${cropName}", State: "${stateName}", Market: "${marketName}"`);
 
         if (!cropName || !stateName || !marketName) {
             response.status(400).json({ error: "Missing 'cropName', 'stateName', or 'marketName' in request. All are now required for specific lookup." });
@@ -440,7 +425,6 @@ exports.getMarketAnalysis = onRequest(
             const thirtyDaysAgo = new Date(today); 
             thirtyDaysAgo.setDate(today.getDate() - 30); 
 
-            // HIGHLIGHTED CHANGE: Get district name from fetched data for prompt
             const districtNameForPrompt = allRelevantData.length > 0 ? allRelevantData[0].district_name : 'N/A';
 
             allRelevantData.forEach(item => {
