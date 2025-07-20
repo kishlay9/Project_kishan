@@ -184,40 +184,49 @@ function displayDiagnosisResults(data) {
 }
 
 // =================================================================
-// 7. TEXT-TO-SPEECH FUNCTIONALITY (UPGRADED)
+// 7. FUNCTION TO PLAY AUDIO FROM A URL
 // =================================================================
 
-function speakText(textToSpeak) {
-    if (!textToSpeak || typeof textToSpeak !== 'string') return;
-    
-    // Stop any previous speech before starting new speech
-    if (window.speechSynthesis && window.speechSynthesis.speaking) {
-        window.speechSynthesis.cancel();
+function speakAudioFromUrl(url) {
+    if (!url) {
+        console.error("No audio URL provided.");
+        return;
     }
 
-    speakButton.textContent = 'Speaking...';
-    speakButton.disabled = true;
+    const remedyAudio = document.getElementById('remedy-audio');
+    const speakButton = document.getElementById('speak-button');
 
-    if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = 'kn-IN'; // Set language to Kannada
-        
-        utterance.onend = () => {
-            speakButton.textContent = 'Listen to Summary';
-            speakButton.disabled = false;
-        };
-        
-        utterance.onerror = (event) => {
-            console.error('SpeechSynthesisUtterance.onerror', event);
-            alert('Sorry, an error occurred during speech playback.');
-            speakButton.textContent = 'Listen to Summary';
-            speakButton.disabled = false;
-        };
+    // Set the source of the audio player to the URL from Firebase
+    remedyAudio.src = url;
 
-        window.speechSynthesis.speak(utterance);
-    } else {
-        alert("Sorry, your browser doesn't support Text-to-Speech.");
+    // --- Manage Button State ---
+    remedyAudio.onplay = () => {
+        speakButton.textContent = 'Playing...';
+        speakButton.disabled = true;
+    };
+
+    remedyAudio.onended = () => {
         speakButton.textContent = 'Listen to Summary';
         speakButton.disabled = false;
+    };
+
+    remedyAudio.onerror = (e) => {
+        console.error("Error playing audio from URL:", url, e);
+        speakButton.textContent = 'Audio Error';
+        speakButton.disabled = false; 
+    };
+
+    // --- Play the audio ---
+    const playPromise = remedyAudio.play();
+
+    // In modern browsers, play() returns a promise.
+    // This helps catch errors if the browser blocks autoplay.
+    if (playPromise !== undefined) {
+        playPromise.catch(error => {
+            console.error("Audio playback failed:", error);
+            // Autoplay was likely prevented. The user may need to click the button.
+            speakButton.textContent = 'Listen to Summary';
+            speakButton.disabled = false;
+        });
     }
 }

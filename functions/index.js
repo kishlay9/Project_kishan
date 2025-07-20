@@ -130,37 +130,32 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
             logger.info(`[TTS] Speech synthesis successful. Audio content length: ${ttsResponse.audioContent.length} bytes.`);
 
 
-            // --- More robust audioFileName creation (already there, just part of the final structure) ---
-            let baseFileName = "analysis-output";
-            if (filePath && typeof filePath === 'string') {
-                const parts = filePath.split('/');
-                const lastPart = parts[parts.length - 1];
-                if (lastPart) {
-                    baseFileName = lastPart.replace(/\.[^/.]+$/, "");
-                }
-            } else {
-                logger.warn(`[AudioFile] filePath was not a valid string: ${filePath}. Using default name.`);
-            }
-            const audioFileName = `${baseFileName}.mp3`;
+            // --- THIS IS THE NEW, CORRECTED BLOCK ---
 
-            logger.info(`[AudioFile] Attempting to save audio to: audio-output/${audioFileName}`);
+        // 1. Get the full filename from the path. This is what the frontend uses as the document ID.
+        const diagnosisId = filePath.split('/').pop();
+        if (!diagnosisId) {
+            logger.error(`Could not extract filename (diagnosisId) from path: ${filePath}. Aborting.`);
+            return;
+        }
 
-            const audioFile = admin.storage().bucket(bucketName).file(`audio-output/${audioFileName}`);
-            await audioFile.save(ttsResponse.audioContent);
-            await audioFile.makePublic();
-            const audioUrl = audioFile.publicUrl();
-            logger.info(`[AudioFile] Audio file created: ${audioUrl}`);
+        // 2. Create a base name for the AUDIO file by removing the original image extension.
+        const baseFileNameForAudio = diagnosisId.replace(/\.[^/.]+$/, "");
+        const audioFileName = `${baseFileNameForAudio}.mp3`;
 
-            diagnosisData.audio_remedy_url = audioUrl;
-            
-            // --- More robust diagnosisId creation and Firestore path (already there, just part of the final structure) ---
-            let diagnosisId = baseFileName;
-            if (!diagnosisId || diagnosisId.trim() === '') {
-                diagnosisId = `diagnosis-${new Date().getTime()}`;
-                logger.warn(`[Firestore] diagnosisId was empty/invalid. Using timestamp as fallback: ${diagnosisId}`);
-            }
-            await firestore.collection("diagnoses").doc(diagnosisId).set(diagnosisData); 
-            logger.info(`[Firestore] Successfully wrote complete diagnosis with audio to Firestore (ID: ${diagnosisId}).`);
+        logger.info(`[AudioFile] Attempting to save audio to: audio-output/${audioFileName}`);
+        const audioFile = admin.storage().bucket(bucketName).file(`audio-output/${audioFileName}`);
+        await audioFile.save(ttsResponse.audioContent);
+        await audioFile.makePublic();
+        const audioUrl = audioFile.publicUrl();
+        logger.info(`[AudioFile] Audio file created: ${audioUrl}`);
+
+        // 3. Add the audio URL to the data payload.
+        diagnosisData.audio_remedy_url = audioUrl;
+
+        // 4. Use the CORRECT diagnosisId (with the file extension) to write to Firestore.
+        await firestore.collection("diagnoses").doc(diagnosisId).set(diagnosisData);
+        logger.info(`[Firestore] Successfully wrote complete diagnosis with audio to Firestore (ID: ${diagnosisId}).`);
         } catch (error) {
             logger.error(`!!! CRITICAL ERROR in analysis for file "${filePath}":`, error, { structuredData: true });
         }
