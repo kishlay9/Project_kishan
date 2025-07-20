@@ -175,7 +175,7 @@ exports.proactiveMarketAnalyst = onSchedule(
         timeZone: "Asia/Kolkata",
         region: LOCATION,
         timeoutSeconds: 3600, // 1 hour for potentially large ingestion from API
-        memory: "1GiB"       // 1 GB should be sufficient for API response and batching
+        memory: "4GiB"       // 1 GB should be sufficient for API response and batching
     },
     async (event) => {
         // --- HIGHLIGHTED CHANGE: Move config loading inside the function ---
@@ -355,43 +355,58 @@ exports.getMarketAnalysis = onRequest(
             return;
         }
 
-        const cropName = request.query.cropName || request.body.cropName;
-        const stateName = request.query.stateName || request.body.stateName;
-        const marketName = request.query.marketName || request.body.marketName; 
+        try { // Start of the main try block
+            // --- HIGHLIGHTED CHANGE: Access token needs to be fetched inside this function as well ---
+            let accessToken;
+            try {
+                const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
+                if (!tokenResponse.ok) {
+                    throw new Error("Failed to fetch access token");
+                }
+                const tokenData = await tokenResponse.json();
+                accessToken = tokenData.access_token;
+            } catch (error) {
+                logger.error("[Auth Error] Could not fetch access token for Gemini API call.", error);
+                response.status(500).json({ error: "Internal server error: could not authenticate." });
+                return;
+            }
 
-        logger.info(`[Market Analysis - OnDemand] Received request for Crop: "${cropName}", State: "${stateName}", Market: "${marketName}"`);
+            const cropName = request.query.cropName || request.body.cropName;
+            const stateName = request.query.stateName || request.body.stateName;
+            const marketName = request.query.marketName || request.body.marketName; 
 
-        if (!cropName || !stateName || !marketName) {
-            response.status(400).json({ error: "Missing 'cropName', 'stateName', or 'marketName' in request. All are now required for specific lookup." });
-            return;
-        }
+            logger.info(`[Market Analysis - OnDemand] Received request for Crop: "${cropName}", State: "${stateName}", Market: "${marketName}"`);
 
-        const cropSlug = String(cropName).toLowerCase().replace(/\s+/g, '-');
-        const stateSlug = String(stateName).toLowerCase().replace(/\s+/g, '-');
-        const marketSlug = String(marketName).toLowerCase().replace(/\s+/g, '-');
-        
-        const firestoreDocId = `${cropSlug}_${marketSlug}_${stateSlug}`;
+            if (!cropName || !stateName || !marketName) {
+                response.status(400).json({ error: "Missing 'cropName', 'stateName', or 'marketName' in request. All are now required for specific lookup." });
+                return;
+            }
 
-        const today = new Date();
-        const todayStr = today.toISOString().slice(0, 10);
-        
-        const ninetyDaysAgo = new Date(today);
-        ninetyDaysAgo.setDate(today.getDate() - 90); 
-        const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().slice(0, 10);
+            const cropSlug = String(cropName).toLowerCase().replace(/\s+/g, '-');
+            const stateSlug = String(stateName).toLowerCase().replace(/\s+/g, '-');
+            const marketSlug = String(marketName).toLowerCase().replace(/\s+/g, '-');
+            
+            const firestoreDocId = `${cropSlug}_${marketSlug}_${stateSlug}`;
 
-        const lastYearStart = new Date(today);
-        lastYearStart.setFullYear(today.getFullYear() - 1);
-        lastYearStart.setDate(today.getDate() - 90); 
-        const lastYearStartStr = lastYearStart.toISOString().slice(0, 10);
+            const today = new Date();
+            const todayStr = today.toISOString().slice(0, 10);
+            
+            const ninetyDaysAgo = new Date(today);
+            ninetyDaysAgo.setDate(today.getDate() - 90); 
+            const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().slice(0, 10);
 
-        const lastYearEnd = new Date(today);
-        lastYearEnd.setFullYear(today.getFullYear() - 1);
-        const lastYearEndStr = lastYearEnd.toISOString().slice(0, 10);
+            const lastYearStart = new Date(today);
+            lastYearStart.setFullYear(today.getFullYear() - 1);
+            lastYearStart.setDate(today.getDate() - 90); 
+            const lastYearStartStr = lastYearStart.toISOString().slice(0, 10);
 
-        let allRelevantData = []; 
-        let dataCompleteness = "Complete"; 
+            const lastYearEnd = new Date(today);
+            lastYearEnd.setFullYear(today.getFullYear() - 1);
+            const lastYearEndStr = lastYearEnd.toISOString().slice(0, 10);
 
-        try {
+            let allRelevantData = []; 
+            let dataCompleteness = "Complete"; 
+
             const historicalPricesRef = firestore.collection("market_prices").doc(firestoreDocId).collection("historical_prices");
             
             const currentPeriodSnapshot = await historicalPricesRef
@@ -514,7 +529,7 @@ Respond ONLY with a single, valid JSON object with the exact structure and keys 
                 response.status(500).json({ error: "Could not generate market analysis from AI." });
                 return;
             }
-            const analysisData = JSON.parse(modelResponseText.replace(/^```json\s*|```\s*$/g, ""));
+            const analysisData = JSON.parse(modelResponseText.replace(/^```json\s*|```s*$/g, ""));
             logger.info("Market Analysis received:", analysisData);
             
             response.status(200).json(analysisData);
