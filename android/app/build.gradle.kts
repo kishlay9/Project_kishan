@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.projectkisan.androidapp"
-    compileSdk = 34
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.projectkisan.androidapp"
         minSdk = 24
@@ -41,7 +41,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
+    implementation("androidx.media3:media3-exoplayer:1.3.1")
     // Compose Dependencies
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
