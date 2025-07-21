@@ -10,3 +10,4 @@ val TextPrimaryLight = Color(0xFF2C3E50)
 val TextMutedLight = Color(0xFF7F8C8D)
 val OrangeAccent = Color(0xFFE67E22)
 val White = Color(0xFFFFFFFF)
+val ButtonGreenLight = Color(0xFFF1FAF5) // A very light, subtle green

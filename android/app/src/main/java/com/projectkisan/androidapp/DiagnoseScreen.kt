@@ -1,7 +1,11 @@
 package com.projectkisan.androidapp
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -12,16 +16,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
@@ -29,32 +37,50 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 import com.projectkisan.androidapp.ui.theme.*
+import java.io.File
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiagnoseScreen() {
-    // State management for image URI, loading status, and result
+    val context = LocalContext.current
     var diagnosisResult by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     var loadingMessage by remember { mutableStateOf("") }
+    var cameraImageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     // Launcher for picking an image from the gallery
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            diagnosisResult = null // Clear previous result on new selection
-            handleImageUpload(
-                imageUri = it,
-                onLoading = { loading, message ->
-                    isLoading = loading
-                    loadingMessage = message
-                },
-                onResult = { result ->
-                    diagnosisResult = result
-                }
-            )
+            startDiagnosis(it, onLoading = { l, m -> isLoading = l; loadingMessage = m }, onResult = { r -> diagnosisResult = r })
+        }
+    }
+
+    // Launcher for taking a photo with the camera
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            cameraImageUri?.let {
+                startDiagnosis(it, onLoading = { l, m -> isLoading = l; loadingMessage = m }, onResult = { r -> diagnosisResult = r })
+            }
+        }
+    }
+
+    // Launcher for asking for Camera Permission
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission Granted: Launch the camera
+            val uri = createImageUri(context)
+            cameraImageUri = uri
+            cameraLauncher.launch(uri)
+        } else {
+            // Permission Denied: Show a message to the user
+            Toast.makeText(context, "Camera permission is required to take photos.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -106,7 +132,16 @@ fun DiagnoseScreen() {
                         imagePickerLauncher.launch("image/*")
                     }
                     ActionButton(iconRes = R.drawable.ic_action_camera, text = "Take Photo", modifier = Modifier.weight(1f)) {
-                        // TODO: Implement camera logic
+                        when (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)) {
+                            PackageManager.PERMISSION_GRANTED -> {
+                                val uri = createImageUri(context)
+                                cameraImageUri = uri
+                                cameraLauncher.launch(uri)
+                            }
+                            else -> {
+                                permissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        }
                     }
                 }
             }
@@ -117,12 +152,10 @@ fun DiagnoseScreen() {
                     CircularProgressIndicator(modifier = Modifier.padding(vertical = 24.dp))
                     Text(loadingMessage, modifier = Modifier.padding(top = 8.dp))
                 }
-
                 if (diagnosisResult != null && !isLoading) {
                     ResultCard(resultText = diagnosisResult!!)
                 }
             }
-
 
             // Recent Diagnoses Section
             item {
@@ -139,16 +172,38 @@ fun DiagnoseScreen() {
     }
 }
 
-// --- Reusable UI Components for this Screen ---
+// --- Helper Functions ---
+
+private fun startDiagnosis(uri: Uri, onLoading: (Boolean, String) -> Unit, onResult: (String?) -> Unit) {
+    onResult(null) // Clear previous result
+    handleImageUpload(
+        imageUri = uri,
+        onLoading = onLoading,
+        onResult = onResult
+    )
+}
+
+private fun createImageUri(context: Context): Uri {
+    val imageFile = File(context.cacheDir, "images/${UUID.randomUUID()}.jpg")
+    imageFile.parentFile?.mkdirs()
+    return FileProvider.getUriForFile(
+        context,
+        "com.projectkisan.androidapp.fileprovider", // MUST match the authorities in your manifest
+        imageFile
+    )
+}
+
+// --- Reusable UI Components ---
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBar() {
     CenterAlignedTopAppBar(
+        modifier = Modifier.padding(vertical = 8.dp),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_logo), // Make sure ic_logo is in drawables
+                    painter = painterResource(id = R.drawable.ic_logo),
                     contentDescription = "Project Kisan Logo",
                     modifier = Modifier.size(32.dp).clip(CircleShape)
                 )
@@ -157,9 +212,9 @@ fun TopBar() {
             }
         },
         actions = {
-            IconButton(onClick = { /*TODO*/ }) { Icon(painterResource(id = R.drawable.ic_top_home), contentDescription = "Home") }
-            IconButton(onClick = { /*TODO*/ }) { Icon(painterResource(id = R.drawable.ic_top_contact), contentDescription = "Contact") }
-            IconButton(onClick = { /*TODO*/ }) { Icon(painterResource(id = R.drawable.ic_top_sun), contentDescription = "Theme") }
+            IconButton(onClick = { /*TODO*/ }) { Icon(painterResource(id = R.drawable.ic_top_home), contentDescription = "Home", tint = TextPrimaryLight) }
+            IconButton(onClick = { /*TODO*/ }) { Icon(painterResource(id = R.drawable.ic_top_contact), contentDescription = "Contact", tint = TextPrimaryLight) }
+            IconButton(onClick = { /*TODO*/ }) { Icon(painterResource(id = R.drawable.ic_top_sun), contentDescription = "Theme", tint = TextPrimaryLight) }
             IconButton(onClick = { /*TODO*/ }) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_top_profile),
@@ -182,7 +237,9 @@ fun DiagnosisFlowStep(iconRes: Int, title: String, subtitle: String) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
+        modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
     ) {
         Column(
             modifier = Modifier
@@ -192,7 +249,7 @@ fun DiagnosisFlowStep(iconRes: Int, title: String, subtitle: String) {
         ) {
             Icon(painterResource(id = iconRes), contentDescription = null, modifier = Modifier.size(32.dp), tint = TextMutedLight)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = TextPrimaryLight)
             Text(subtitle, color = TextMutedLight, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
         }
     }
@@ -209,7 +266,7 @@ fun ActionButton(iconRes: Int, text: String, modifier: Modifier = Modifier, onCl
         onClick = onClick,
         modifier = modifier.height(120.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = ButtonDefaults.buttonColors(containerColor = ButtonGreenLight),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -230,7 +287,10 @@ fun ResultCard(resultText: String) {
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp).shadow(elevation = 2.dp, shape = RoundedCornerShape(12.dp))
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp)
+            .shadow(elevation = 2.dp, shape = RoundedCornerShape(12.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Diagnosis Result", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -240,7 +300,6 @@ fun ResultCard(resultText: String) {
     }
 }
 
-
 @Composable
 fun RecentDiagnosisCard() {
     Card(
@@ -249,9 +308,14 @@ fun RecentDiagnosisCard() {
         modifier = Modifier.shadow(elevation = 2.dp, shape = RoundedCornerShape(12.dp))
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            Box(modifier = Modifier.width(6.dp).fillMaxHeight().background(OrangeAccent))
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .height(70.dp) // Give it a fixed height to match text
+                    .background(OrangeAccent)
+            )
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Tomato Plant: Early Blight (High Confidence)", fontWeight = FontWeight.Bold)
+                Text("Tomato Plant: Early Blight (High Confidence)", fontWeight = FontWeight.Bold, color = TextPrimaryLight)
                 Text("Viewed 2 days ago", style = MaterialTheme.typography.bodySmall, color = TextMutedLight)
             }
         }
@@ -263,7 +327,7 @@ fun RecentDiagnosisCard() {
 private fun handleImageUpload(
     imageUri: Uri,
     onLoading: (Boolean, String) -> Unit,
-    onResult: (String) -> Unit
+    onResult: (String?) -> Unit
 ) {
     val storage = Firebase.storage
     val firestore = Firebase.firestore
