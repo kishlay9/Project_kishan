@@ -941,3 +941,145 @@ async function processSingleFarmDailyTasks(farmId, farmData) {
     }
 }
 
+// =================================================================
+// FUNCTION 8: GET WEATHER AND AQI (with Reverse Geocoding & Spraying Analysis)
+// =================================================================
+exports.getWeatherAndAqi = onRequest(
+    {
+        region: LOCATION,
+        timeoutSeconds: 60,
+        memory: "1GiB",
+        // --- HIGHLIGHTED CHANGE: Add secrets for BOTH weather and air quality API keys ---
+        // For simplicity, we'll assume one key has access to Weather, AQI, and Geocoding APIs.
+        // You can create separate secrets if you use different keys.
+        secrets: ["GOOGLE_MAPS_API_KEY"] 
+    },
+    async (request, response) => {
+        // --- CORS handling for frontend requests ---
+        response.set('Access-Control-Allow-Origin', '*'); 
+        if (request.method === 'OPTIONS') {
+            response.set('Access-Control-Allow-Methods', 'GET, POST');
+            response.set('Access-Control-Allow-Headers', 'Content-Type');
+            response.status(204).send('');
+            return;
+        }
+
+        const lat = request.query.lat || request.body.lat;
+        const lon = request.query.lon || request.body.lon;
+
+        functions.logger.info(`[Weather & AQI] Received request for Lat: "${lat}", Lon: "${lon}"`);
+
+        if (!lat || !lon) {
+            response.status(400).json({ error: "Missing 'lat' or 'lon' in request." });
+            return;
+        }
+
+        const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+        if (!GOOGLE_MAPS_API_KEY) {
+            functions.logger.error("[Weather & AQI] GOOGLE_MAPS_API_KEY is not available in environment.");
+            response.status(500).json({ error: "Internal server configuration error." });
+            return;
+        }
+
+        try {
+            // --- 1. Define API Call Promises for Parallel Execution ---
+            const weatherApiUrl = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${GOOGLE_MAPS_API_KEY}&location.latitude=${lat}&location.longitude=${lon}&days=1`;
+            const airQualityApiUrl = `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${GOOGLE_MAPS_API_KEY}`;
+            const geocodingApiUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${GOOGLE_MAPS_API_KEY}`;
+
+            const weatherPromise = axios.get(weatherApiUrl);
+            const airQualityPromise = axios.post(airQualityApiUrl, {
+                location: {
+                    latitude: parseFloat(lat),
+                    longitude: parseFloat(lon)
+                }
+            });
+            const geocodingPromise = axios.get(geocodingApiUrl);
+
+            // --- 2. Execute API Calls in Parallel ---
+            const [weatherResponse, airQualityResponse, geocodingResponse] = await Promise.all([weatherPromise, airQualityPromise, geocodingPromise]);
+
+            const weatherData = weatherResponse.data.forecastDays[0];
+            const aqiData = airQualityResponse.data;
+            const cityName = parseCityFromGeocodingResponse(geocodingResponse.data);
+
+            // --- 3. Prepare Data for Gemini (Spraying Conditions Analysis) ---
+            const todayWeatherForAI = {
+                windSpeed: weatherData.daytimeForecast?.wind?.speed?.value,
+                windUnit: weatherData.daytimeForecast?.wind?.speed?.unit,
+                precipitationProbability: weatherData.daytimeForecast?.precipitation?.probability?.percent,
+                humidity: weatherData.daytimeForecast?.relativeHumidity
+            };
+
+            const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+            const sprayingPrompt = `You are an agricultural advisor. Based on the following weather data, determine if conditions are 'Favourable' or 'Unfavourable' for spraying pesticides. High wind speed (over 15 km/h) is unfavourable. A high probability of rain (over 40%) is unfavourable.
+            
+            Weather Data: ${JSON.stringify(todayWeatherForAI)}
+
+            Respond ONLY with a valid JSON object with two keys: "condition" (the single word verdict, either "Favourable" or "Unfavourable") and "reason" (a very brief explanation, like "High winds" or "Clear and calm").`;
+
+            const geminiResp = await generativeModel.generateContent(sprayingPrompt);
+            const geminiContent = geminiResp.response.candidates[0].content.parts[0].text;
+            
+            let sprayingConditions = { condition: "Unknown", reason: "AI analysis failed." }; // Default value
+            try {
+                const firstBrace = geminiContent.indexOf('{');
+                const lastBrace = geminiContent.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1) {
+                    const jsonString = geminiContent.substring(firstBrace, lastBrace + 1);
+                    sprayingConditions = JSON.parse(jsonString);
+                }
+            } catch (e) {
+                functions.logger.error("[Weather & AQI] Failed to parse Gemini response for spraying conditions.", e);
+            }
+
+
+            // --- 4. Assemble the Final JSON Response for the Frontend ---
+            const finalResponse = {
+                location: {
+                    city: cityName, // From Geocoding API
+                    date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) // e.g., "22 Jul"
+                },
+                weather: {
+                    currentTemp: weatherData.daytimeForecast?.temperature?.degrees,
+                    condition: weatherData.daytimeForecast?.weatherCondition?.description?.text,
+                    minTemp: weatherData.minTemperature?.degrees,
+                    maxTemp: weatherData.maxTemperature?.degrees,
+                    iconUri: weatherData.daytimeForecast?.weatherCondition?.iconBaseUri
+                },
+                aqi: {
+                    value: aqiData.indexes[0]?.aqi,
+                    category: aqiData.indexes[0]?.category,
+                    dominantPollutant: aqiData.indexes[0]?.dominantPollutant
+                },
+                sprayingConditions: sprayingConditions
+            };
+
+            response.status(200).json(finalResponse);
+
+        } catch (error) {
+            if (error.response) {
+                functions.logger.error(`[Weather & AQI] API Error: Status ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`, error);
+            } else {
+                functions.logger.error(`[Weather & AQI] Failed to process request. Error:`, error.message, { structuredData: true });
+            }
+            response.status(500).json({ error: "Failed to fetch weather and AQI data." });
+        }
+    }
+);
+
+// --- HELPER FUNCTION FOR GEOCODING (add this at the end of the file) ---
+function parseCityFromGeocodingResponse(geocodingData) {
+    if (!geocodingData || !geocodingData.results || geocodingData.results.length === 0) {
+        return "Unknown Location";
+    }
+
+    // Find the component that represents the city/town (locality) or district
+    const firstResult = geocodingData.results[0];
+    const localityComponent = firstResult.address_components.find(comp => 
+        comp.types.includes("locality") || 
+        comp.types.includes("administrative_area_level_2") // Fallback for district
+    );
+    
+    return localityComponent ? localityComponent.long_name : "Unknown Location";
+}
