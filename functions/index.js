@@ -443,8 +443,9 @@ async function analyzeSingleFarmForRisks(farmData, farmId) {
 }
 
 
+
 // =================================================================
-// New HTTP-triggered function for On-Demand Market Analysis (Function 5)
+// New HTTP-triggered function for On-Demand Market Analysis (Function 4)
 // =================================================================
 exports.getMarketAnalysis = onRequest(
     {
@@ -461,6 +462,10 @@ exports.getMarketAnalysis = onRequest(
             return;
         }
 
+        let cropName = request.query.cropName || request.body.cropName;
+        let stateName = request.query.stateName || request.body.stateName;
+        let marketName = request.query.marketName || request.body.marketName; 
+
         try { 
             let accessToken;
             try {
@@ -475,10 +480,6 @@ exports.getMarketAnalysis = onRequest(
                 response.status(500).json({ error: "Internal server error: could not authenticate." });
                 return;
             }
-
-            const cropName = request.query.cropName || request.body.cropName;
-            const stateName = request.query.stateName || request.body.stateName;
-            const marketName = request.query.marketName || request.body.marketName; 
 
             functions.logger.info(`[Market Analysis - OnDemand] Received request for Crop: "${cropName}", State: "${stateName}", Market: "${marketName}"`);
 
@@ -628,20 +629,57 @@ Respond ONLY with a single, valid JSON object with the exact structure and keys 
             const geminiResponseData = await geminiResponse.json();
             functions.logger.info("Full Gemini Analysis Response:", JSON.stringify(geminiResponseData, null, 2));
 
+            // --- HIGHLIGHTED FIX: Corrected syntax and added robust JSON parsing logic ---
             const modelResponseText = geminiResponseData?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!modelResponseText) { 
                 functions.logger.error("[Gemini Error] Did not receive valid analysis from AI.", { response: geminiResponseData });
                 response.status(500).json({ error: "Could not generate market analysis from AI." });
                 return;
             }
-            const analysisData = JSON.parse(modelResponseText.replace(/^```json\s*|```s*$/g, ""));
-            functions.logger.info("Market Analysis received:", analysisData);
+
+            let jsonString = modelResponseText;
             
-            response.status(200).json(analysisData);
+            // Step 1: Try to extract content from a markdown block like ```json ... ```
+            const jsonMatch = modelResponseText.match(/```json\s*([\s\S]*?)\s*```/);
+            if (jsonMatch && jsonMatch[1]) {
+                // If found, use the captured group, which is the clean JSON content
+                jsonString = jsonMatch[1];
+            } else {
+                // Fallback if no markdown block is found
+                jsonString = modelResponseText;
+            }
+
+            // Step 2: For extra safety, find the first '{' and last '}' to trim any potential extra text
+            const firstBrace = jsonString.indexOf('{');
+            const lastBrace = jsonString.lastIndexOf('}');
+            
+            if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+                functions.logger.error("[JSON Parse Error] Could not find a valid JSON object within Gemini's response.", { rawResponse: modelResponseText });
+                response.status(500).json({ error: "AI response did not contain a valid JSON object." });
+                return;
+            }
+            
+            // Step 3: Get the final, clean JSON string and trim it
+            const finalJsonString = jsonString.substring(firstBrace, lastBrace + 1).trim();
+
+            try {
+                // Step 4: Parse the cleaned string
+                const analysisData = JSON.parse(finalJsonString);
+                functions.logger.info("Market Analysis received:", analysisData);
+                response.status(200).json(analysisData);
+                return; // Explicitly return after sending successful response
+            } catch (parseError) {
+                functions.logger.error("[JSON Parse Error] Failed to parse Gemini's response as JSON after cleaning.", { rawResponse: modelResponseText, cleanedString: finalJsonString, error: parseError });
+                response.status(500).json({ error: "Failed to parse AI response.", details: parseError.message });
+                return; // Explicitly return after sending error response
+            }
 
         } catch (error) {
             functions.logger.error(`[CRITICAL Market Analysis - OnDemand] Error processing request for ${cropName} in ${marketName} (${stateName}):`, error, { structuredData: true });
-            response.status(500).json({ error: "Failed to generate market analysis.", details: error.message });
+            // Check if headers have already been sent before sending another response
+            if (!response.headersSent) {
+                response.status(500).json({ error: "Failed to generate market analysis.", details: error.message });
+            }
         }
     }
 );
