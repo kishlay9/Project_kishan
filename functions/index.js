@@ -808,7 +808,7 @@ exports.generateMasterPlan = onCall(
 );
 
 // =================================================================
-// FUNCTION 7: YIELD MAXIMIZER - GENERATE DAILY TASKS (SCHEDULED)
+// FUNCTION 7: YIELD MAXIMIZER - GENERATE DAILY TASKS (CORRECTED)
 // =================================================================
 exports.generateDailyTasks = onSchedule(
     {
@@ -817,7 +817,9 @@ exports.generateDailyTasks = onSchedule(
         region: LOCATION,
         timeoutSeconds: 540,
         memory: "1GiB",
-        concurrency: 1 
+        concurrency: 1,
+        // --- HIGHLIGHTED CHANGE: Add the secret for the Weather API Key ---
+        secrets: ["WEATHER_API_KEY"] 
     },
     async (event) => {
         functions.logger.info("[Daily Tasks] Starting daily task generation for all active farms.");
@@ -838,10 +840,17 @@ exports.generateDailyTasks = onSchedule(
     }
 );
 
-// --- HELPER FUNCTION: Contains the core logic for processing one farm's daily tasks ---
+// --- HELPER FUNCTION (CORRECTED) ---
+// --- HELPER FUNCTION (CORRECTED) ---
 async function processSingleFarmDailyTasks(farmId, farmData) {
     const { location, activePlan } = farmData;
     const { crop, sowingDate, masterPlan } = activePlan;
+
+    const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
+    if (!WEATHER_API_KEY) {
+        functions.logger.error(`[Daily Tasks] WEATHER_API_KEY secret is not configured. Skipping farm ${farmId}.`);
+        return;
+    }
 
     try {
         // A. Calculate the Crop's Age (in weeks)
@@ -851,24 +860,24 @@ async function processSingleFarmDailyTasks(farmId, farmData) {
         const daysSinceSowing = Math.floor(timeDifference / (1000 * 3600 * 24));
         const currentWeek = Math.floor(daysSinceSowing / 7) + 1;
 
-        // B. Get the Current Week's Goals from the Master Plan
+        // B. Get the Current Week's Goals
         const currentWeekPlan = masterPlan.find(week => week.weekNumber === currentWeek);
         if (!currentWeekPlan) {
-            functions.logger.info(`[Daily Tasks] Farm ${farmId} is outside its plan's schedule (Day ${daysSinceSowing}, Week ${currentWeek}). No tasks generated.`);
+            functions.logger.info(`[Daily Tasks] Farm ${farmId} is outside its plan's schedule. No tasks generated.`);
             return;
         }
 
         // C. Get Hyperlocal Context (Weather Forecast)
-        const tokenResponse = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', { headers: { 'Metadata-Flavor': 'Google' } });
-        if (!tokenResponse.ok) throw new Error('Failed to get auth token.');
-        const { access_token: accessToken } = await tokenResponse.json();
+        const weatherApiUrl = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${WEATHER_API_KEY}&location.latitude=${location.latitude}&location.longitude=${location.longitude}&days=2`;
+        const weatherResponse = await axios.get(weatherApiUrl);
+        const weatherForecast = weatherResponse.data.forecastDays;
 
-        const weatherApiUrl = `https://weather.googleapis.com/v1/forecast:getDaily?location.latitude=${location.latitude}&location.longitude=${location.longitude}&days=2`;
-        const weatherResponse = await axios.get(weatherApiUrl, { headers: { 'Authorization': `Bearer ${accessToken}` } });
-        const weatherForecast = weatherResponse.data.dailyForecasts;
+        if (!weatherForecast || !Array.isArray(weatherForecast) || weatherForecast.length < 2) {
+            throw new Error("Received invalid or insufficient (less than 2 days) weather forecast data.");
+        }
         
-        // D. Consult the AI Expert (Gemini) to create the daily to-do list
-        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+        // D. Consult the AI Expert
+        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" }); 
         const prompt = `
             You are a hyper-practical AI Agronomist providing a daily to-do list for an Indian farmer. Be extremely direct, simple, and actionable.
             
@@ -876,35 +885,50 @@ async function processSingleFarmDailyTasks(farmId, farmData) {
             - Farmer's Crop: ${crop}
             - Current Week of Cultivation: ${currentWeek}
             - This Week's Overall Goal (from Master Plan): "${currentWeekPlan.activities}"
-            - Today's Weather Forecast: "Max Temp: ${weatherForecast[0].temperatureMax}°C, Min Temp: ${weatherForecast[0].temperatureMin}°C, Humidity: ${weatherForecast[0].relativeHumidity?.average}%, Precipitation: ${weatherForecast[0].precipitation?.total || 0}mm"
-            - Tomorrow's Weather Forecast: "Max Temp: ${weatherForecast[1].temperatureMax}°C, Min Temp: ${weatherForecast[1].temperatureMin}°C, Humidity: ${weatherForecast[1].relativeHumidity?.average}%, Precipitation: ${weatherForecast[1].precipitation?.total || 0}mm"
+            - Today's Weather Forecast: "Max Temp: ${(weatherForecast[0]?.maxTemperature?.degrees || 'N/A')}°C, Min Temp: ${(weatherForecast[0]?.minTemperature?.degrees || 'N/A')}°C, Humidity: ${(weatherForecast[0]?.daytimeForecast?.relativeHumidity || 'N/A')}%, Precipitation: ${(weatherForecast[0]?.daytimeForecast?.precipitation?.qpf?.quantity || 0)}mm"
+            - Tomorrow's Weather Forecast: "Max Temp: ${(weatherForecast[1]?.maxTemperature?.degrees || 'N/A')}°C, Min Temp: ${(weatherForecast[1]?.minTemperature?.degrees || 'N/A')}°C, Humidity: ${(weatherForecast[1]?.daytimeForecast?.relativeHumidity || 'N/A')}%, Precipitation: ${(weatherForecast[1]?.daytimeForecast?.precipitation?.qpf?.quantity || 0)}mm"
 
             **Task:**
-            Based on ALL the context above, generate a prioritized checklist of 2-4 tasks for the farmer to complete TODAY. Adapt the master plan's goals to the specific daily weather. Your advice should be proactive. For example, if fertilization is planned this week and heavy rain is forecast for tomorrow, advise fertilizing today. Your tone should be encouraging and clear.
+            Based on ALL the context above, generate a prioritized checklist of 2-4 tasks for the farmer to complete TODAY. Adapt the master plan's goals to the specific daily weather. Your advice should be proactive.
 
             Respond ONLY with a valid JSON object with a single key "daily_tasks". The value should be an array of strings. Each string is a simple, actionable task.
-
-            **Example Response:**
-            {
-              "daily_tasks": [
-                "Weather Alert: Heavy rain is forecast for tomorrow. Apply fertilizer today before the rain to prevent it from washing away.",
-                "Inspect the underside of 10-1is 5 leaves for any small insects, as the warm weather is favorable for pests.",
-                "Irrigate the field for 20 minutes this evening. No rain is expected today, and the soil needs moisture.",
-                "Gently remove any weeds you see growing near the base of the plants."
-              ]
-            }
         `;
 
         const resp = await generativeModel.generateContent(prompt);
+        
+        if (!resp || !resp.response || !resp.response.candidates || !resp.response.candidates[0] || 
+            !resp.response.candidates[0].content || !resp.response.candidates[0].content.parts || 
+            !resp.response.candidates[0].content.parts[0] || typeof resp.response.candidates[0].content.parts[0].text !== 'string') {
+            throw new Error('Invalid Vertex AI response structure.');
+        }
         const content = resp.response.candidates[0].content.parts[0].text;
-        const tasksData = JSON.parse(content.replace(/```json/g, '').replace(/```/g, '').trim());
+
+        // --- HIGHLIGHTED FIX: Corrected and robust JSON parsing logic ---
+        let jsonString = content;
+        
+        // Step 1: Try to extract content from a markdown block like ```json ... ```
+        const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch && jsonMatch[1]) {
+            // If found, use the captured group, which is the clean JSON content
+            jsonString = jsonMatch[1];
+        }
+        
+        // Step 2: For extra safety, find the first '{' and last '}' to trim any potential extra text
+        const firstBrace = jsonString.indexOf('{');
+        const lastBrace = jsonString.lastIndexOf('}');
+        if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+            throw new Error("AI response did not contain a valid JSON object.");
+        }
+        const finalJsonString = jsonString.substring(firstBrace, lastBrace + 1).trim();
+        const tasksData = JSON.parse(finalJsonString);
+        // --- END HIGHLIGHTED FIX ---
 
         if (!tasksData.daily_tasks) {
             throw new Error("AI response did not contain a 'daily_tasks' array.");
         }
 
-        // E. Save the Daily Tasks to a sub-collection for offline sync
-        const todayStr = today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        // E. Save the Daily Tasks
+        const todayStr = today.toISOString().split('T')[0];
         await firestore.collection('userFarms').doc(farmId).collection('dailyTasks').doc(todayStr).set({
             tasks: tasksData.daily_tasks,
             timestamp: admin.firestore.FieldValue.serverTimestamp()
@@ -913,6 +937,7 @@ async function processSingleFarmDailyTasks(farmId, farmData) {
         functions.logger.info(`[Daily Tasks] Successfully generated ${tasksData.daily_tasks.length} tasks for farm ${farmId}.`);
 
     } catch (error) {
-        functions.logger.error(`[Daily Tasks] Failed to generate tasks for farm ${farmId}:`, error);
+        functions.logger.error(`[Daily Tasks] Failed to generate tasks for farm ${farmId}:`, { message: error.message, stack: error.stack, structuredData: true });
     }
 }
+
