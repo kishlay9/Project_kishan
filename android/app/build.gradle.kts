@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.projectkisan.androidapp"
-    compileSdk = 34
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.projectkisan.androidapp"
         minSdk = 24
