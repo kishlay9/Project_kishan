@@ -6,7 +6,9 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onRequest } = require("firebase-functions/v2/https");
 // --- HIGHLIGHTED FIX: Use the main functions object consistently ---
 const functions = require("firebase-functions");
-
+// At the top of your functions/index.js
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+// ... other imports ...
 // Common libraries
 const admin = require("firebase-admin");
 const fetch = require("node-fetch");
@@ -732,3 +734,185 @@ Respond ONLY with a single, valid JSON object with the exact structure and keys 
         }
     }
 );
+// =================================================================
+// FUNCTION 6: YIELD MAXIMIZER - GENERATE MASTER PLAN
+// =================================================================
+exports.generateMasterPlan = onCall(
+    {
+        region: LOCATION,
+        memory: "1GiB",
+        timeoutSeconds: 120, // Allow 2 minutes for AI to generate a detailed plan
+        concurrency: 5
+    },
+    async (request) => {
+        // 1. Validate Input from the Frontend
+        const { farmId, crop, variety, sowingDate, location } = request.data;
+
+        if (!farmId || !crop || !sowingDate || !location) {
+            throw new HttpsError('invalid-argument', 'Missing required data: farmId, crop, sowingDate, and location are all required.');
+        }
+        functions.logger.info(`[Master Plan] Received request to generate plan for farm: ${farmId}, crop: ${crop}`);
+
+        try {
+            // 2. The AI's Job: Create the comprehensive plan
+            const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+            const prompt = `
+                You are a master agronomist for the Indian subcontinent. Your task is to create a comprehensive, week-by-week cultivation plan.
+                
+                **Farmer's Details:**
+                - Crop: ${crop}
+                - Variety: ${variety || 'General'}
+                - Geographic Location (for climate context): Latitude ${location.latitude}, Longitude ${location.longitude}
+                - Sowing Date: ${sowingDate}
+
+                **Task:**
+                Generate a detailed master plan covering the entire lifecycle of the crop, from land preparation to final harvest. Structure the plan by week number (e.g., Week 1, Week 2). For each week, provide a concise summary of the key activities and goals for that stage. Cover these topics where relevant:
+                1. Land Preparation & Soil Health
+                2. Sowing/Transplanting Details
+                3. Irrigation Schedule & Water Needs
+                4. Nutrient Management (mentioning key nutrients like N, P, K for each stage)
+                5. Pest & Disease Scouting (preventative actions)
+                6. Weeding and other essential cultural practices
+                7. Special care during flowering, fruiting, or maturity stages.
+                8. Harvesting indicators and methods.
+
+                Respond ONLY with a single, valid JSON object. The top-level key must be "masterPlan". Its value must be an array of objects. Each object in the array represents one week and MUST have these two keys: "weekNumber" (an integer) and "activities" (a descriptive string summarizing the tasks for that week).
+            `;
+
+            const resp = await generativeModel.generateContent(prompt);
+            const content = resp.response.candidates[0].content.parts[0].text;
+            const planData = JSON.parse(content.replace(/```json/g, '').replace(/```/g, '').trim());
+
+            if (!planData.masterPlan || !Array.isArray(planData.masterPlan)) {
+                throw new Error("AI did not return the masterPlan in the expected format.");
+            }
+
+            // 3. Save the Master Plan to the farm's document in Firestore
+            await firestore.collection('userFarms').doc(farmId).set({
+                activePlan: {
+                    crop: crop,
+                    variety: variety || 'General',
+                    sowingDate: sowingDate,
+                    masterPlan: planData.masterPlan
+                }
+            }, { merge: true }); // Use merge:true to avoid overwriting other farm data
+
+            functions.logger.info(`[Master Plan] Successfully generated and saved a ${planData.masterPlan.length}-week plan for farm ${farmId}.`);
+            return { success: true, message: "Master plan created successfully." };
+
+        } catch (error) {
+            functions.logger.error(`[Master Plan] Failed to generate plan for farm ${farmId}:`, error);
+            throw new HttpsError('internal', 'An error occurred while generating the master crop plan.');
+        }
+    }
+);
+
+// =================================================================
+// FUNCTION 7: YIELD MAXIMIZER - GENERATE DAILY TASKS (SCHEDULED)
+// =================================================================
+exports.generateDailyTasks = onSchedule(
+    {
+        schedule: "every day 06:00",
+        timeZone: "Asia/Kolkata",
+        region: LOCATION,
+        timeoutSeconds: 540,
+        memory: "1GiB",
+        concurrency: 1 
+    },
+    async (event) => {
+        functions.logger.info("[Daily Tasks] Starting daily task generation for all active farms.");
+        const farmsWithActivePlans = await firestore.collection('userFarms').where('activePlan', '!=', null).get();
+
+        if (farmsWithActivePlans.empty) {
+            functions.logger.info("[Daily Tasks] No active farm plans found. Exiting.");
+            return null;
+        }
+
+        const taskPromises = farmsWithActivePlans.docs.map(doc => 
+            processSingleFarmDailyTasks(doc.id, doc.data())
+        );
+        
+        await Promise.all(taskPromises);
+        functions.logger.info(`[Daily Tasks] Finished task generation for ${farmsWithActivePlans.size} farms.`);
+        return null;
+    }
+);
+
+// --- HELPER FUNCTION: Contains the core logic for processing one farm's daily tasks ---
+async function processSingleFarmDailyTasks(farmId, farmData) {
+    const { location, activePlan } = farmData;
+    const { crop, sowingDate, masterPlan } = activePlan;
+
+    try {
+        // A. Calculate the Crop's Age (in weeks)
+        const today = new Date();
+        const sowDate = new Date(sowingDate);
+        const timeDifference = today.getTime() - sowDate.getTime();
+        const daysSinceSowing = Math.floor(timeDifference / (1000 * 3600 * 24));
+        const currentWeek = Math.floor(daysSinceSowing / 7) + 1;
+
+        // B. Get the Current Week's Goals from the Master Plan
+        const currentWeekPlan = masterPlan.find(week => week.weekNumber === currentWeek);
+        if (!currentWeekPlan) {
+            functions.logger.info(`[Daily Tasks] Farm ${farmId} is outside its plan's schedule (Day ${daysSinceSowing}, Week ${currentWeek}). No tasks generated.`);
+            return;
+        }
+
+        // C. Get Hyperlocal Context (Weather Forecast)
+        const tokenResponse = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', { headers: { 'Metadata-Flavor': 'Google' } });
+        if (!tokenResponse.ok) throw new Error('Failed to get auth token.');
+        const { access_token: accessToken } = await tokenResponse.json();
+
+        const weatherApiUrl = `https://weather.googleapis.com/v1/forecast:getDaily?location.latitude=${location.latitude}&location.longitude=${location.longitude}&days=2`;
+        const weatherResponse = await axios.get(weatherApiUrl, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+        const weatherForecast = weatherResponse.data.dailyForecasts;
+        
+        // D. Consult the AI Expert (Gemini) to create the daily to-do list
+        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+        const prompt = `
+            You are a hyper-practical AI Agronomist providing a daily to-do list for an Indian farmer. Be extremely direct, simple, and actionable.
+            
+            **Context:**
+            - Farmer's Crop: ${crop}
+            - Current Week of Cultivation: ${currentWeek}
+            - This Week's Overall Goal (from Master Plan): "${currentWeekPlan.activities}"
+            - Today's Weather Forecast: "Max Temp: ${weatherForecast[0].temperatureMax}°C, Min Temp: ${weatherForecast[0].temperatureMin}°C, Humidity: ${weatherForecast[0].relativeHumidity?.average}%, Precipitation: ${weatherForecast[0].precipitation?.total || 0}mm"
+            - Tomorrow's Weather Forecast: "Max Temp: ${weatherForecast[1].temperatureMax}°C, Min Temp: ${weatherForecast[1].temperatureMin}°C, Humidity: ${weatherForecast[1].relativeHumidity?.average}%, Precipitation: ${weatherForecast[1].precipitation?.total || 0}mm"
+
+            **Task:**
+            Based on ALL the context above, generate a prioritized checklist of 2-4 tasks for the farmer to complete TODAY. Adapt the master plan's goals to the specific daily weather. Your advice should be proactive. For example, if fertilization is planned this week and heavy rain is forecast for tomorrow, advise fertilizing today. Your tone should be encouraging and clear.
+
+            Respond ONLY with a valid JSON object with a single key "daily_tasks". The value should be an array of strings. Each string is a simple, actionable task.
+
+            **Example Response:**
+            {
+              "daily_tasks": [
+                "Weather Alert: Heavy rain is forecast for tomorrow. Apply fertilizer today before the rain to prevent it from washing away.",
+                "Inspect the underside of 10-1is 5 leaves for any small insects, as the warm weather is favorable for pests.",
+                "Irrigate the field for 20 minutes this evening. No rain is expected today, and the soil needs moisture.",
+                "Gently remove any weeds you see growing near the base of the plants."
+              ]
+            }
+        `;
+
+        const resp = await generativeModel.generateContent(prompt);
+        const content = resp.response.candidates[0].content.parts[0].text;
+        const tasksData = JSON.parse(content.replace(/```json/g, '').replace(/```/g, '').trim());
+
+        if (!tasksData.daily_tasks) {
+            throw new Error("AI response did not contain a 'daily_tasks' array.");
+        }
+
+        // E. Save the Daily Tasks to a sub-collection for offline sync
+        const todayStr = today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        await firestore.collection('userFarms').doc(farmId).collection('dailyTasks').doc(todayStr).set({
+            tasks: tasksData.daily_tasks,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        functions.logger.info(`[Daily Tasks] Successfully generated ${tasksData.daily_tasks.length} tasks for farm ${farmId}.`);
+
+    } catch (error) {
+        functions.logger.error(`[Daily Tasks] Failed to generate tasks for farm ${farmId}:`, error);
+    }
+}
