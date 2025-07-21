@@ -167,40 +167,36 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
 );
 
 // =================================================================
-// FUNCTION 2: PROACTIVE MARKET ANALYST (Daily OGD API Ingestion)
+// HIGHLIGHTED CHANGE: FUNCTION 2: PROACTIVE MARKET ANALYST (with Sanitized Slugs)
 // =================================================================
 exports.proactiveMarketAnalyst = onSchedule(
     {
-        schedule: "every day 08:00",
+        schedule: "every day 20:00", // Daily at 8 PM IST
         timeZone: "Asia/Kolkata",
         region: LOCATION,
         timeoutSeconds: 3600,
         memory: "1GiB",
-        // --- HIGHLIGHTED CHANGE: Add secrets to load as environment variables ---
         secrets: ["OGD_API_KEY"]
     },
     async (event) => {
-        // --- HIGHLIGHTED CHANGE: Read API key from process.env ---
         const OGD_API_KEY = process.env.OGD_API_KEY;
-
         functions.logger.info("[Market Analyst - Ingestion] Starting daily market data collection from OGD API.");
 
         if (!OGD_API_KEY) {
             functions.logger.error("[Market Analyst - Ingestion] OGD_API_KEY is not available in environment. Cannot fetch market data.");
-            return; // Exit the function gracefully
+            return;
         }
 
         const today = new Date();
         const todayStrForAPI = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
         
         let offset = 0;
-        // --- HIGHLIGHTED CHANGE: Using limit of 30 as per your test ---
-        const limit = 30; 
+        const limit = 300; 
         let totalRecords = 0;
         let recordsProcessed = 0;
         
         try {
-            functions.logger.info(`[Market Analyst - Ingestion] Fetching initial page from OGD API for ${todayStrForAPI}...`);
+            functions.logger.info(`[Market Analyst - Ingestion] Fetching initial page from OGD API for ${todayStrForAPI} with limit=${limit}...`);
             let queryParams = new URLSearchParams({
                 'api-key': OGD_API_KEY,
                 'format': 'json',
@@ -263,7 +259,6 @@ exports.proactiveMarketAnalyst = onSchedule(
                     const district = record.district;
                     const variety = record.variety;
                     const grade = record.grade;
-
                     const priceModal = parseFloat(record.modal_price || 0); 
                     const priceMin = parseFloat(record.min_price || 0);
                     const priceMax = parseFloat(record.max_price || 0);
@@ -287,9 +282,19 @@ exports.proactiveMarketAnalyst = onSchedule(
                         functions.logger.warn(`[Market Analyst - Ingestion Warning] Error parsing API date "${arrivalDateApi}": ${e.message}. Using today's date for record: ${JSON.stringify(record)}.`);
                     }
 
-                    const cropSlug = String(commodity).toLowerCase().replace(/\s+/g, '-');
-                    const stateSlug = String(state).toLowerCase().replace(/\s+/g, '-');
-                    const marketSlug = String(market).toLowerCase().replace(/\s+/g, '-');
+                    // --- HIGHLIGHTED CHANGE: Slug sanitization to remove invalid characters ---
+                    // This function will convert to lowercase, replace spaces with '-', and remove any character
+                    // that is not a letter, number, or hyphen. This is crucial for Firestore doc IDs.
+                    const sanitizeForId = (str) => {
+                        if (!str) return '';
+                        return String(str).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                    };
+
+                    const cropSlug = sanitizeForId(commodity);
+                    const stateSlug = sanitizeForId(state);
+                    const marketSlug = sanitizeForId(market);
+                    // --- END HIGHLIGHTED CHANGE ---
+
                     const firestoreDocId = `${cropSlug}_${marketSlug}_${stateSlug}`; 
                     
                     const marketData = {
@@ -325,12 +330,11 @@ exports.proactiveMarketAnalyst = onSchedule(
             }
 
         } catch (error) {
-            functions.logger.error(`[CRITICAL Market Analyst - Ingestion Error] Failed to complete OGD API ingestion for ${todayStrForAPI}:`, error, { structuredData: true });
+            functions.logger.error(`[CRITICAL Market Analyst - Ingestion Error] Failed to complete OGD API ingestion:`, error, { structuredData: true });
         }
         functions.logger.info(`[Market Analyst - Ingestion] Daily OGD API data ingestion completed. Total records processed: ${recordsProcessed}.`);
     }
 );
-
 // =================================================================
 // FUNCTION 3: KNOWLEDGE BASE UPDATER (THE LIBRARIAN) - v2 SYNTAX
 // =================================================================
@@ -358,7 +362,6 @@ exports.updateKnowledgeBase = onSchedule(
     }
 );
 
-
 // =================================================================
 // FUNCTION 4: PROACTIVE GUARDIAN ENGINE (WEATHER-BASED ALERTS)
 // =================================================================
@@ -368,7 +371,9 @@ exports.proactiveGuardianEngine = onSchedule(
         timeZone: "Asia/Kolkata",
         region: LOCATION,
         timeoutSeconds: 540,
-        memory: "1GiB"
+        memory: "1GiB",
+        // --- HIGHLIGHTED CHANGE: Add secret for Weather API Key ---
+        secrets: ["WEATHER_API_KEY"]
     },
     async (event) => {
         functions.logger.info("[Proactive Guardian] Engine started.");
@@ -389,11 +394,19 @@ exports.proactiveGuardianEngine = onSchedule(
     }
 );
 
-// --- HELPER FUNCTION FOR THE GUARDIAN ENGINE ---
+// --- HELPER FUNCTION FOR THE GUARDIAN ENGINE (WITH CORRECT GOOGLE WEATHER API FIELD) ---
 async function analyzeSingleFarmForRisks(farmData, farmId) {
+    functions.logger.info(`[Proactive Guardian] Analyzing farm: ${farmId}`);
+
     const { location, currentCrop, userId } = farmData;
-    if (!location || !location.latitude || !location.longitude || !currentCrop || !userId) {
-        functions.logger.warn(`[Proactive Guardian] Skipping farm ${farmId}: missing essential data.`);
+    if (!location || typeof location.latitude !== 'number' || typeof location.longitude !== 'number' || !currentCrop || !userId) {
+        functions.logger.warn(`[Proactive Guardian] Skipping farm ${farmId}: missing or invalid essential data.`, { farmData });
+        return;
+    }
+
+    const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
+    if (!WEATHER_API_KEY) {
+        functions.logger.error(`[Proactive Guardian] WEATHER_API_KEY is not available in environment for farm ${farmId}. Skipping.`);
         return;
     }
 
@@ -406,19 +419,58 @@ async function analyzeSingleFarmForRisks(farmData, farmId) {
 
         const lat = location.latitude;
         const lon = location.longitude;
-        const weatherApiUrl = `https://weather.googleapis.com/v1/forecast:getDaily?location.latitude=${lat}&location.longitude=${lon}&days=7`;
+        const weatherApiUrl = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${WEATHER_API_KEY}&location.latitude=${lat}&location.longitude=${lon}&days=7`;
         
-        const weatherResponse = await axios.get(weatherApiUrl, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        const dailyWeather = weatherResponse.data.dailyForecasts;
+        functions.logger.info(`[Proactive Guardian] Fetching weather data for farm ${farmId} from Google Weather API.`);
+        const weatherResponse = await axios.get(weatherApiUrl);
+        
+        // --- HIGHLIGHTED CHANGE: Use the correct 'forecastDays' field name from the API documentation ---
+        if (!weatherResponse.data || !Array.isArray(weatherResponse.data.forecastDays) || weatherResponse.data.forecastDays.length === 0) {
+            functions.logger.warn(`[Proactive Guardian] Weather data for farm ${farmId} was invalid or empty.`, { response: weatherResponse.data });
+            return; // Skip this farm if weather data is not valid
+        }
+        const dailyWeather = weatherResponse.data.forecastDays;
+        // --- END HIGHLIGHTED CHANGE ---
 
-        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-preview-0409" });
-        const prompt = `You are an expert agricultural entomologist...`; // Your full weather prompt
+        functions.logger.info(`[Proactive Guardian] Weather data received for farm ${farmId}:`, { dailyWeatherSample: dailyWeather.slice(0, 2) });
+
+        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+        const prompt = `Based on the following 7-day weather forecast for a farm growing ${currentCrop}, identify potential high-risk threats like pests or diseases.
+        Weather Data: ${JSON.stringify(dailyWeather)}
         
+        Analyze the data for patterns conducive to specific threats (e.g., high humidity and moderate temps for fungal diseases, specific wind patterns for pest migration).
+
+        Respond ONLY with a single, valid JSON object containing an array named "threats". Each object in the array should have these exact keys: "threat_name", "threat_type" (e.g., "Pest", "Fungal Disease", "Bacterial Disease"), "risk_level" ("Low", "Medium", or "High"), and "reasoning". If no significant risks are found, return an empty array.`;
+        
+        functions.logger.info(`[Proactive Guardian] Sending prompt to Vertex AI for farm ${farmId}.`);
         const resp = await generativeModel.generateContent(prompt);
+        
+        if (!resp || !resp.response || !resp.response.candidates || !resp.response.candidates[0] || 
+            !resp.response.candidates[0].content || !resp.response.candidates[0].content.parts || 
+            !resp.response.candidates[0].content.parts[0] || typeof resp.response.candidates[0].content.parts[0].text !== 'string') {
+            throw new Error('Invalid Vertex AI response structure: Missing candidates, content, parts, or text.');
+        }
         const content = resp.response.candidates[0].content.parts[0].text;
-        const threats = JSON.parse(content.replace(/^```json\s*|```\s*$/g, "").trim()); 
+        
+        functions.logger.info(`[Proactive Guardian] Raw Gemini response for farm ${farmId}:`, { content });
+
+        let jsonString = content;
+        const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch && jsonMatch[1]) {
+            jsonString = jsonMatch[1];
+        }
+        
+        const firstBrace = jsonString.indexOf('{');
+        const lastBrace = jsonString.lastIndexOf('}');
+        if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+            throw new Error("AI response did not contain a valid JSON object.");
+        }
+        const finalJsonString = jsonString.substring(firstBrace, lastBrace + 1).trim();
+        const threatsObject = JSON.parse(finalJsonString);
+        const threats = threatsObject.threats || [];
+
+        functions.logger.info(`[Proactive Guardian] Parsed threats for farm ${farmId}:`, { threats });
+
         for (const threat of threats) {
             if (threat.risk_level === 'High' || threat.risk_level === 'Medium') {
                 const today = new Date().toISOString().split('T')[0];
@@ -435,17 +487,14 @@ async function analyzeSingleFarmForRisks(farmData, farmId) {
         }
     } catch (error) {
         if (error.response) {
-            functions.logger.error(`[Proactive Guardian] API Error for farm ${farmId}:`, { status: error.response.status, data: error.response.data });
+            functions.logger.error(`[Proactive Guardian] API Error for farm ${farmId}: Status ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`, error);
         } else {
-            functions.logger.error(`[Proactive Guardian] Failed to analyze farm ${farmId}. Error:`, error.message);
+            functions.logger.error(`[Proactive Guardian] Failed to analyze farm ${farmId}. Error:`, error.message, { structuredData: true });
         }
     }
 }
-
-
-
 // =================================================================
-// New HTTP-triggered function for On-Demand Market Analysis (Function 4)
+// New HTTP-triggered function for On-Demand Market Analysis (Function 5)
 // =================================================================
 exports.getMarketAnalysis = onRequest(
     {
