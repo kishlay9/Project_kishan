@@ -1,40 +1,41 @@
 // =================================================================
-// SETUP (WITH NEW v2 IMPORTS)
+// SETUP (CORRECTED AND UNIFIED)
 // =================================================================
 const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onRequest } = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
-const { logger, config } = require("firebase-functions");
-const fetch = require("node-fetch");
-const cheerio = require("cheerio"); // Still needed for Knowledge Base Updater (Function 3)
-const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
-// HIGHLIGHTED CHANGE: csv and Storage client imports are removed as Kaggle CSV ingestion is removed.
-// const csv = require('csv-parser'); 
-// const { Storage } = require('@google-cloud/storage');
+// --- HIGHLIGHTED FIX: Use the v2 logger directly and consistently ---
+const { logger } = require("firebase-functions/v2");
 
+// Common libraries
+const admin = require("firebase-admin");
+const fetch = require("node-fetch");
+const cheerio = require("cheerio");
+const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
+// --- HIGHLIGHTED FIX: Added missing imports for your functions ---
+const axios = require("axios");
+const { VertexAI } = require("@google-cloud/vertexai");
+
+// Initialize all clients ONCE
 admin.initializeApp();
 const firestore = admin.firestore();
 const ttsClient = new TextToSpeechClient();
-// HIGHLIGHTED CHANGE: gcsClient initialization is removed as Kaggle CSV ingestion is removed.
-// const gcsClient = new Storage(); 
 
 // =================================================================
 // CONFIGURATION
 // =================================================================
 const PROJECT_ID = "project-kisan-new";
-const BUCKET_NAME = "project-kisan-new.firebasestorage.app";
+// --- HIGHLIGHTED FIX: Corrected bucket name format ---
+const BUCKET_NAME = "project-kisan-new.appspot.com";
 const LOCATION = "asia-south1";
 
-// --- HIGHLIGHTED CHANGE: OGD API Key (Accessed from Firebase Functions Config) ---
-// YOU MUST SET THIS VIA: firebase functions:config:set ogd.api_key="579b464db66ec23bdd000001c495c37445694fce75e978eb67a15b4f"
+// --- HIGHLIGHTED FIX: Initialize the VertexAI client for the whole file ---
+const vertex_ai = new VertexAI({ project: PROJECT_ID, location: LOCATION });
 
-
-// --- HIGHLIGHTED CHANGE: OGD API Base URL with specific RESOURCE_ID ---
+// OGD API Base URL
 const OGD_RESOURCE_ID = "9ef84268-d588-465a-a308-a864a43d0070";
 const OGD_API_BASE_URL = `https://api.data.gov.in/resource/${OGD_RESOURCE_ID}`;
 
-// --- HIGHLIGHTED CHANGE: Removed KAGGLE_CSV_CONFIG as Kaggle CSV ingestion is removed ---
 
 // =================================================================
 // FUNCTION 1: CROP DOCTOR (ANALYZE PLANT IMAGE) - v2 SYNTAX
@@ -52,28 +53,28 @@ exports.analyzePlantImage = onObjectFinalized(
         logger.info(`[Function Start] Received object event. FilePath: "${filePath}", ContentType: "${contentType}", Bucket: "${bucketName}"`);
 
         if (!filePath || !filePath.startsWith("uploads/")) { 
-            logger.warn(`[Function Skip] File "${filePath}" ignored: not in "uploads/" directory or no name.`);
+            functions.logger.warn(`[Function Skip] File "${filePath}" ignored: not in "uploads/" directory or no name.`);
             return;
         }
 
         let apiEndpoint; 
         
         try {
-            logger.info("[Auth] Fetching service account token from metadata server...");
+            functions.logger.info("[Auth] Fetching service account token from metadata server...");
             const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
             
             if (!tokenResponse.ok) { 
                 const errorText = await tokenResponse.text();
-                logger.error(`[Auth Error] Failed to fetch token. Status: ${tokenResponse.status}, Response: ${errorText}`);
+                functions.logger.error(`[Auth Error] Failed to fetch token. Status: ${tokenResponse.status}, Response: ${errorText}`);
                 throw new Error(`Failed to fetch access token: ${tokenResponse.statusText}`);
             }
 
             const tokenData = await tokenResponse.json();
             const accessToken = tokenData.access_token;
-            logger.info(`[Auth] Access token fetched. Token expires in: ${tokenData.expires_in}s`);
+            functions.logger.info(`[Auth] Access token fetched. Token expires in: ${tokenData.expires_in}s`);
 
             apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
-            logger.info(`[AI] Using API endpoint: ${apiEndpoint}`);
+            functions.logger.info(`[AI] Using API endpoint: ${apiEndpoint}`);
 
             const diagnosisPrompt = `You are a world-class AI agronomist for Indian farmers. Your primary task is to determine if the image contains a plant or plant part. If it does, then proceed with plant identification and diagnosis.
 
@@ -107,18 +108,18 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
                     ] 
                 }] 
             };
-            logger.info("[AI] Sending request to Gemini API...");
+            functions.logger.info("[AI] Sending request to Gemini API...");
             const geminiResponse = await fetch(apiEndpoint, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(requestBody) });
             const responseData = await geminiResponse.json();
-            logger.info("Full Diagnosis Response:", JSON.stringify(responseData, null, 2));
+            functions.logger.info("Full Diagnosis Response:", JSON.stringify(responseData, null, 2));
 
             const modelResponseText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!modelResponseText) { 
-                logger.error("[Gemini Error] Did not receive a valid diagnosis from the AI. Full Response:", JSON.stringify(responseData, null, 2));
+                functions.logger.error("[Gemini Error] Did not receive a valid diagnosis from the AI. Full Response:", JSON.stringify(responseData, null, 2));
                 throw new Error("Did not receive a valid diagnosis from the AI."); 
             }
             const diagnosisData = JSON.parse(modelResponseText.replace(/^```json\s*|```\s*$/g, ""));
-            logger.info("Diagnosis received:", diagnosisData);
+            functions.logger.info("Diagnosis received:", diagnosisData);
 
             let textToSpeak = "";
             if (diagnosisData.object_category === "Plant") {
@@ -135,33 +136,33 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
                 audioConfig: { audioEncoding: 'MP3' } 
             };
             
-            logger.info(`[TTS] Synthesizing speech for: "${textToSpeak.substring(0, Math.min(textToSpeak.length, 100))}..."`);
+            functions.logger.info(`[TTS] Synthesizing speech for: "${textToSpeak.substring(0, Math.min(textToSpeak.length, 100))}..."`);
             const [ttsResponse] = await ttsClient.synthesizeSpeech(ttsRequest);
-            logger.info(`[TTS] Speech synthesis successful. Audio content length: ${ttsResponse.audioContent.length} bytes.`);
+            functions.logger.info(`[TTS] Speech synthesis successful. Audio content length: ${ttsResponse.audioContent.length} bytes.`);
 
 
             const diagnosisId = filePath.split('/').pop();
             if (!diagnosisId) {
-                logger.error(`Could not extract filename (diagnosisId) from path: ${filePath}. Aborting.`);
+                functions.logger.error(`Could not extract filename (diagnosisId) from path: ${filePath}. Aborting.`);
                 return;
             }
 
             const baseFileNameForAudio = diagnosisId.replace(/\.[^/.]+$/, "");
             const audioFileName = `${baseFileNameForAudio}.mp3`;
 
-            logger.info(`[AudioFile] Attempting to save audio to: audio-output/${audioFileName}`);
+            functions.logger.info(`[AudioFile] Attempting to save audio to: audio-output/${audioFileName}`);
             const audioFile = admin.storage().bucket(bucketName).file(`audio-output/${audioFileName}`);
             await audioFile.save(ttsResponse.audioContent);
             await audioFile.makePublic();
             const audioUrl = audioFile.publicUrl();
-            logger.info(`[AudioFile] Audio file created: ${audioUrl}`);
+            functions.logger.info(`[AudioFile] Audio file created: ${audioUrl}`);
 
             diagnosisData.audio_remedy_url = audioUrl;
             
             await firestore.collection("diagnoses").doc(diagnosisId).set(diagnosisData); 
-            logger.info(`[Firestore] Successfully wrote complete diagnosis with audio to Firestore (ID: ${diagnosisId}).`);
+            functions.logger.info(`[Firestore] Successfully wrote complete diagnosis with audio to Firestore (ID: ${diagnosisId}).`);
         } catch (error) {
-            logger.error(`!!! CRITICAL ERROR in analysis for file "${filePath}":`, error, { structuredData: true });
+            functions.logger.error(`!!! CRITICAL ERROR in analysis for file "${filePath}":`, error, { structuredData: true });
         }
     }
 );
@@ -169,38 +170,40 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
 // =================================================================
 // HIGHLIGHTED CHANGE: FUNCTION 2: PROACTIVE MARKET ANALYST (Daily OGD API Ingestion for ALL Records)
 // =================================================================
+// =================================================================
+// HIGHLIGHTED CHANGE: FUNCTION 2: PROACTIVE MARKET ANALYST (Daily OGD API Ingestion)
+// =================================================================
 exports.proactiveMarketAnalyst = onSchedule(
     {
-        schedule: "every day 08:00", // Daily at 8 AM IST
+        schedule: "every day 08:00",
         timeZone: "Asia/Kolkata",
         region: LOCATION,
-        timeoutSeconds: 3600, // 1 hour for potentially large ingestion from API
-        memory: "4GiB"       // 1 GB should be sufficient for API response and batching
+        timeoutSeconds: 3600,
+        memory: "1GiB",
+        // --- HIGHLIGHTED CHANGE: Add secrets to load as environment variables ---
+        secrets: ["OGD_API_KEY"]
     },
     async (event) => {
-        // --- HIGHLIGHTED CHANGE: Move config loading inside the function ---
-        const OGD_API_KEY = functions.config().ogd?.api_key;
+        // --- HIGHLIGHTED CHANGE: Read API key from process.env ---
+        const OGD_API_KEY = process.env.OGD_API_KEY;
 
-        logger.info("[Market Analyst - Ingestion] Starting daily market data collection from OGD API.");
+        functions.logger.info("[Market Analyst - Ingestion] Starting daily market data collection from OGD API.");
 
         if (!OGD_API_KEY) {
-            logger.error("[Market Analyst - Ingestion] OGD_API_KEY is not configured. Cannot fetch market data.");
+            functions.logger.error("[Market Analyst - Ingestion] OGD_API_KEY is not available in environment. Cannot fetch market data.");
             return; // Exit the function gracefully
         }
 
         const today = new Date();
-        // The API uses DD/MM/YYYY for arrival_date in its records, so format the query date as such.
         const todayStrForAPI = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
-        const todayStrForFirestore = today.toISOString().slice(0, 10); // YYYY-MM-DD for Firestore document ID
-
+        
         let offset = 0;
-        const limit = 100; // HIGHLIGHTED CHANGE: Using limit of 100 as per your test
+        const limit = 100;
         let totalRecords = 0;
         let recordsProcessed = 0;
         
         try {
-            // --- HIGHLIGHTED CHANGE: Initial API call to get total records and first batch ---
-            logger.info(`[Market Analyst - Ingestion] Fetching initial page from OGD API for ${todayStrForAPI}...`);
+            functions.logger.info(`[Market Analyst - Ingestion] Fetching initial page from OGD API for ${todayStrForAPI}...`);
             let queryParams = new URLSearchParams({
                 'api-key': OGD_API_KEY,
                 'format': 'json',
@@ -215,24 +218,23 @@ exports.proactiveMarketAnalyst = onSchedule(
 
             if (!response.ok || responseData.status !== "ok") {
                 const errorDetails = response.ok ? JSON.stringify(responseData) : await response.text();
-                logger.error(`[Market Analyst - Ingestion Error] Failed initial fetch from OGD API. Status: ${response.status}, Details: ${errorDetails}`);
+                functions.logger.error(`[Market Analyst - Ingestion Error] Failed initial fetch from OGD API. Status: ${response.status}, Details: ${errorDetails}`);
                 throw new Error("Failed initial OGD API data fetch.");
             }
             
             totalRecords = parseInt(responseData.total || '0', 10);
-            logger.info(`[Market Analyst - Ingestion] Total records for ${todayStrForAPI}: ${totalRecords}`);
+            functions.logger.info(`[Market Analyst - Ingestion] Total records for ${todayStrForAPI}: ${totalRecords}`);
 
             if (totalRecords === 0) {
-                logger.warn(`[Market Analyst - Ingestion Warning] No records found for ${todayStrForAPI} from OGD API.`);
-                return; // Exit if no records for today
+                functions.logger.warn(`[Market Analyst - Ingestion Warning] No records found for ${todayStrForAPI} from OGD API.`);
+                return;
             }
 
-            // --- HIGHLIGHTED CHANGE: Pagination Loop ---
             while (recordsProcessed < totalRecords) {
                 const batch = firestore.batch();
                 let batchCount = 0;
                 
-                if (recordsProcessed > 0) { // Fetch next page if not the first one
+                if (recordsProcessed > 0) {
                     queryParams = new URLSearchParams({
                         'api-key': OGD_API_KEY,
                         'format': 'json',
@@ -247,38 +249,35 @@ exports.proactiveMarketAnalyst = onSchedule(
 
                     if (!response.ok || responseData.status !== "ok") {
                         const errorDetails = response.ok ? JSON.stringify(responseData) : await response.text();
-                        logger.error(`[Market Analyst - Ingestion Error] Failed to fetch page at offset ${offset}. Status: ${response.status}, Details: ${errorDetails}`);
-                        break; // Exit loop if page fetch fails
+                        functions.logger.error(`[Market Analyst - Ingestion Error] Failed to fetch page at offset ${offset}. Status: ${response.status}, Details: ${errorDetails}`);
+                        break;
                     }
                 }
 
                 if (!responseData.records || responseData.records.length === 0) {
-                    logger.warn(`[Market Analyst - Ingestion Warning] No more records received from OGD API at offset ${offset}. Expected ${totalRecords}, processed ${recordsProcessed}. Exiting loop.`);
-                    break; // No more records to process
+                    functions.logger.warn(`[Market Analyst - Ingestion Warning] No more records received from OGD API at offset ${offset}. Expected ${totalRecords}, processed ${recordsProcessed}. Exiting loop.`);
+                    break;
                 }
 
                 for (const record of responseData.records) {
-                    // --- HIGHLIGHTED CHANGE: Extract data using actual OGD API response field names ---
                     const commodity = record.commodity;
                     const market = record.market;
                     const state = record.state;
-                    const district = record.district; // From API record
-                    const variety = record.variety; // From API record
-                    const grade = record.grade;     // From API record
+                    const district = record.district;
+                    const variety = record.variety;
+                    const grade = record.grade;
 
                     const priceModal = parseFloat(record.modal_price || 0); 
                     const priceMin = parseFloat(record.min_price || 0);
                     const priceMax = parseFloat(record.max_price || 0);
                     const arrivalDateApi = record.arrival_date; 
 
-                    // Validate extracted data before adding to batch
                     if (!commodity || !state || !market || !arrivalDateApi || isNaN(priceModal) || priceModal <= 0) {
-                        logger.warn(`[Market Analyst - Ingestion Warning] Skipping incomplete/invalid record: ${JSON.stringify(record)}`);
+                        functions.logger.warn(`[Market Analyst - Ingestion Warning] Skipping incomplete/invalid record: ${JSON.stringify(record)}`);
                         continue; 
                     }
 
-                    // Convert API date (DD/MM/YYYY) to YYYY-MM-DD for Firestore
-                    let firestoreDate = todayStrForFirestore; 
+                    let firestoreDate = new Date().toISOString().slice(0, 10); 
                     try {
                         const parts = arrivalDateApi.split('/'); 
                         if (parts.length === 3) {
@@ -288,7 +287,7 @@ exports.proactiveMarketAnalyst = onSchedule(
                             }
                         }
                     } catch (e) {
-                        logger.warn(`[Market Analyst - Ingestion Warning] Error parsing API date "${arrivalDateApi}": ${e.message}. Using today's date for record: ${JSON.stringify(record)}.`);
+                        functions.logger.warn(`[Market Analyst - Ingestion Warning] Error parsing API date "${arrivalDateApi}": ${e.message}. Using today's date for record: ${JSON.stringify(record)}.`);
                     }
 
                     const cropSlug = String(commodity).toLowerCase().replace(/\s+/g, '-');
@@ -307,7 +306,6 @@ exports.proactiveMarketAnalyst = onSchedule(
                         price_modal: priceModal,
                         price_min: priceMin,
                         price_max: priceMax,
-                        // arrival_quantity_tonnes: ?, // Not in API response, remove or add if you find it
                         price_unit: "Rs./Quintal", 
                         source_api: `data.gov.in (Resource ID: ${OGD_RESOURCE_ID})`, 
                         ingested_at: admin.firestore.FieldValue.serverTimestamp(),
@@ -323,22 +321,20 @@ exports.proactiveMarketAnalyst = onSchedule(
 
                 if (batchCount > 0) {
                     await batch.commit();
-                    logger.info(`[Market Analyst - Ingestion] Batch committed. Processed ${batchCount} records. Total processed: ${recordsProcessed} of ${totalRecords}.`);
+                    functions.logger.info(`[Market Analyst - Ingestion] Batch committed. Processed ${batchCount} records. Total processed: ${recordsProcessed} of ${totalRecords}.`);
                 }
                 
-                offset += limit; // Move to the next offset for the next API call
-            } // End while loop
+                offset += limit;
+            }
 
         } catch (error) {
-            logger.error(`[CRITICAL Market Analyst - Ingestion Error] Failed to complete OGD API ingestion for ${todayStrForAPI}:`, error, { structuredData: true });
+            functions.logger.error(`[CRITICAL Market Analyst - Ingestion Error] Failed to complete OGD API ingestion for ${todayStrForAPI}:`, error, { structuredData: true });
         }
-        logger.info(`[Market Analyst - Ingestion] Daily OGD API data ingestion completed. Total records processed: ${recordsProcessed}.`);
+        functions.logger.info(`[Market Analyst - Ingestion] Daily OGD API data ingestion completed. Total records processed: ${recordsProcessed}.`);
     }
 );
-
 // =================================================================
 // New HTTP-triggered function for On-Demand Market Analysis (Function 4)
-// (This function queries standardized Firestore data and uses Gemini 1.5 Pro)
 // =================================================================
 exports.getMarketAnalysis = onRequest(
     {
@@ -355,7 +351,7 @@ exports.getMarketAnalysis = onRequest(
             return;
         }
 
-        try { // Start of the main try block
+        try { 
             // --- HIGHLIGHTED CHANGE: Access token needs to be fetched inside this function as well ---
             let accessToken;
             try {
@@ -366,7 +362,7 @@ exports.getMarketAnalysis = onRequest(
                 const tokenData = await tokenResponse.json();
                 accessToken = tokenData.access_token;
             } catch (error) {
-                logger.error("[Auth Error] Could not fetch access token for Gemini API call.", error);
+                functions.logger.error("[Auth Error] Could not fetch access token for Gemini API call.", error);
                 response.status(500).json({ error: "Internal server error: could not authenticate." });
                 return;
             }
@@ -375,7 +371,7 @@ exports.getMarketAnalysis = onRequest(
             const stateName = request.query.stateName || request.body.stateName;
             const marketName = request.query.marketName || request.body.marketName; 
 
-            logger.info(`[Market Analysis - OnDemand] Received request for Crop: "${cropName}", State: "${stateName}", Market: "${marketName}"`);
+            functions.logger.info(`[Market Analysis - OnDemand] Received request for Crop: "${cropName}", State: "${stateName}", Market: "${marketName}"`);
 
             if (!cropName || !stateName || !marketName) {
                 response.status(400).json({ error: "Missing 'cropName', 'stateName', or 'marketName' in request. All are now required for specific lookup." });
@@ -424,11 +420,11 @@ exports.getMarketAnalysis = onRequest(
                  allRelevantData = allRelevantData.concat(lastYearSnapshot.docs.map(doc => doc.data()));
             }
 
-            logger.info(`[Market Analysis - OnDemand] Fetched ${allRelevantData.length} relevant records for ${cropName} in ${marketName} (${stateName}) from Firestore.`);
+            functions.logger.info(`[Market Analysis - OnDemand] Fetched ${allRelevantData.length} relevant records for ${cropName} in ${marketName} (${stateName}) from Firestore.`);
 
             if (allRelevantData.length === 0) {
                 dataCompleteness = "Missing (No data found in Firestore for this crop/market/state combination)";
-                logger.warn(`[Market Analysis - OnDemand] No data found in Firestore for ${cropName} at ${marketName} (${stateName}).`);
+                functions.logger.warn(`[Market Analysis - OnDemand] No data found in Firestore for ${cropName} at ${marketName} (${stateName}).`);
             } else if (allRelevantData.length < 60) {
                  dataCompleteness = "Partial (Limited historical data)";
             }
@@ -514,28 +510,28 @@ Respond ONLY with a single, valid JSON object with the exact structure and keys 
             const geminiApiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
             const geminiRequestBody = { contents: [{ parts: [{ text: analysisPrompt }], role: "user" }] };
             
-            logger.info("[AI] Sending analysis request to Gemini API...");
+            functions.logger.info("[AI] Sending analysis request to Gemini API...");
             const geminiResponse = await fetch(geminiApiEndpoint, { 
                 method: "POST", 
                 headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, 
                 body: JSON.stringify(geminiRequestBody) 
             });
             const geminiResponseData = await geminiResponse.json();
-            logger.info("Full Gemini Analysis Response:", JSON.stringify(geminiResponseData, null, 2));
+            functions.logger.info("Full Gemini Analysis Response:", JSON.stringify(geminiResponseData, null, 2));
 
             const modelResponseText = geminiResponseData?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!modelResponseText) { 
-                logger.error("[Gemini Error] Did not receive valid analysis from AI.", { response: geminiResponseData });
+                functions.logger.error("[Gemini Error] Did not receive valid analysis from AI.", { response: geminiResponseData });
                 response.status(500).json({ error: "Could not generate market analysis from AI." });
                 return;
             }
             const analysisData = JSON.parse(modelResponseText.replace(/^```json\s*|```s*$/g, ""));
-            logger.info("Market Analysis received:", analysisData);
+            functions.logger.info("Market Analysis received:", analysisData);
             
             response.status(200).json(analysisData);
 
         } catch (error) {
-            logger.error(`[CRITICAL Market Analysis - OnDemand] Error processing request for ${cropName} in ${marketName} (${stateName}):`, error, { structuredData: true });
+            functions.logger.error(`[CRITICAL Market Analysis - OnDemand] Error processing request for ${cropName} in ${marketName} (${stateName}):`, error, { structuredData: true });
             response.status(500).json({ error: "Failed to generate market analysis.", details: error.message });
         }
     }
@@ -554,16 +550,101 @@ exports.updateKnowledgeBase = onSchedule(
         const FILE_PATH = "knowledge-base/pib_agri_schemes.txt";
         try {
             const response = await fetch(URL_TO_SCRAPE);
-            if (!response.ok) { logger.error(`Failed to fetch URL with status: ${response.status}`); return; }
+            if (!response.ok) { functions.logger.error(`Failed to fetch URL with status: ${response.status}`); return; }
             const html = await response.text();
             const $ = cheerio.load(html);
             const scrapedText = $('.PrintRelease').text();
-            if (!scrapedText || scrapedText.trim() === "") { logger.warn("Scraped text is empty. Aborting update."); return; }
+            if (!scrapedText || scrapedText.trim() === "") { functions.logger.warn("Scraped text is empty. Aborting update."); return; }
             const cleanedText = scrapedText.replace(/\s+/g, ' ').trim();
             const storage = admin.storage();
             const file = storage.bucket(BUCKET_NAME).file(FILE_PATH);
             await file.save(cleanedText);
-            logger.info(`Successfully saved updated knowledge to gs://${BUCKET_NAME}/${FILE_PATH}`);
-        } catch (error) { logger.error("!!! CRITICAL ERROR inside updateKnowledgeBase function:", error); }
+            functions.logger.info(`Successfully saved updated knowledge to gs://${BUCKET_NAME}/${FILE_PATH}`);
+        } catch (error) { functions.logger.error("!!! CRITICAL ERROR inside updateKnowledgeBase function:", error); }
     }
 );
+
+
+// =================================================================
+// FUNCTION 4: PROACTIVE GUARDIAN ENGINE (WEATHER-BASED ALERTS)
+// This function replaces the Kaggle CSV ingestion logic.
+// =================================================================
+exports.proactiveGuardianEngine = onSchedule(
+    {
+        schedule: "every day 07:00",
+        timeZone: "Asia/Kolkata",
+        region: LOCATION,
+        timeoutSeconds: 540,
+        memory: "1GiB"
+    },
+    async (event) => {
+        logger.info("[Proactive Guardian] Engine started.");
+        const farmsSnapshot = await firestore.collection('userFarms').get();
+
+        if (farmsSnapshot.empty) {
+            logger.info("[Proactive Guardian] No farms found to analyze. Exiting.");
+            return null;
+        }
+
+        const analysisPromises = farmsSnapshot.docs.map(doc => {
+            return analyzeSingleFarmForRisks(doc.data(), doc.id);
+        });
+
+        await Promise.all(analysisPromises);
+        logger.info("[Proactive Guardian] Finished processing all farms.");
+        return null;
+    }
+);
+
+// --- HELPER FUNCTION FOR THE GUARDIAN ENGINE ---
+async function analyzeSingleFarmForRisks(farmData, farmId) {
+    const { location, currentCrop, userId } = farmData;
+    if (!location || !location.latitude || !location.longitude || !currentCrop || !userId) {
+        logger.warn(`[Proactive Guardian] Skipping farm ${farmId}: missing essential data.`);
+        return;
+    }
+
+    try {
+        const tokenResponse = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', { headers: { 'Metadata-Flavor': 'Google' } });
+        if (!tokenResponse.ok) {
+            throw new Error('Failed to get authentication token for Google APIs.');
+        }
+        const { access_token: accessToken } = await tokenResponse.json();
+
+        const lat = location.latitude;
+        const lon = location.longitude;
+        const weatherApiUrl = `https://weather.googleapis.com/v1/forecast:getDaily?location.latitude=${lat}&location.longitude=${lon}&days=7`;
+        
+        const weatherResponse = await axios.get(weatherApiUrl, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        const dailyWeather = weatherResponse.data.dailyForecasts;
+
+        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-preview-0409" });
+        const prompt = `You are an expert agricultural entomologist...`; // Your full weather prompt
+        
+        const resp = await generativeModel.generateContent(prompt);
+        const content = resp.response.candidates[0].content.parts[0].text;
+        const threats = JSON.parse(content.replace(/^```json\s*|```\s*$/g, "").trim()); 
+        for (const threat of threats) {
+            if (threat.risk_level === 'High' || threat.risk_level === 'Medium') {
+                const today = new Date().toISOString().split('T')[0];
+                const alertId = `${farmId}_${threat.threat_name.replace(/\s+/g, '')}_${today}`;
+                const alertData = {
+                    userId, farmId, crop: currentCrop,
+                    threatName: threat.threat_name, threatType: threat.threat_type,
+                    riskLevel: threat.risk_level, reasoning: threat.reasoning,
+                    timestamp: admin.firestore.FieldValue.serverTimestamp()
+                };
+                await firestore.collection('pestAlerts').doc(alertId).set(alertData);
+                logger.info(`[Proactive Guardian] High-risk alert created for farm ${farmId}: ${threat.threat_name}`);
+            }
+        }
+    } catch (error) {
+        if (error.response) {
+            logger.error(`[Proactive Guardian] API Error for farm ${farmId}:`, { status: error.response.status, data: error.response.data });
+        } else {
+            logger.error(`[Proactive Guardian] Failed to analyze farm ${farmId}. Error:`, error.message);
+        }
+    }
+}
