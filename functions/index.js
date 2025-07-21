@@ -4,15 +4,15 @@
 const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onRequest } = require("firebase-functions/v2/https");
-// --- HIGHLIGHTED FIX: Use the v2 logger directly and consistently ---
-const { logger } = require("firebase-functions/v2");
+// --- HIGHLIGHTED FIX: Use the main functions object consistently ---
+const functions = require("firebase-functions");
 
 // Common libraries
 const admin = require("firebase-admin");
 const fetch = require("node-fetch");
 const cheerio = require("cheerio");
 const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
-// --- HIGHLIGHTED FIX: Added missing imports for your functions ---
+// --- HIGHLIGHTED FIX: Added missing imports for your new functions ---
 const axios = require("axios");
 const { VertexAI } = require("@google-cloud/vertexai");
 
@@ -39,7 +39,6 @@ const OGD_API_BASE_URL = `https://api.data.gov.in/resource/${OGD_RESOURCE_ID}`;
 
 // =================================================================
 // FUNCTION 1: CROP DOCTOR (ANALYZE PLANT IMAGE) - v2 SYNTAX
-// (This function remains UNCHANGED - as per your request, it continues to use gemini-1.5-pro-002)
 // =================================================================
 exports.analyzePlantImage = onObjectFinalized(
     {
@@ -50,7 +49,7 @@ exports.analyzePlantImage = onObjectFinalized(
     async (event) => {
         const { name: filePath, bucket: bucketName, contentType } = event.data;
 
-        logger.info(`[Function Start] Received object event. FilePath: "${filePath}", ContentType: "${contentType}", Bucket: "${bucketName}"`);
+        functions.logger.info(`[Function Start] Received object event. FilePath: "${filePath}", ContentType: "${contentType}", Bucket: "${bucketName}"`);
 
         if (!filePath || !filePath.startsWith("uploads/")) { 
             functions.logger.warn(`[Function Skip] File "${filePath}" ignored: not in "uploads/" directory or no name.`);
@@ -168,10 +167,7 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
 );
 
 // =================================================================
-// HIGHLIGHTED CHANGE: FUNCTION 2: PROACTIVE MARKET ANALYST (Daily OGD API Ingestion for ALL Records)
-// =================================================================
-// =================================================================
-// HIGHLIGHTED CHANGE: FUNCTION 2: PROACTIVE MARKET ANALYST (Daily OGD API Ingestion)
+// FUNCTION 2: PROACTIVE MARKET ANALYST (Daily OGD API Ingestion)
 // =================================================================
 exports.proactiveMarketAnalyst = onSchedule(
     {
@@ -198,7 +194,8 @@ exports.proactiveMarketAnalyst = onSchedule(
         const todayStrForAPI = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
         
         let offset = 0;
-        const limit = 100;
+        // --- HIGHLIGHTED CHANGE: Using limit of 30 as per your test ---
+        const limit = 30; 
         let totalRecords = 0;
         let recordsProcessed = 0;
         
@@ -333,8 +330,121 @@ exports.proactiveMarketAnalyst = onSchedule(
         functions.logger.info(`[Market Analyst - Ingestion] Daily OGD API data ingestion completed. Total records processed: ${recordsProcessed}.`);
     }
 );
+
 // =================================================================
-// New HTTP-triggered function for On-Demand Market Analysis (Function 4)
+// FUNCTION 3: KNOWLEDGE BASE UPDATER (THE LIBRARIAN) - v2 SYNTAX
+// =================================================================
+exports.updateKnowledgeBase = onSchedule(
+    {
+        schedule: "every 24 hours",
+        region: LOCATION
+    },
+    async (event) => {
+        const URL_TO_SCRAPE = "https://pib.gov.in/PressReleasePage.aspx?PRID=1945323";
+        const FILE_PATH = "knowledge-base/pib_agri_schemes.txt";
+        try {
+            const response = await fetch(URL_TO_SCRAPE);
+            if (!response.ok) { functions.logger.error(`Failed to fetch URL with status: ${response.status}`); return; }
+            const html = await response.text();
+            const $ = cheerio.load(html);
+            const scrapedText = $('.PrintRelease').text();
+            if (!scrapedText || scrapedText.trim() === "") { functions.logger.warn("Scraped text is empty. Aborting update."); return; }
+            const cleanedText = scrapedText.replace(/\s+/g, ' ').trim();
+            const storage = admin.storage();
+            const file = storage.bucket(BUCKET_NAME).file(FILE_PATH);
+            await file.save(cleanedText);
+            functions.logger.info(`Successfully saved updated knowledge to gs://${BUCKET_NAME}/${FILE_PATH}`);
+        } catch (error) { functions.logger.error("!!! CRITICAL ERROR inside updateKnowledgeBase function:", error); }
+    }
+);
+
+
+// =================================================================
+// FUNCTION 4: PROACTIVE GUARDIAN ENGINE (WEATHER-BASED ALERTS)
+// =================================================================
+exports.proactiveGuardianEngine = onSchedule(
+    {
+        schedule: "every day 07:00",
+        timeZone: "Asia/Kolkata",
+        region: LOCATION,
+        timeoutSeconds: 540,
+        memory: "1GiB"
+    },
+    async (event) => {
+        functions.logger.info("[Proactive Guardian] Engine started.");
+        const farmsSnapshot = await firestore.collection('userFarms').get();
+
+        if (farmsSnapshot.empty) {
+            functions.logger.info("[Proactive Guardian] No farms found to analyze. Exiting.");
+            return null;
+        }
+
+        const analysisPromises = farmsSnapshot.docs.map(doc => {
+            return analyzeSingleFarmForRisks(doc.data(), doc.id);
+        });
+
+        await Promise.all(analysisPromises);
+        functions.logger.info("[Proactive Guardian] Finished processing all farms.");
+        return null;
+    }
+);
+
+// --- HELPER FUNCTION FOR THE GUARDIAN ENGINE ---
+async function analyzeSingleFarmForRisks(farmData, farmId) {
+    const { location, currentCrop, userId } = farmData;
+    if (!location || !location.latitude || !location.longitude || !currentCrop || !userId) {
+        functions.logger.warn(`[Proactive Guardian] Skipping farm ${farmId}: missing essential data.`);
+        return;
+    }
+
+    try {
+        const tokenResponse = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', { headers: { 'Metadata-Flavor': 'Google' } });
+        if (!tokenResponse.ok) {
+            throw new Error('Failed to get authentication token for Google APIs.');
+        }
+        const { access_token: accessToken } = await tokenResponse.json();
+
+        const lat = location.latitude;
+        const lon = location.longitude;
+        const weatherApiUrl = `https://weather.googleapis.com/v1/forecast:getDaily?location.latitude=${lat}&location.longitude=${lon}&days=7`;
+        
+        const weatherResponse = await axios.get(weatherApiUrl, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        const dailyWeather = weatherResponse.data.dailyForecasts;
+
+        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-preview-0409" });
+        const prompt = `You are an expert agricultural entomologist...`; // Your full weather prompt
+        
+        const resp = await generativeModel.generateContent(prompt);
+        const content = resp.response.candidates[0].content.parts[0].text;
+        const threats = JSON.parse(content.replace(/^```json\s*|```\s*$/g, "").trim()); 
+        for (const threat of threats) {
+            if (threat.risk_level === 'High' || threat.risk_level === 'Medium') {
+                const today = new Date().toISOString().split('T')[0];
+                const alertId = `${farmId}_${threat.threat_name.replace(/\s+/g, '')}_${today}`;
+                const alertData = {
+                    userId, farmId, crop: currentCrop,
+                    threatName: threat.threat_name, threatType: threat.threat_type,
+                    riskLevel: threat.risk_level, reasoning: threat.reasoning,
+                    timestamp: admin.firestore.FieldValue.serverTimestamp()
+                };
+                await firestore.collection('pestAlerts').doc(alertId).set(alertData);
+                functions.logger.info(`[Proactive Guardian] High-risk alert created for farm ${farmId}: ${threat.threat_name}`);
+            }
+        }
+    } catch (error) {
+        if (error.response) {
+            functions.logger.error(`[Proactive Guardian] API Error for farm ${farmId}:`, { status: error.response.status, data: error.response.data });
+        } else {
+            functions.logger.error(`[Proactive Guardian] Failed to analyze farm ${farmId}. Error:`, error.message);
+        }
+    }
+}
+
+
+// =================================================================
+// New HTTP-triggered function for On-Demand Market Analysis (Function 5)
 // =================================================================
 exports.getMarketAnalysis = onRequest(
     {
@@ -352,7 +462,6 @@ exports.getMarketAnalysis = onRequest(
         }
 
         try { 
-            // --- HIGHLIGHTED CHANGE: Access token needs to be fetched inside this function as well ---
             let accessToken;
             try {
                 const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
@@ -536,115 +645,3 @@ Respond ONLY with a single, valid JSON object with the exact structure and keys 
         }
     }
 );
-
-// =================================================================
-// FUNCTION 3: KNOWLEDGE BASE UPDATER (THE LIBRARIAN) - v2 SYNTAX
-// =================================================================
-exports.updateKnowledgeBase = onSchedule(
-    {
-        schedule: "every 24 hours",
-        region: LOCATION
-    },
-    async (event) => {
-        const URL_TO_SCRAPE = "https://pib.gov.in/PressReleasePage.aspx?PRID=1945323";
-        const FILE_PATH = "knowledge-base/pib_agri_schemes.txt";
-        try {
-            const response = await fetch(URL_TO_SCRAPE);
-            if (!response.ok) { functions.logger.error(`Failed to fetch URL with status: ${response.status}`); return; }
-            const html = await response.text();
-            const $ = cheerio.load(html);
-            const scrapedText = $('.PrintRelease').text();
-            if (!scrapedText || scrapedText.trim() === "") { functions.logger.warn("Scraped text is empty. Aborting update."); return; }
-            const cleanedText = scrapedText.replace(/\s+/g, ' ').trim();
-            const storage = admin.storage();
-            const file = storage.bucket(BUCKET_NAME).file(FILE_PATH);
-            await file.save(cleanedText);
-            functions.logger.info(`Successfully saved updated knowledge to gs://${BUCKET_NAME}/${FILE_PATH}`);
-        } catch (error) { functions.logger.error("!!! CRITICAL ERROR inside updateKnowledgeBase function:", error); }
-    }
-);
-
-
-// =================================================================
-// FUNCTION 4: PROACTIVE GUARDIAN ENGINE (WEATHER-BASED ALERTS)
-// This function replaces the Kaggle CSV ingestion logic.
-// =================================================================
-exports.proactiveGuardianEngine = onSchedule(
-    {
-        schedule: "every day 07:00",
-        timeZone: "Asia/Kolkata",
-        region: LOCATION,
-        timeoutSeconds: 540,
-        memory: "1GiB"
-    },
-    async (event) => {
-        logger.info("[Proactive Guardian] Engine started.");
-        const farmsSnapshot = await firestore.collection('userFarms').get();
-
-        if (farmsSnapshot.empty) {
-            logger.info("[Proactive Guardian] No farms found to analyze. Exiting.");
-            return null;
-        }
-
-        const analysisPromises = farmsSnapshot.docs.map(doc => {
-            return analyzeSingleFarmForRisks(doc.data(), doc.id);
-        });
-
-        await Promise.all(analysisPromises);
-        logger.info("[Proactive Guardian] Finished processing all farms.");
-        return null;
-    }
-);
-
-// --- HELPER FUNCTION FOR THE GUARDIAN ENGINE ---
-async function analyzeSingleFarmForRisks(farmData, farmId) {
-    const { location, currentCrop, userId } = farmData;
-    if (!location || !location.latitude || !location.longitude || !currentCrop || !userId) {
-        logger.warn(`[Proactive Guardian] Skipping farm ${farmId}: missing essential data.`);
-        return;
-    }
-
-    try {
-        const tokenResponse = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', { headers: { 'Metadata-Flavor': 'Google' } });
-        if (!tokenResponse.ok) {
-            throw new Error('Failed to get authentication token for Google APIs.');
-        }
-        const { access_token: accessToken } = await tokenResponse.json();
-
-        const lat = location.latitude;
-        const lon = location.longitude;
-        const weatherApiUrl = `https://weather.googleapis.com/v1/forecast:getDaily?location.latitude=${lat}&location.longitude=${lon}&days=7`;
-        
-        const weatherResponse = await axios.get(weatherApiUrl, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        const dailyWeather = weatherResponse.data.dailyForecasts;
-
-        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-preview-0409" });
-        const prompt = `You are an expert agricultural entomologist...`; // Your full weather prompt
-        
-        const resp = await generativeModel.generateContent(prompt);
-        const content = resp.response.candidates[0].content.parts[0].text;
-        const threats = JSON.parse(content.replace(/^```json\s*|```\s*$/g, "").trim()); 
-        for (const threat of threats) {
-            if (threat.risk_level === 'High' || threat.risk_level === 'Medium') {
-                const today = new Date().toISOString().split('T')[0];
-                const alertId = `${farmId}_${threat.threat_name.replace(/\s+/g, '')}_${today}`;
-                const alertData = {
-                    userId, farmId, crop: currentCrop,
-                    threatName: threat.threat_name, threatType: threat.threat_type,
-                    riskLevel: threat.risk_level, reasoning: threat.reasoning,
-                    timestamp: admin.firestore.FieldValue.serverTimestamp()
-                };
-                await firestore.collection('pestAlerts').doc(alertId).set(alertData);
-                logger.info(`[Proactive Guardian] High-risk alert created for farm ${farmId}: ${threat.threat_name}`);
-            }
-        }
-    } catch (error) {
-        if (error.response) {
-            logger.error(`[Proactive Guardian] API Error for farm ${farmId}:`, { status: error.response.status, data: error.response.data });
-        } else {
-            logger.error(`[Proactive Guardian] Failed to analyze farm ${farmId}. Error:`, error.message);
-        }
-    }
-}
