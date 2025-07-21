@@ -1,154 +1,88 @@
 package com.projectkisan.androidapp
 
-import android.net.Uri
 import android.os.Bundle
-import android.util.Log
-import android.view.View
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-// ▼▼▼ FIX: Add necessary imports for Firestore types ▼▼▼
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.ktx.storage
-import java.util.Date
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.projectkisan.androidapp.ui.theme.ProjectKisanTheme
 
-class MainActivity : AppCompatActivity() {
+// Define all our screens in a sealed class for type safety
+sealed class Screen(val route: String, val label: String, val icon: Int) {
+    object Home : Screen("home", "Home", R.drawable.ic_home) // You need to add these icons
+    object Plan : Screen("plan", "Plan", R.drawable.ic_plan)
+    object Ask : Screen("ask", "Ask", R.drawable.ic_ask)
+    object Diagnose : Screen("diagnose", "Diagnose", R.drawable.ic_diagnose)
+    object Market : Screen("market", "Market", R.drawable.ic_market)
+}
 
-    // UI Elements (no changes here)
-    private lateinit var imageViewPreview: ImageView
-    private lateinit var buttonUpload: Button
-    private lateinit var textViewResult: TextView
-    private lateinit var progressBar: ProgressBar
-
-    // Firebase Instances (no changes here)
-    private val storage = Firebase.storage
-    private val firestore = Firebase.firestore
-    private var firestoreListener: ListenerRegistration? = null
-
-    // Activity Result Launcher (no changes here)
-    private val selectImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            imageViewPreview.setImageURI(it)
-            handleImageUpload(it)
-        }
-    }
-
-    // onCreate (no changes here)
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        imageViewPreview = findViewById(R.id.imageViewPreview)
-        buttonUpload = findViewById(R.id.buttonUpload)
-        textViewResult = findViewById(R.id.textViewResult)
-        progressBar = findViewById(R.id.progressBar)
-
-        buttonUpload.setOnClickListener {
-            selectImageLauncher.launch("image/*")
-        }
-    }
-
-    // handleImageUpload (no changes here)
-    private fun handleImageUpload(imageUri: Uri) {
-        showLoading(true, "Uploading image...")
-
-        val fileExtension = contentResolver.getType(imageUri)?.substringAfterLast('/') ?: "jpg"
-        val uniqueFileName = "image_${Date().time}_android.$fileExtension"
-        val storagePath = "uploads/$uniqueFileName"
-        val storageRef = storage.reference.child(storagePath)
-
-        storageRef.putFile(imageUri)
-            .addOnProgressListener { taskSnapshot ->
-                val progress = (100.0 * taskSnapshot.bytesTransferred) / taskSnapshot.totalByteCount
-                textViewResult.text = "Uploading... ${progress.toInt()}%"
-            }
-            .addOnSuccessListener {
-                textViewResult.text = "Analyzing image with AI..."
-                listenForDiagnosisResult(uniqueFileName)
-            }
-            .addOnFailureListener { exception ->
-                showLoading(false)
-                Toast.makeText(this, "Upload failed: ${exception.message}", Toast.LENGTH_LONG).show()
-                Log.e("MainActivity", "Upload failed", exception)
-            }
-    }
-
-    // listenForDiagnosisResult (THIS IS WHERE THE FIX IS)
-    private fun listenForDiagnosisResult(diagnosisId: String) {
-        val docRef = firestore.collection("diagnoses").document(diagnosisId)
-
-        firestoreListener?.remove()
-
-        // ▼▼▼ FIX: Explicitly specify the types for the listener's parameters ▼▼▼
-        firestoreListener = docRef.addSnapshotListener { snapshot: DocumentSnapshot?, e: FirebaseFirestoreException? ->
-            if (e != null) {
-                showLoading(false)
-                textViewResult.text = "Error listening for result: ${e.message}"
-                Log.w("MainActivity", "Listen failed.", e)
-                return@addSnapshotListener
-            }
-
-            // ▼▼▼ FIX: Use 'snapshot?.exists()' which is the correct syntax ▼▼▼
-            if (snapshot != null && snapshot.exists()) {
-                Log.d("MainActivity", "Diagnosis data received: ${snapshot.data}")
-                displayDiagnosisResults(snapshot.data)
-                firestoreListener?.remove()
-            } else {
-                Log.d("MainActivity", "Listening... Current data: null")
+        setContent {
+            ProjectKisanTheme {
+                MainScreen()
             }
         }
     }
+}
 
-    // displayDiagnosisResults and showLoading (no changes here)
-    private fun displayDiagnosisResults(data: Map<String, Any>?) {
-        showLoading(false)
-        if (data == null) {
-            textViewResult.text = "Failed to parse diagnosis data."
-            return
+@Composable
+fun MainScreen() {
+    val navController = rememberNavController()
+    val screens = listOf(
+        Screen.Home,
+        Screen.Plan,
+        Screen.Ask,
+        Screen.Diagnose,
+        Screen.Market
+    )
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentDestination = navBackStackEntry?.destination
+
+                screens.forEach { screen ->
+                    NavigationBarItem(
+                        label = { Text(screen.label) },
+                        icon = { Icon(painterResource(id = screen.icon), contentDescription = null) },
+                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                        onClick = {
+                            navController.navigate(screen.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
+            }
         }
-
-        val diseaseName = data["disease_name_english"] as? String ?: "N/A"
-        val plantType = data["plant_type"] as? String ?: "N/A"
-        val description = data["description_english"] as? String ?: "No description available."
-        val confidence = data["confidence_score"] as? Double ?: 0.0
-        val confidencePercent = (confidence * 100).toInt()
-
-        val resultString = """
-            Plant: $plantType
-            Diagnosis: $diseaseName
-            Confidence: $confidencePercent%
-            
-            Description:
-            $description
-        """.trimIndent()
-
-        textViewResult.text = resultString
-
-        val audioUrl = data["audio_remedy_url"] as? String
-        if (!audioUrl.isNullOrEmpty()) {
-            Toast.makeText(this, "Audio summary available!", Toast.LENGTH_SHORT).show()
-            Log.d("MainActivity", "Audio URL: $audioUrl")
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Home.route,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable(Screen.Home.route) { HomeScreen() }
+            composable(Screen.Plan.route) { PlanScreen() }
+            composable(Screen.Ask.route) { AskScreen() }
+            composable(Screen.Diagnose.route) { DiagnoseScreen() }
+            composable(Screen.Market.route) { MarketScreen() }
         }
-    }
-
-    private fun showLoading(isLoading: Boolean, message: String = "") {
-        progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-        buttonUpload.isEnabled = !isLoading
-        if (isLoading) {
-            textViewResult.text = message
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        firestoreListener?.remove()
     }
 }

@@ -21,3 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Project Kisan"
 include(":app")
+include(":app")
+ 
