@@ -16,6 +16,10 @@ const cheerio = require("cheerio");
 const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
 const Busboy = require('busboy');
 const { SpeechClient } = require('@google-cloud/speech');
+const { Client } = require("@googlemaps/google-maps-services-js");
+const multer = require('multer')
+const busboyBodyParser = require('busboy-body-parser');
+const contentType = require('content-type');
 // --- HIGHLIGHTED FIX: Added missing imports for your new functions ---
 const axios = require("axios");
 const { VertexAI } = require("@google-cloud/vertexai");
@@ -28,6 +32,7 @@ const firestore = admin.firestore();
 const storage = admin.storage();
 const ttsClient = new TextToSpeechClient();
 const speechClient = new SpeechClient();
+const mapsClient = new Client({});
 
 
 // =================================================================
@@ -1209,15 +1214,22 @@ function parseCityFromGeocodingResponse(geocodingData) {
 
 
 // =================================================================
-// FUNCTION 9: GOVERNMENT SCHEME NAVIGATOR (Handles Text and Voice Input)
+// FUNCTION 9: GOVERNMENT SCHEME NAVIGATOR (Handles Text and Voice Input - FINAL)
 // =================================================================
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10 MB limit
+    },
+});
+
 exports.getSchemeAnswer = onRequest(
     {
         region: LOCATION,
-        timeoutSeconds: 120, // Increased timeout to allow for speech processing
+        timeoutSeconds: 120,
         memory: "1GiB"
     },
-    async (request, response) => {
+    (request, response) => {
         // --- CORS handling for frontend requests ---
         response.set('Access-Control-Allow-Origin', '*'); 
         if (request.method === 'OPTIONS') {
@@ -1227,210 +1239,330 @@ exports.getSchemeAnswer = onRequest(
             return;
         }
 
-        // --- HIGHLIGHTED CHANGE: Logic to handle both JSON/text and multipart/form-data (audio) ---
-        if (request.is('multipart/form-data')) {
-            // Handle audio upload
-            handleAudioRequest(request, response);
-        } else {
-            // Handle plain text/JSON request
-            const question = request.query.question || request.body.question;
-            const stateName = request.query.stateName || request.body.stateName;
-            await processAndRespond(question, stateName, response);
-        }
+        // --- HIGHLIGHTED CHANGE: Use multer as middleware to parse the form ---
+        upload.single('audio')(request, response, async (err) => {
+            if (err) {
+                functions.logger.error('[Multer Error]', err);
+                response.status(400).json({ error: "File upload error: " + err.message });
+                return;
+            }
+
+            let question, stateName;
+
+            if (request.file) { // If a file was uploaded by multer
+                stateName = request.body.stateName;
+                const audioBuffer = request.file.buffer;
+                
+                if (!stateName || !audioBuffer) {
+                    response.status(400).json({ error: "Missing 'stateName' field or 'audio' file in form data." });
+                    return;
+                }
+
+                try {
+                    question = await transcribeAudio(audioBuffer);
+                    if (!question) {
+                        response.status(500).json({ error: "Could not understand the audio. Please try speaking clearly." });
+                        return;
+                    }
+                } catch (transcribeError) {
+                    functions.logger.error('[Transcription Error]', transcribeError);
+                    response.status(500).json({ error: "Failed to transcribe audio." });
+                    return;
+                }
+
+            } else { // Fallback for plain text/JSON requests
+                question = request.query.question || request.body.question;
+                stateName = request.query.stateName || request.body.stateName;
+            }
+
+            // --- Unified Gemini Analysis Logic ---
+            try {
+                const result = await getGeminiAnalysisForScheme(question, stateName);
+                response.status(200).json(result);
+            } catch (geminiError) {
+                functions.logger.error(`[CRITICAL Scheme Q&A Error]`, geminiError);
+                if (geminiError instanceof HttpsError) {
+                    response.status(geminiError.httpErrorCode.status).json({ error: geminiError.message });
+                } else {
+                    response.status(500).json({ error: "An internal error occurred during AI analysis." });
+                }
+            }
+        });
     }
 );
 
-// --- HELPER FUNCTION TO PROCESS AUDIO UPLOADS (CORRECTED WITH PROMISE) ---
-async function handleAudioRequest(request, response) {
-    // --- HIGHLIGHTED CHANGE: Wrap the busboy logic in a new Promise ---
-    return new Promise((resolve, reject) => {
-        const busboy = Busboy({ headers: request.headers });
-        const fields = {};
-        const fileBuffers = {};
+// --- HELPER FUNCTION TO TRANSCRIBE AUDIO ---
+async function transcribeAudio(audioBuffer) {
+    functions.logger.info("[Scheme Q&A] Transcribing audio with Speech-to-Text API...");
+    const audio = { content: audioBuffer.toString('base64') };
+    const speechConfig = {
+        encoding: 'WEBM_OPUS', // IMPORTANT: Match your frontend audio format
+        sampleRateHertz: 48000,   // IMPORTANT: Match your frontend audio format
+        languageCode: 'en-IN',
+    };
+    const sttRequest = { audio: audio, config: speechConfig };
 
-        busboy.on('field', (fieldname, val) => {
-            functions.logger.info(`[Scheme Q&A] Processed field ${fieldname}: ${val}.`);
-            fields[fieldname] = val;
-        });
-
-        busboy.on('file', (fieldname, file, filename) => {
-            const chunks = [];
-            file.on('data', (chunk) => {
-                chunks.push(chunk);
-            });
-            file.on('end', () => {
-                fileBuffers[fieldname] = Buffer.concat(chunks);
-                functions.logger.info(`[Scheme Q&A] Finished processing audio file ${fieldname}. Buffer size: ${fileBuffers[fieldname].length}`);
-            });
-        });
-
-        busboy.on('finish', async () => {
-            try {
-                const stateName = fields.stateName;
-                const audioBuffer = fileBuffers.audio;
-
-                if (!stateName || !audioBuffer) {
-                    response.status(400).json({ error: "Missing 'stateName' field or 'audio' file in form data." });
-                    resolve(); // Resolve the promise after sending response
-                    return;
-                }
-
-                functions.logger.info("[Scheme Q&A] Transcribing audio with Speech-to-Text API...");
-                const audio = {
-                    content: audioBuffer.toString('base64'),
-                };
-                const speechConfig = {
-                    encoding: 'WEBM_OPUS',
-                    sampleRateHertz: 48000,
-                    languageCode: 'en-IN',
-                };
-                const sttRequest = {
-                    audio: audio,
-                    config: speechConfig,
-                };
-
-                const [sttResponse] = await speechClient.recognize(sttRequest);
-                const transcription = sttResponse.results
-                    .map(result => result.alternatives[0].transcript)
-                    .join('\n');
-                
-                if (!transcription) {
-                    functions.logger.error("[Scheme Q&A Error] Speech-to-Text returned empty transcription.");
-                    response.status(500).json({ error: "Could not understand the audio. Please try speaking clearly." });
-                    resolve(); // Resolve the promise
-                    return;
-                }
-                functions.logger.info(`[Scheme Q&A] Transcription successful: "${transcription}"`);
-
-                await processAndRespond(transcription, stateName, response);
-                resolve(); // Resolve the promise after processing is done
-
-            } catch (error) {
-                functions.logger.error(`[CRITICAL Scheme Q&A Error] Error processing audio request:`, error, { structuredData: true });
-                if (!response.headersSent) {
-                    response.status(500).json({ error: "Failed to process audio.", details: error.message });
-                }
-                reject(error); // Reject the promise on error
-            }
-        });
-
-        // --- HIGHLIGHTED CHANGE: Add error handler for busboy ---
-        busboy.on('error', (err) => {
-            functions.logger.error('[Busboy Error]', err);
-            reject(err);
-        });
-
-        request.pipe(busboy);
-    });
+    const [sttResponse] = await speechClient.recognize(sttRequest);
+    const transcription = sttResponse.results
+        .map(result => result.alternatives[0].transcript)
+        .join('\n');
+    
+    if (transcription) {
+        functions.logger.info(`[Scheme Q&A] Transcription successful: "${transcription}"`);
+    } else {
+        functions.logger.error("[Scheme Q&A Error] Speech-to-Text returned empty transcription.");
+    }
+    return transcription;
 }
 
-// --- HELPER FUNCTION FOR GEMINI ANALYSIS AND RESPONSE (to handle both text and audio) ---
-async function processAndRespond(question, stateName, response) {
+// --- HELPER FUNCTION FOR GEMINI ANALYSIS ---
+async function getGeminiAnalysisForScheme(question, stateName) {
+    if (!question || !stateName) {
+        throw new Error("Missing 'question' or 'stateName' for analysis.");
+    }
+
+    let accessToken;
     try {
-        let accessToken;
-        try {
-            const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
-            if (!tokenResponse.ok) throw new Error("Failed to fetch access token");
-            const tokenData = await tokenResponse.json();
-            accessToken = tokenData.access_token;
-        } catch (error) {
-            functions.logger.error("[Scheme Q&A Auth Error] Could not fetch access token for Gemini API call.", error);
-            response.status(500).json({ error: "Internal server error: could not authenticate." });
-            return;
-        }
-
-        functions.logger.info(`[Scheme Q&A] Processing request for Question: "${question}", State: "${stateName}"`);
-        if (!question || !stateName) {
-            response.status(400).json({ error: "Missing 'question' or 'stateName' in request." });
-            return;
-        }
-
-        const analysisPrompt = `You are a helpful and knowledgeable assistant for Indian farmers. Your goal is to find relevant government schemes based on a farmer's question and state, and return the information in a structured JSON format.
-
-        **IMPORTANT CONTEXT:**
-        - The user is asking about the state of: **${stateName}**
-        - The user's question is: **"${question}"**
-
-        **YOUR TASK:**
-        1.  Based on your knowledge, search for relevant agricultural schemes. You must consider BOTH **Central Government schemes** (applicable nationwide, like PM-KISAN) AND specific **State Government schemes** for **${stateName}**.
-        2.  Analyze the schemes you find and determine if they are relevant to the user's question.
-        3.  Format your findings into a single, valid JSON object with the exact structure below.
-
-        **JSON OUTPUT STRUCTURE:**
-        {
-          "schemes_found": true,
-          "schemes": [
-            {
-              "scheme_name": "Name of the first scheme found",
-              "government_level": "Central" or "State",
-              "brief_description": "A simple, one-sentence summary of the scheme's purpose.",
-              "key_benefits": [
-                "Benefit 1 (e.g., 'Financial assistance of Rs. 6000 per year').",
-                "Benefit 2 (e.g., 'Subsidy on seeds and fertilizers')."
-              ],
-              "how_to_apply": "A simple, step-by-step guide on how to apply. If you don't know the exact steps, advise the user to visit the official government portal for that scheme."
-            }
-          ],
-          "message_if_no_schemes": ""
-        }
-
-        **IMPORTANT RULES:**
-        - If you find one or more relevant schemes, populate the "schemes" array and set "schemes_found" to true. The "message_if_no_schemes" should be an empty string.
-        - If you find NO relevant schemes, the "schemes" array MUST be empty (\`[]\`), "schemes_found" MUST be false, and you must provide a helpful message in "message_if_no_schemes", like "I could not find a specific scheme for your query in ${stateName}. You can check the official state agricultural portal for more information."
-        - Do not make up facts, scheme names, or URLs. If you are unsure, it's better to state that in the "how_to_apply" section.`;
-        
-        const geminiApiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
-        const geminiRequestBody = { 
-            contents: [{ 
-                parts: [{ text: analysisPrompt }], 
-                role: "user" 
-            }] 
-        };
-        
-        functions.logger.info("[Scheme Q&A] Sending request to Gemini API...");
-        const geminiResponse = await fetch(geminiApiEndpoint, { 
-            method: "POST", 
-            headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, 
-            body: JSON.stringify(geminiRequestBody) 
-        });
-        const geminiResponseData = await geminiResponse.json();
-        
-        const modelResponseText = geminiResponseData?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!modelResponseText) { 
-            functions.logger.error("[Scheme Q&A Error] Gemini response was empty or invalid.", { response: geminiResponseData });
-            response.status(500).json({ error: "Could not get a valid answer from the AI." });
-            return;
-        }
-        
-        // Robust JSON Parsing
-        let jsonString = modelResponseText;
-        const jsonMatch = modelResponseText.match(/```json\s*([\s\S]*?)\s*```/);
-        if (jsonMatch && jsonMatch[1]) jsonString = jsonMatch[1];
-        
-        const firstBrace = jsonString.indexOf('{');
-        const lastBrace = jsonString.lastIndexOf('}');
-        if (firstBrace === -1 || lastBrace === -1) {
-            functions.logger.error("[Scheme Q&A Parse Error] Could not find a valid JSON object in Gemini's response.", { rawResponse: modelResponseText });
-            response.status(500).json({ error: "AI response did not contain a valid JSON object." });
-            return;
-        }
-        const finalJsonString = jsonString.substring(firstBrace, lastBrace + 1).trim();
-
-        try {
-            const schemeData = JSON.parse(finalJsonString);
-            functions.logger.info("[Scheme Q&A] Successfully parsed scheme data from Gemini.");
-            response.status(200).json(schemeData);
-            return;
-        } catch (parseError) {
-            functions.logger.error("[Scheme Q&A Parse Error] Failed to parse Gemini's response as JSON after cleaning.", { rawResponse: modelResponseText, cleanedString: finalJsonString, error: parseError });
-            response.status(500).json({ error: "Failed to parse AI response.", details: parseError.message });
-            return;
-        }
-
+        const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
+        if (!tokenResponse.ok) throw new Error("Failed to fetch access token");
+        const tokenData = await tokenResponse.json();
+        accessToken = tokenData.access_token;
     } catch (error) {
-        functions.logger.error(`[CRITICAL Scheme Q&A Error] Error processing request for question "${question}":`, error, { structuredData: true });
-        if (!response.headersSent) {
-            response.status(500).json({ error: "Failed to get an answer.", details: error.message });
+        functions.logger.error("[Scheme Q&A Auth Error] Could not fetch access token for Gemini API call.", error);
+        throw new Error("Internal server error: could not authenticate.");
+    }
+
+    const analysisPrompt = `You are a helpful and knowledgeable assistant for Indian farmers. Your goal is to find relevant government schemes based on a farmer's question and state, and return the information in a structured JSON format.
+
+    **IMPORTANT CONTEXT:**
+    - The user is asking about the state of: **${stateName}**
+    - The user's question is: **"${question}"**
+
+    **YOUR TASK:**
+    1.  Based on your knowledge, search for relevant agricultural schemes. You must consider BOTH **Central Government schemes** (applicable nationwide, like PM-KISAN) AND specific **State Government schemes** for **${stateName}**.
+    2.  Analyze the schemes you find and determine if they are relevant to the user's question.
+    3.  Format your findings into a single, valid JSON object with the exact structure below.
+
+    **JSON OUTPUT STRUCTURE:**
+    {
+      "schemes_found": true,
+      "schemes": [
+        {
+          "scheme_name": "Name of the first scheme found",
+          "government_level": "Central" or "State",
+          "brief_description": "A simple, one-sentence summary of the scheme's purpose.",
+          "key_benefits": [
+            "Benefit 1 (e.g., 'Financial assistance of Rs. 6000 per year').",
+            "Benefit 2 (e.g., 'Subsidy on seeds and fertilizers')."
+          ],
+          "how_to_apply": "A simple, step-by-step guide on how to apply. If you don't know the exact steps, advise the user to visit the official government portal for that scheme."
         }
+      ],
+      "message_if_no_schemes": ""
+    }
+
+    **IMPORTANT RULES:**
+    - If you find one or more relevant schemes, populate the "schemes" array and set "schemes_found" to true. The "message_if_no_schemes" should be an empty string.
+    - If you find NO relevant schemes, the "schemes" array MUST be empty (\`[]\`), "schemes_found" MUST be false, and you must provide a helpful message in "message_if_no_schemes", like "I could not find a specific scheme for your query in ${stateName}. You can check the official state agricultural portal for more information."
+    - Do not make up facts, scheme names, or URLs. If you are unsure, it's better to state that in the "how_to_apply" section.`;
+    
+    const geminiApiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
+    const geminiRequestBody = { contents: [{ parts: [{ text: analysisPrompt }], role: "user" }] };
+    
+    const geminiResponse = await fetch(geminiApiEndpoint, { 
+        method: "POST", 
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, 
+        body: JSON.stringify(geminiRequestBody) 
+    });
+    const geminiResponseData = await geminiResponse.json();
+    
+    const modelResponseText = geminiResponseData?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!modelResponseText) {
+        functions.logger.error("[Scheme Q&A Error] Gemini response was empty or invalid.", { response: geminiResponseData });
+        throw new Error("Could not get a valid answer from the AI.");
+    }
+    
+    // Robust JSON Parsing
+    let jsonString = modelResponseText;
+    const jsonMatch = modelResponseText.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonMatch && jsonMatch[1]) jsonString = jsonMatch[1];
+    
+    const firstBrace = jsonString.indexOf('{');
+    const lastBrace = jsonString.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) {
+        throw new Error("AI response did not contain a valid JSON object.");
+    }
+    const finalJsonString = jsonString.substring(firstBrace, lastBrace + 1).trim();
+
+    try {
+        return JSON.parse(finalJsonString);
+    } catch (parseError) {
+        functions.logger.error("[Scheme Q&A Parse Error] Failed to parse Gemini's response as JSON after cleaning.", { rawResponse: modelResponseText, cleanedString: finalJsonString, error: parseError });
+        throw new Error("Failed to parse AI response.");
     }
 }
+
+// =================================================================
+// FUNCTION 10: GENERATE OPPURTUNITY ENGINE
+// =================================================================
+exports.generateOpportunity = onCall(
+    {
+        region: LOCATION,
+        memory: "2GiB",
+        timeoutSeconds: 180,
+        concurrency: 5,
+        // Securely loads the API key from Secret Manager
+        secrets: ["GOOGLE_MAPS_API_KEY"]
+    },
+    async (request) => {
+        // 1. Get Farmer's Constraints from the app
+        const { location, landSize, budget, waterAccess } = request.data;
+        if (!location || !landSize || !budget || !waterAccess) {
+            throw new HttpsError('invalid-argument', 'Missing required constraints: location, landSize, budget, and waterAccess.');
+        }
+        functions.logger.info(`[Opportunity Engine V2] Request for land: ${landSize} acres, budget: ₹${budget}`);
+
+        try {
+            // --- PHASE 1: FUSE ALL INPUT DATA ---
+
+            // A. Get Geocoded Location (State/District) using the secret
+            const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+            if (!GOOGLE_MAPS_API_KEY) {
+                functions.logger.error("[Opportunity Engine V2] GOOGLE_MAPS_API_KEY secret not found in environment.");
+                throw new HttpsError('internal', 'Server configuration error: Missing API key.');
+            }
+            functions.logger.info(`[Opportunity Engine V2] Geocoding location...`);
+
+            const geocodeResponse = await mapsClient.reverseGeocode({
+                params: {
+                    latlng: { latitude: location.latitude, longitude: location.longitude },
+                    key: GOOGLE_MAPS_API_KEY,
+                }
+            });
+
+            const addressComponents = geocodeResponse.data.results[0]?.address_components;
+            const state = addressComponents?.find(c => c.types.includes('administrative_area_level_1'))?.long_name;
+            const district = addressComponents?.find(c => c.types.includes('administrative_area_level_2'))?.long_name;
+            if (!state || !district) {
+                throw new HttpsError('not-found', "Could not determine a valid State and District from the provided location.");
+            }
+            functions.logger.info(`[Opportunity Engine V2] Location identified: ${district}, ${state}`);
+
+            // B. Get Climate Data Summary
+            const climateSummary = `The region of ${district}, ${state} typically experiences a hot, dry summer followed by a moderate to heavy monsoon season from July to September.`;
+
+            // C. Generate Agronomic Data with Gemini
+            functions.logger.info(`[Opportunity Engine V2] Generating agronomic data with AI...`);
+            const agronomicModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+            
+            const agronomicPrompt = `
+                You are an expert Indian agronomist. For the following list of crops, provide their general agronomic and financial data.
+                Crops: ${POTENTIAL_CROPS.join(", ")}
+                Respond ONLY with a single valid JSON object. The top-level keys should be the crop names. Each crop object must have these exact keys:
+                - "water_need": A string ('Low', 'Medium', 'High', 'Very High').
+                - "risk_profile": A string ('Low', 'Medium', 'High').
+                - "typical_cost_per_acre_inr": An integer representing the average seed and preparation cost per acre.
+                - "typical_yield_quintal_per_acre": An integer for the average yield in quintals per acre.
+                - "avg_market_price_inr_per_quintal": An integer for the typical national average market price per quintal.
+            `;
+
+            const agronomicResp = await agronomicModel.generateContent(agronomicPrompt);
+            const agronomicContent = agronomicResp.response.candidates[0].content.parts[0].text;
+            
+            let CROP_KNOWLEDGE_BASE;
+            try {
+                let jsonString = agronomicContent.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || agronomicContent;
+                const firstBrace = jsonString.indexOf('{');
+                const lastBrace = jsonString.lastIndexOf('}');
+                jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+                CROP_KNOWLEDGE_BASE = JSON.parse(jsonString.trim());
+                functions.logger.info(`[Opportunity Engine V2] Successfully generated agronomic data for ${Object.keys(CROP_KNOWLEDGE_BASE).length} crops.`);
+            } catch (e) {
+                functions.logger.error("[Opportunity Engine V2] Failed to parse agronomic data from AI.", { rawResponse: agronomicContent });
+                throw new HttpsError('internal', 'Failed to generate internal crop knowledge base.');
+            }
+
+            // D. Fetch Recent Market Data from Firestore for the last week
+            functions.logger.info(`[Opportunity Engine V2] Fetching recent market data from Firestore...`);
+            let marketDataSummary = "Recent Market Data Summary for your specific district:\n";
+            
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+            const marketDataPromises = Object.keys(CROP_KNOWLEDGE_BASE).map(async (crop) => {
+                const querySnapshot = await firestore.collectionGroup("historical_prices")
+                    .where("crop_name", "==", crop)
+                    .where("state_name", "==", state)
+                    .where("district_name", "==", district)
+                    .where("date", ">=", sevenDaysAgoStr)
+                    .get();
+                
+                if (!querySnapshot.empty) {
+                    let total = 0;
+                    querySnapshot.forEach(doc => { total += doc.data().price_modal; });
+                    const averagePrice = Math.round(total / querySnapshot.size);
+                    return `- ${crop}: The average price in your district over the last week was ₹${averagePrice} per quintal.`;
+                }
+                return `- ${crop}: No recent price data found for your specific district in the last week. The national average is around ₹${CROP_KNOWLEDGE_BASE[crop].avg_market_price_inr_per_quintal}.`;
+            });
+            
+            const results = await Promise.all(marketDataPromises);
+            marketDataSummary += results.join("\n");
+
+            // --- PHASE 2: CONSULT THE AI STRATEGIST ---
+            functions.logger.info(`[Opportunity Engine V2] Generating final prompt for Gemini...`);
+            const strategyModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+            const prompt = `
+                You are an expert agricultural business strategist for small-scale Indian farmers. Your goal is to generate profitable, hyper-personalized, and realistic business plans.
+                
+                **Farmer's Constraints:**
+                - Location: District of ${district}, State of ${state}
+                - Land Size: ${landSize} acres
+                - Total Investment Budget: ₹${budget}
+                - Water Access: ${waterAccess}
+
+                **External and Generated Data:**
+                - **Climate Outlook:** ${climateSummary}
+                - **Recent Market Prices (Specific to Farmer's District):**
+                ${marketDataSummary}
+                - **General Agronomic & Financial Data (AI Generated):**
+                ${JSON.stringify(CROP_KNOWLEDGE_BASE, null, 2)}
+
+                **Your Task:**
+                Based on ALL the data above, act as a business consultant. Generate a list of the **Top 3 most profitable and suitable crop plans** for this specific farmer.
+                1. The total cost for each plan must be within the farmer's budget.
+                2. The water needs of the crop must match the farmer's water access.
+                3. For each plan, calculate an estimated total upfront cost and a potential total profit for their land size. Use the AI-generated typical costs and yields, but adjust your profit expectation based on the more current, local market prices if available.
+                4. For each plan, provide a short, bulleted list of "Pros" and "Cons".
+                5. Your reasoning must be sound and based on all the data provided.
+
+                **Output Format:**
+                Respond ONLY with a single, valid JSON object with a single key, "crop_plans". The value should be an array of exactly three plan objects. Each plan object must have these keys: "crop_name" (string), "estimated_profit_inr" (integer), "estimated_cost_inr" (integer), "pros" (an array of strings), and "cons" (an array of strings).
+            `;
+
+            const resp = await strategyModel.generateContent(prompt);
+            const content = resp.response.candidates[0].content.parts[0].text;
+
+            let analysis;
+            try {
+                let jsonString = content.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || content;
+                const firstBrace = jsonString.indexOf('{');
+                const lastBrace = jsonString.lastIndexOf('}');
+                jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+                analysis = JSON.parse(jsonString.trim());
+                functions.logger.info("[Opportunity Engine V2] Successfully parsed final plans from Gemini.");
+            } catch (parsingError) {
+                functions.logger.error("[Opportunity Engine V2] Failed to parse final plans from Gemini.", { rawResponse: content });
+                throw new HttpsError('internal', 'The AI returned a response in an unexpected format.');
+            }
+
+            return analysis;
+
+        } catch (error) {
+            functions.logger.error("[Opportunity Engine V2] Critical error:", error);
+            if (error instanceof HttpsError) throw error;
+            throw new HttpsError('internal', 'An error occurred while generating opportunities.');
+        }
+    }
+);
