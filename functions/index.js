@@ -14,6 +14,8 @@ const admin = require("firebase-admin");
 const fetch = require("node-fetch");
 const cheerio = require("cheerio");
 const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
+const Busboy = require('busboy');
+const { SpeechClient } = require('@google-cloud/speech');
 // --- HIGHLIGHTED FIX: Added missing imports for your new functions ---
 const axios = require("axios");
 const { VertexAI } = require("@google-cloud/vertexai");
@@ -25,6 +27,7 @@ admin.initializeApp();
 const firestore = admin.firestore();
 const storage = admin.storage();
 const ttsClient = new TextToSpeechClient();
+const speechClient = new SpeechClient();
 
 
 // =================================================================
@@ -1206,12 +1209,12 @@ function parseCityFromGeocodingResponse(geocodingData) {
 
 
 // =================================================================
-// FUNCTION 9: GOVERNMENT SCHEME NAVIGATOR (Gemini-Only Q&A with Structured Output)
+// FUNCTION 9: GOVERNMENT SCHEME NAVIGATOR (Handles Text and Voice Input)
 // =================================================================
 exports.getSchemeAnswer = onRequest(
     {
         region: LOCATION,
-        timeoutSeconds: 60, // A 1-minute timeout is sufficient for a Q&A call
+        timeoutSeconds: 120, // Increased timeout to allow for speech processing
         memory: "1GiB"
     },
     async (request, response) => {
@@ -1224,128 +1227,210 @@ exports.getSchemeAnswer = onRequest(
             return;
         }
 
-        let question = request.query.question || request.body.question;
-        let stateName = request.query.stateName || request.body.stateName;
-
-        try {
-            // --- 1. Authentication for Gemini API ---
-            let accessToken;
-            try {
-                const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
-                if (!tokenResponse.ok) {
-                    throw new Error("Failed to fetch access token");
-                }
-                const tokenData = await tokenResponse.json();
-                accessToken = tokenData.access_token;
-            } catch (error) {
-                functions.logger.error("[Scheme Q&A Auth Error] Could not fetch access token for Gemini API call.", error);
-                response.status(500).json({ error: "Internal server error: could not authenticate." });
-                return;
-            }
-
-            // --- 2. Input Validation ---
-            functions.logger.info(`[Scheme Q&A] Received request for Question: "${question}", State: "${stateName}"`);
-
-            if (!question || !stateName) {
-                response.status(400).json({ error: "Missing 'question' or 'stateName' in request." });
-                return;
-            }
-
-            // --- 3. Prompt Engineering (New, More Powerful Prompt) ---
-            const analysisPrompt = `You are a helpful and knowledgeable assistant for Indian farmers. Your goal is to find relevant government schemes based on a farmer's question and state, and return the information in a structured JSON format.
-
-            **IMPORTANT CONTEXT:**
-            - The user is asking about the state of: **${stateName}**
-            - The user's question is: **"${question}"**
-
-            **YOUR TASK:**
-            1.  Based on your knowledge, search for relevant agricultural schemes. You must consider BOTH **Central Government schemes** (applicable nationwide, like PM-KISAN) AND specific **State Government schemes** for **${stateName}**.
-            2.  Analyze the schemes you find and determine if they are relevant to the user's question.
-            3.  Format your findings into a single, valid JSON object with the exact structure below.
-
-            **JSON OUTPUT STRUCTURE:**
-            {
-              "schemes_found": true,
-              "schemes": [
-                {
-                  "scheme_name": "Name of the first scheme found",
-                  "government_level": "Central" or "State",
-                  "brief_description": "A simple, one-sentence summary of the scheme's purpose.",
-                  "key_benefits": [
-                    "Benefit 1 (e.g., 'Financial assistance of Rs. 6000 per year').",
-                    "Benefit 2 (e.g., 'Subsidy on seeds and fertilizers')."
-                  ],
-                  "how_to_apply": "A simple, step-by-step guide on how to apply. If you don't know the exact steps, advise the user to visit the official government portal for that scheme."
-                }
-              ],
-              "message_if_no_schemes": ""
-            }
-
-            **IMPORTANT RULES:**
-            - If you find one or more relevant schemes, populate the "schemes" array and set "schemes_found" to true. The "message_if_no_schemes" should be an empty string.
-            - If you find NO relevant schemes, the "schemes" array MUST be empty (\`[]\`), "schemes_found" MUST be false, and you must provide a helpful message in "message_if_no_schemes", like "I could not find a specific scheme for your query in ${stateName}. You can check the official state agricultural portal for more information."
-            - Do not make up facts, scheme names, or URLs. If you are unsure, it's better to state that in the "how_to_apply" section.`;
-            
-            // --- 4. AI Call ---
-            const geminiApiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
-            const geminiRequestBody = { 
-                contents: [{ 
-                    parts: [{ text: analysisPrompt }], 
-                    role: "user" 
-                }] 
-            };
-            
-            functions.logger.info("[Scheme Q&A] Sending request to Gemini API...");
-            const geminiResponse = await fetch(geminiApiEndpoint, { 
-                method: "POST", 
-                headers: { 
-                    Authorization: `Bearer ${accessToken}`, 
-                    "Content-Type": "application/json" 
-                }, 
-                body: JSON.stringify(geminiRequestBody) 
-            });
-            const geminiResponseData = await geminiResponse.json();
-            
-            const modelResponseText = geminiResponseData?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-            if (!modelResponseText) { 
-                functions.logger.error("[Scheme Q&A Error] Gemini response was empty or invalid.", { response: geminiResponseData });
-                response.status(500).json({ error: "Could not get a valid answer from the AI." });
-                return;
-            }
-            
-            // --- 5. Robust JSON Parsing and Return to Frontend ---
-            let jsonString = modelResponseText;
-            const jsonMatch = modelResponseText.match(/```json\s*([\s\S]*?)\s*```/);
-            if (jsonMatch && jsonMatch[1]) {
-                jsonString = jsonMatch[1];
-            }
-            
-            const firstBrace = jsonString.indexOf('{');
-            const lastBrace = jsonString.lastIndexOf('}');
-            if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
-                functions.logger.error("[Scheme Q&A Parse Error] Could not find a valid JSON object in Gemini's response.", { rawResponse: modelResponseText });
-                response.status(500).json({ error: "AI response did not contain a valid JSON object." });
-                return;
-            }
-            const finalJsonString = jsonString.substring(firstBrace, lastBrace + 1).trim();
-
-            try {
-                const schemeData = JSON.parse(finalJsonString);
-                functions.logger.info("[Scheme Q&A] Successfully parsed scheme data from Gemini.");
-                response.status(200).json(schemeData);
-                return;
-            } catch (parseError) {
-                functions.logger.error("[Scheme Q&A Parse Error] Failed to parse Gemini's response as JSON after cleaning.", { rawResponse: modelResponseText, cleanedString: finalJsonString, error: parseError });
-                response.status(500).json({ error: "Failed to parse AI response.", details: parseError.message });
-                return;
-            }
-
-        } catch (error) {
-            functions.logger.error(`[CRITICAL Scheme Q&A Error] Error processing request for question "${question}":`, error, { structuredData: true });
-            if (!response.headersSent) {
-                response.status(500).json({ error: "Failed to get an answer.", details: error.message });
-            }
+        // --- HIGHLIGHTED CHANGE: Logic to handle both JSON/text and multipart/form-data (audio) ---
+        if (request.is('multipart/form-data')) {
+            // Handle audio upload
+            handleAudioRequest(request, response);
+        } else {
+            // Handle plain text/JSON request
+            const question = request.query.question || request.body.question;
+            const stateName = request.query.stateName || request.body.stateName;
+            await processAndRespond(question, stateName, response);
         }
     }
 );
+
+// --- HELPER FUNCTION TO PROCESS AUDIO UPLOADS (CORRECTED WITH PROMISE) ---
+async function handleAudioRequest(request, response) {
+    // --- HIGHLIGHTED CHANGE: Wrap the busboy logic in a new Promise ---
+    return new Promise((resolve, reject) => {
+        const busboy = Busboy({ headers: request.headers });
+        const fields = {};
+        const fileBuffers = {};
+
+        busboy.on('field', (fieldname, val) => {
+            functions.logger.info(`[Scheme Q&A] Processed field ${fieldname}: ${val}.`);
+            fields[fieldname] = val;
+        });
+
+        busboy.on('file', (fieldname, file, filename) => {
+            const chunks = [];
+            file.on('data', (chunk) => {
+                chunks.push(chunk);
+            });
+            file.on('end', () => {
+                fileBuffers[fieldname] = Buffer.concat(chunks);
+                functions.logger.info(`[Scheme Q&A] Finished processing audio file ${fieldname}. Buffer size: ${fileBuffers[fieldname].length}`);
+            });
+        });
+
+        busboy.on('finish', async () => {
+            try {
+                const stateName = fields.stateName;
+                const audioBuffer = fileBuffers.audio;
+
+                if (!stateName || !audioBuffer) {
+                    response.status(400).json({ error: "Missing 'stateName' field or 'audio' file in form data." });
+                    resolve(); // Resolve the promise after sending response
+                    return;
+                }
+
+                functions.logger.info("[Scheme Q&A] Transcribing audio with Speech-to-Text API...");
+                const audio = {
+                    content: audioBuffer.toString('base64'),
+                };
+                const speechConfig = {
+                    encoding: 'WEBM_OPUS',
+                    sampleRateHertz: 48000,
+                    languageCode: 'en-IN',
+                };
+                const sttRequest = {
+                    audio: audio,
+                    config: speechConfig,
+                };
+
+                const [sttResponse] = await speechClient.recognize(sttRequest);
+                const transcription = sttResponse.results
+                    .map(result => result.alternatives[0].transcript)
+                    .join('\n');
+                
+                if (!transcription) {
+                    functions.logger.error("[Scheme Q&A Error] Speech-to-Text returned empty transcription.");
+                    response.status(500).json({ error: "Could not understand the audio. Please try speaking clearly." });
+                    resolve(); // Resolve the promise
+                    return;
+                }
+                functions.logger.info(`[Scheme Q&A] Transcription successful: "${transcription}"`);
+
+                await processAndRespond(transcription, stateName, response);
+                resolve(); // Resolve the promise after processing is done
+
+            } catch (error) {
+                functions.logger.error(`[CRITICAL Scheme Q&A Error] Error processing audio request:`, error, { structuredData: true });
+                if (!response.headersSent) {
+                    response.status(500).json({ error: "Failed to process audio.", details: error.message });
+                }
+                reject(error); // Reject the promise on error
+            }
+        });
+
+        // --- HIGHLIGHTED CHANGE: Add error handler for busboy ---
+        busboy.on('error', (err) => {
+            functions.logger.error('[Busboy Error]', err);
+            reject(err);
+        });
+
+        request.pipe(busboy);
+    });
+}
+
+// --- HELPER FUNCTION FOR GEMINI ANALYSIS AND RESPONSE (to handle both text and audio) ---
+async function processAndRespond(question, stateName, response) {
+    try {
+        let accessToken;
+        try {
+            const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
+            if (!tokenResponse.ok) throw new Error("Failed to fetch access token");
+            const tokenData = await tokenResponse.json();
+            accessToken = tokenData.access_token;
+        } catch (error) {
+            functions.logger.error("[Scheme Q&A Auth Error] Could not fetch access token for Gemini API call.", error);
+            response.status(500).json({ error: "Internal server error: could not authenticate." });
+            return;
+        }
+
+        functions.logger.info(`[Scheme Q&A] Processing request for Question: "${question}", State: "${stateName}"`);
+        if (!question || !stateName) {
+            response.status(400).json({ error: "Missing 'question' or 'stateName' in request." });
+            return;
+        }
+
+        const analysisPrompt = `You are a helpful and knowledgeable assistant for Indian farmers. Your goal is to find relevant government schemes based on a farmer's question and state, and return the information in a structured JSON format.
+
+        **IMPORTANT CONTEXT:**
+        - The user is asking about the state of: **${stateName}**
+        - The user's question is: **"${question}"**
+
+        **YOUR TASK:**
+        1.  Based on your knowledge, search for relevant agricultural schemes. You must consider BOTH **Central Government schemes** (applicable nationwide, like PM-KISAN) AND specific **State Government schemes** for **${stateName}**.
+        2.  Analyze the schemes you find and determine if they are relevant to the user's question.
+        3.  Format your findings into a single, valid JSON object with the exact structure below.
+
+        **JSON OUTPUT STRUCTURE:**
+        {
+          "schemes_found": true,
+          "schemes": [
+            {
+              "scheme_name": "Name of the first scheme found",
+              "government_level": "Central" or "State",
+              "brief_description": "A simple, one-sentence summary of the scheme's purpose.",
+              "key_benefits": [
+                "Benefit 1 (e.g., 'Financial assistance of Rs. 6000 per year').",
+                "Benefit 2 (e.g., 'Subsidy on seeds and fertilizers')."
+              ],
+              "how_to_apply": "A simple, step-by-step guide on how to apply. If you don't know the exact steps, advise the user to visit the official government portal for that scheme."
+            }
+          ],
+          "message_if_no_schemes": ""
+        }
+
+        **IMPORTANT RULES:**
+        - If you find one or more relevant schemes, populate the "schemes" array and set "schemes_found" to true. The "message_if_no_schemes" should be an empty string.
+        - If you find NO relevant schemes, the "schemes" array MUST be empty (\`[]\`), "schemes_found" MUST be false, and you must provide a helpful message in "message_if_no_schemes", like "I could not find a specific scheme for your query in ${stateName}. You can check the official state agricultural portal for more information."
+        - Do not make up facts, scheme names, or URLs. If you are unsure, it's better to state that in the "how_to_apply" section.`;
+        
+        const geminiApiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
+        const geminiRequestBody = { 
+            contents: [{ 
+                parts: [{ text: analysisPrompt }], 
+                role: "user" 
+            }] 
+        };
+        
+        functions.logger.info("[Scheme Q&A] Sending request to Gemini API...");
+        const geminiResponse = await fetch(geminiApiEndpoint, { 
+            method: "POST", 
+            headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, 
+            body: JSON.stringify(geminiRequestBody) 
+        });
+        const geminiResponseData = await geminiResponse.json();
+        
+        const modelResponseText = geminiResponseData?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!modelResponseText) { 
+            functions.logger.error("[Scheme Q&A Error] Gemini response was empty or invalid.", { response: geminiResponseData });
+            response.status(500).json({ error: "Could not get a valid answer from the AI." });
+            return;
+        }
+        
+        // Robust JSON Parsing
+        let jsonString = modelResponseText;
+        const jsonMatch = modelResponseText.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch && jsonMatch[1]) jsonString = jsonMatch[1];
+        
+        const firstBrace = jsonString.indexOf('{');
+        const lastBrace = jsonString.lastIndexOf('}');
+        if (firstBrace === -1 || lastBrace === -1) {
+            functions.logger.error("[Scheme Q&A Parse Error] Could not find a valid JSON object in Gemini's response.", { rawResponse: modelResponseText });
+            response.status(500).json({ error: "AI response did not contain a valid JSON object." });
+            return;
+        }
+        const finalJsonString = jsonString.substring(firstBrace, lastBrace + 1).trim();
+
+        try {
+            const schemeData = JSON.parse(finalJsonString);
+            functions.logger.info("[Scheme Q&A] Successfully parsed scheme data from Gemini.");
+            response.status(200).json(schemeData);
+            return;
+        } catch (parseError) {
+            functions.logger.error("[Scheme Q&A Parse Error] Failed to parse Gemini's response as JSON after cleaning.", { rawResponse: modelResponseText, cleanedString: finalJsonString, error: parseError });
+            response.status(500).json({ error: "Failed to parse AI response.", details: parseError.message });
+            return;
+        }
+
+    } catch (error) {
+        functions.logger.error(`[CRITICAL Scheme Q&A Error] Error processing request for question "${question}":`, error, { structuredData: true });
+        if (!response.headersSent) {
+            response.status(500).json({ error: "Failed to get an answer.", details: error.message });
+        }
+    }
+}
