@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Prices - Project Kisan</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="market-page-body">
+
+    <header>
+        <div class="header-container">
+            <div class="logo-container">
+                <img src="images/LOGO.png" alt="Project Kisan Logo" class="logo">
+                <h1>Project Kisan</h1>
+            </div>
+            <nav class="header-nav">
+                <a href="index.html">Home</a>
+                <a href="#search-section" class="active">Market Prices</a>
+                <a href="index.html#features">Features</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container-wide">
+        <!-- Search Panel -->
+        <section id="search-section" class="search-panel">
+            <h2>Find Your Crop's Value</h2>
+            <p>Select your crop and market to get a detailed price analysis.</p>
+            <form id="price-form">
+                <div class="search-form-grid">
+                    <div class="form-group">
+                        <label for="state-select">State</label>
+                        <select id="state-select" name="state">
+                            <option value="">Select State</option>
+                            <option value="Punjab">Punjab</option>
+                            <option value="Uttar-pradesh">Uttar Pradesh</option>
+                            <option value="Maharashtra">Maharashtra</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="market-select">Market</label>
+                        <select id="market-select" name="market">
+                            <option value="">Select Market</option>
+                            <option value="Sangrur">Sangrur</option>
+                            <option value="Tarntaran">Tarntaran</option>
+                            <option value="Patti">Patti</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="crop-select">Crop</label>
+                        <select id="crop-select" name="crop">
+                            <option value="">Select Crop</option>
+                            <option value="Tomato">Tomato</option>
+                            <option value="Onion">Onion</option>
+                            <option value="Plum">Plum</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" id="analyze-button" class="cta-button">Analyze Market Price</button>
+            </form>
+        </section>
+
+        <!-- Analysis Results Section (Initially Hidden) -->
+        <div id="status-indicator" class="hidden">
+            <div class="spinner"></div>
+            <p id="status-text">Generating detailed analysis...</p>
+        </div>
+        <section id="analysis-results-container" class="hidden">
+             <div class="analysis-card">
+                 <div class="analysis-header">
+                    <div>
+                        <h3 id="res-title"></h3>
+                        <p id="res-analysis-date" class="analysis-date-text"></p>
+                    </div>
+                    <span id="res-completeness" class="confidence-badge"></span>
+                </div>
+                <div class="price-display">
+                    <div class="price-point">
+                        <span class="price-label">Current Avg Price</span>
+                        <span id="res-price" class="price-value"></span>
+                    </div>
+                    <!-- NEW: Price Meta Details -->
+                    <div class="price-meta-details">
+                        <p><strong>30-Day Trend:</strong> <span id="res-trend"></span></p>
+                        <p><strong>Vs. Last Year:</strong> <span id="res-comparison"></span></p>
+                    </div>
+                </div>
+                <p class="analysis-subtitle"><strong>Price Outlook:</strong> <span id="res-outlook"></span></p>
+                <div class="details-grid">
+                    <div class="detail-block">
+                        <h4>Farmer Opinion & Advice</h4>
+                        <p id="res-advice"></p>
+                    </div>
+                    <div class="detail-block">
+                        <h4>Influencing Factors</h4>
+                        <ul id="res-factors"></ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Live Price Table Section (Always Visible) -->
+        <section id="price-table-container">
+            <h3 class="table-title">Today's Mandi Prices</h3>
+            <div class="table-wrapper">
+                <table class="price-table">
+                    <thead>
+                        <tr>
+                            <th>Commodity</th>
+                            <th>Variety</th>
+                            <th>Min Price</th>
+                            <th>Max Price</th>
+                            <th>Avg Price</th>
+                            <th>Arrival Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="price-table-body">
+                        <!-- Rows will be injected by JS on page load -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-bottom">
+            <p>© 2024 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
+        </div>
+    </footer>
+    
+    <script src="market.js"></script>
+</body>
+</html>

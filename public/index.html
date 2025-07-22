@@ -1,33 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Kisan</title>
+    <title>Project Kisan - Your AI Farming Partner</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
 
     <header>
-        <div class="logo-container">
-            <img src="images/logo.png" alt="Project Kisan Logo" class="logo">
-            <h1>Project Kisan</h1>
+        <div class="header-container">
+            <div class="logo-container">
+                <img src="images/LOGO.png" alt="Project Kisan Logo" class="logo">
+                <h1>Project Kisan</h1>
+            </div>
+            <nav class="header-nav">
+                <a href="#hero">Home</a>
+                <a href="#diagnose-tool">AI Tool</a>
+                <a href="#features">Features</a>
+            </nav>
         </div>
     </header>
 
-    <main>
+    <!-- Hero Section with Video Background -->
+    <section id="hero" class="hero-section">
+        <video class="hero-video" autoplay loop muted playsinline>
+            <source src="videos/farm-drone-shot.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <div class="hero-content fade-in">
+            <h2>AI-Powered Guidance For Your Farm</h2>
+            <p>From diagnosis to remedy, get instant, intelligent support to protect your crops and increase your yield.
+            </p>
+            <div class="hero-button-group">
+                <a href="#diagnose-tool" class="cta-button">Diagnose Your Crop</a>
+                <a href="#features" class="cta-button-outline">Learn More</a>
+            </div>
+        </div>
+    </section>
+
+    <main id="diagnose-tool">
         <!-- Main Action Section -->
+        <!-- (in index.html) -->
+
         <section class="action-panel">
             <h2>Your AI Farming Assistant</h2>
-            <p>Ask a question in your language or upload a photo to get instant help.</p>
+            <p>Upload a photo for diagnosis, or ask a question in your language.</p>
             <div class="button-group">
-                <button id="mic-button">
+                <!-- New Secondary Button -->
+                <button id="ask-question-button" class="upload-button-outline">
                     <img src="images/mic.png" alt="Microphone Icon">
                     <span>Ask a Question</span>
                 </button>
+
+                <!-- Existing Primary Button -->
                 <label for="image-upload-input" class="upload-button">
                     <img src="images/diagnose-crop.svg" alt="Diagnose Icon">
                     <span>Diagnose Crop</span>
@@ -41,7 +72,7 @@
             <div class="spinner"></div>
             <p id="status-text">Analyzing your image...</p>
         </div>
-        <!-- Replace your old results-container with this one -->
+
         <section id="results-container" class="hidden">
             <div class="result-header">
                 <div>
@@ -63,19 +94,19 @@
             </div>
 
             <div class="result-section">
-                <h4>Description (English & Kannada)</h4>
+                <h4>Description</h4>
                 <p id="result-description-english"></p>
                 <p id="result-description-kannada" class="kannada-text"></p>
             </div>
 
             <div class="result-section">
-                <h4>Organic Remedy (English & Kannada)</h4>
+                <h4>Organic Remedy</h4>
                 <p id="result-organic-english"></p>
                 <p id="result-organic-kannada" class="kannada-text"></p>
             </div>
 
             <div class="result-section">
-                <h4>Chemical Remedy (English & Kannada)</h4>
+                <h4>Chemical Remedy</h4>
                 <p id="result-chemical-english"></p>
                 <p id="result-chemical-kannada" class="kannada-text"></p>
             </div>
@@ -84,41 +115,162 @@
                 <h4>Prevention Tips</h4>
                 <div id="result-prevention"></div>
             </div>
-            
-            <!-- This audio element will be used to play the AI's voice -->
+
             <audio id="remedy-audio" class="hidden"></audio>
             <button id="speak-button" class="hidden">Listen to Summary</button>
         </section>
-
-        <!-- Features Grid -->
-        <section class="features-grid">
-            <div class="feature-card">
-                <img src="images/marketshop.svg" alt="Market Icon">
-                <h3>Market Prices</h3>
-            </div>
-            <div class="feature-card">
-                <img src="images/scheme.svg" alt="Schemes Icon">
-                <h3>Govt. Schemes</h3>
-            </div>
-            <div class="feature-card">
-                <img src="images/pesticide-execution.png" alt="Yield Maximizer">
-                <h3>Yield Console</h3>
-            </div>
-            <div class="feature-card">
-                <img src="images/ai-guardian.svg" alt="Guardian Icon">
-                <h3>Guardian AI</h3>
-            </div>
-        </section>
-
     </main>
-    
+
+    <!-- FULL SUITE OF TOOLS SECTION (ENHANCED FEATURES GRID) -->
+    <section id="features" class="more-features-section">
+        <div class="container">
+            <h2 class="section-title fade-in">A Complete Toolkit for the Modern Farmer</h2>
+            <p class="section-subtitle fade-in">
+                Beyond diagnostics, Project Kisan offers a suite of tools to manage and grow your farming business.
+            </p>
+            <div class="features-grid">
+                <!-- ...to this: -->
+                <a href="market.html" class="feature-card-link">
+                    <div class="feature-card fade-in" style="animation-delay: 0.1s;">
+                        <img src="images/marketshop.svg" alt="Market Icon">
+                        <h3>Market Prices</h3>
+                    </div>
+                </a>
+                <div class="feature-card fade-in" style="animation-delay: 0.2s;">
+                    <img src="images/scheme.svg" alt="Schemes Icon">
+                    <h3>Govt. Schemes</h3>
+                </div>
+                <div class="feature-card fade-in" style="animation-delay: 0.3s;">
+                    <img src="images/pesticide-execution.png" alt="Yield Maximizer">
+                    <h3>Yield Console</h3>
+                </div>
+                <a href="guardian.html" class="feature-card-link">
+                    <div class="feature-card highlight fade-in" style="animation-delay: 0.4s;">
+                        <img src="images/ai-guardian.svg" alt="Guardian Icon">
+                        <h3>Guardian AI</h3>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- WHY CHOOSE PROJECT KISAN? SECTION -->
+    <section class="feature-spotlight-section">
+        <div class="container">
+            <div class="feature-spotlight-grid">
+                <div class="feature-text-content">
+                    <h2 class="section-title-left fade-in">Empowering Farmers With <span
+                            class="underline">Technology</span></h2>
+                    <div class="feature-item fade-in">
+                        <div class="feature-icon">
+                            <img src="images/diagnose-crop.svg" alt="Accurate Diagnosis Icon">
+                        </div>
+                        <div class="feature-description">
+                            <h4>Accurate Diagnosis</h4>
+                            <p>Our AI is trained on millions of images to provide a precise identification of crop
+                                diseases and pests.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item fade-in" style="animation-delay: 0.2s;">
+                        <div class="feature-icon">
+                            <img src="images/remedy.png" alt="Instant Remedies Icon">
+                        </div>
+                        <div class="feature-description">
+                            <h4>Instant Remedies</h4>
+                            <p>Receive immediate, actionable advice with both organic and chemical treatment options.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="feature-item fade-in" style="animation-delay: 0.4s;">
+                        <div class="feature-icon">
+                            <img src="images/ai-guardian.svg" alt="Easy to Use Icon">
+                        </div>
+                        <div class="feature-description">
+                            <h4>Easy to Use</h4>
+                            <p>No complex setup. Just upload a photo from your phone to get the help you need, when you
+                                need it.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-image-content fade-in">
+                    <img src="images/farmer happy.jpg" alt="A happy farmer, empowered by technology.">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- OUR ANALYSIS PROCESS SECTION -->
+    <section class="process-section">
+        <div class="container">
+            <h2 class="section-title fade-in">We Take Complete Control of the Analysis</h2>
+            <p class="section-subtitle fade-in">
+                Project Kisan connects your crop photo directly to our powerful AI analysis engine. Each step is
+                captured and monitored by our tech to give you the most accurate results. Our integrated service
+                includes:
+            </p>
+            <div class="process-timeline">
+                <div class="process-step fade-in">
+                    <div class="process-icon">
+                        <img src="images/diagnose-crop.svg" alt="Upload Icon">
+                    </div>
+                    <p>Upload</p>
+                </div>
+                <div class="process-connector"></div>
+                <div class="process-step fade-in" style="animation-delay: 0.1s;">
+                    <div class="process-icon">
+                        <img src="images/ai-guardian.svg" alt="AI Analysis Icon">
+                    </div>
+                    <p>AI Analysis</p>
+                </div>
+                <div class="process-connector"></div>
+                <div class="process-step fade-in" style="animation-delay: 0.2s;">
+                    <div class="process-icon">
+                        <img src="images/scheme.svg" alt="Identification Icon">
+                    </div>
+                    <p>Identification</p>
+                </div>
+                <div class="process-connector"></div>
+                <div class="process-step fade-in" style="animation-delay: 0.3s;">
+                    <div class="process-icon">
+                        <img src="images/pesticide-execution.png" alt="Remedy Icon">
+                    </div>
+                    <p>Remedy</p>
+                </div>
+                <div class="process-connector"></div>
+                <div class="process-step fade-in" style="animation-delay: 0.4s;">
+                    <div class="process-icon">
+                        <img src="images/marketshop.svg" alt="Audio Icon">
+                    </div>
+                    <p>Audio Summary</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer-->
+
+
+    <footer class="site-footer">
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <img src="images/LOGO.png" alt="Project Kisan Logo">
+                <h3>Project Kisan</h3>
+                <p class="footer-tagline">Technology for the heart of India.</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2024 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
+        </div>
+    </footer>
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
-    
+
     <!-- Your App's Logic -->
     <script src="app.js"></script>
 
 </body>
+
 </html>

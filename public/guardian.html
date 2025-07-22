@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardian AI - Project Kisan</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Icon Library for search and dropdown icons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+<body class="market-page-body">
+
+    <header>
+        <div class="header-container">
+            <div class="logo-container">
+                <img src="images/LOGO.png" alt="Project Kisan Logo" class="logo">
+                <h1>Project Kisan</h1>
+            </div>
+            <nav class="header-nav">
+                <a href="index.html">Home</a>
+                <a href="market.html">Market Prices</a>
+                <a href="guardian.html" class="active">Guardian AI</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container-wide">
+        <!-- Section 1: Weather Outlook -->
+        <section class="weather-dashboard">
+            <div class="weather-header">
+                <img id="weather-icon" src="images/ai-guardian.svg" alt="Weather icon">
+                <div>
+                    <h2>Today's Weather Outlook</h2>
+                    <p>Based on your location: <span id="weather-location">N/A</span></p>
+                </div>
+            </div>
+            <div class="weather-grid">
+                <div class="weather-metric"><span>Temperature</span><p id="weather-temp">--</p></div>
+                <div class="weather-metric"><span>Humidity</span><p id="weather-humidity">--</p></div>
+                <div class="weather-metric"><span>Chance of Rain</span><p id="weather-rain">--</p></div>
+                <div class="weather-metric"><span>Wind Speed</span><p id="weather-wind">--</p></div>
+            </div>
+        </section>
+
+        <!-- Section 2: Upgraded Schedule Generator -->
+        <section id="schedule-generator">
+            <div class="generator-panel-grid">
+                <div class="generator-info">
+                    <img src="images/ai-guardian.svg" alt="Guardian AI Icon">
+                    <h3>Your Proactive Farming Schedule</h3>
+                    <p>Our Guardian AI uses your crop, sowing date, and local weather to generate a custom 7-day plan, helping you prevent threats before they happen.</p>
+                </div>
+                <form id="guardian-form" class="generator-form">
+                    <div class="form-group">
+                        <label for="g-crop-select">Select Your Crop</label>
+                        <select id="g-crop-select" name="crop">
+                            <option value="apple">Apple</option>
+                            <option value="tomato">Tomato</option>
+                            <option value="wheat">Wheat</option>
+                            <option value="rice">Rice</option>
+                            <option value="potato">Potato</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="g-sowing-date">Sowing Date</label>
+                        <input type="date" id="g-sowing-date" name="sowing_date">
+                    </div>
+                    <div class="form-group">
+                        <label for="g-location">Your Location (City)</label>
+                        <input type="text" id="g-location" name="location" placeholder="e.g., Sangrur">
+                    </div>
+                    <button type="submit" class="cta-button">Generate Schedule</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Section 3: Generated Schedule Output (Initially Hidden) -->
+        <div id="guardian-status" class="hidden"><div class="spinner"></div><p>Guardian AI is analyzing data and building your schedule...</p></div>
+        <section id="schedule-output" class="hidden">
+             <div class="schedule-card">
+                <h3>Threat Assessment for the Next 7 Days</h3>
+                <div class="threat-assessment">
+                    <div class="threat-details">
+                        <p><span>Primary Threat</span><strong id="threat-name"></strong></p>
+                        <p><span>Risk Level</span><span id="threat-risk" class="risk-badge"></span></p>
+                    </div>
+                    <div id="gemini-warning" class="gemini-warning">
+                        <img src="images/ai-guardian.svg" alt="AI Icon">
+                        <p id="threat-message"></p>
+                    </div>
+                </div>
+
+                <h3>Your 7-Day Action Plan</h3>
+                <div class="action-plan-grid">
+                    <div class="action-item"><h4>Watering Schedule</h4><p id="action-watering"></p></div>
+                    <div class="action-item"><h4>Fertilizer & Nutrition</h4><p id="action-fertilizer"></p></div>
+                    <div class="action-item"><h4>Scouting & Precautions</h4><p id="action-precautions"></p></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Pests & Diseases Library with Modal Trigger -->
+        <section id="disease-library-container">
+            <div class="library-header">
+                <h2>Proactive Disease & Pest Library</h2>
+                <div class="form-group">
+                    <label>See information for:</label>
+                    <button id="crop-modal-trigger" class="crop-select-button">
+                        <span id="selected-crop-name">🍎 Apple</span>
+                        <i class='bx bx-chevron-down'></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Dynamic stage cards will be injected here by JS -->
+        </section>
+    </main>
+
+    <!-- CROP SELECTION MODAL -->
+    <div id="crop-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Select your crop</h2>
+                <button id="modal-close-button" class="close-button">×</button>
+            </div>
+            <div class="modal-search-wrapper">
+                <i class='bx bx-search'></i>
+                <input type="text" id="crop-search-input" placeholder="Search for your crop...">
+            </div>
+            <div class="modal-info-banner">
+                <i class='bx bxs-info-circle'></i>
+                <span>This feature is only available for a limited selection of crops.</span>
+            </div>
+            <div id="crop-grid" class="crop-grid-container">
+                <!-- Crop items will be dynamically injected here by JS -->
+            </div>
+        </div>
+    </div>
+    <div id="disease-detail-modal" class="modal-overlay hidden">
+    <div class="disease-modal-content">
+        <button id="disease-modal-close-button" class="close-button">×</button>
+        <img id="modal-disease-image" src="" alt="Disease Image">
+        <div class="modal-text-content">
+            <h2 id="modal-disease-name">Disease Name</h2>
+            
+            <div class="modal-section">
+                <h4>Symptoms</h4>
+                <ul id="modal-disease-symptoms"></ul>
+            </div>
+
+            <div class="modal-section">
+                <h4>Preventive Measures</h4>
+                <ul id="modal-disease-prevention"></ul>
+            </div>
+
+            <div class="modal-section">
+                <h4>Causal Factors</h4>
+                <p id="modal-disease-cause"></p>
+            </div>
+        </div>
+    </div>
+</div>
+    <footer class="site-footer">
+        <div class="footer-bottom">
+            <p>© 2024 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
+        </div>
+    </footer>
+    
+    <script src="guardian.js"></script>
+</body>
+</html>

@@ -3,26 +3,29 @@
 // =================================================================
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "project-kisan-new",
-    storageBucket: "project-kisan-new.firebasestorage.app",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg",
+  authDomain: "project-kisan-new.firebaseapp.com",
+  projectId: "project-kisan-new",
+  storageBucket: "project-kisan-new.firebasestorage.app",
+  messagingSenderId: "176046173818",
+  appId: "1:176046173818:web:de8fb0e50752c8f62195c3",
+  measurementId: "G-GDJE785E2N"
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const storage = firebase.storage();
 const firestore = firebase.firestore();
 
-// --- ADD THIS ENTIRE BLOCK ---
 if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
     console.log("LOCALHOST DETECTED: Forcing connection to local emulators...");
-    firestore.useEmulator("localhost", 8080);
-    storage.useEmulator("localhost", 9199);
+    try {
+        firestore.useEmulator("localhost", 8080);
+        storage.useEmulator("localhost", 9199);
+    } catch (e) {
+        console.error("Error setting up emulators. Have you started them with 'firebase emulators:start'?", e);
+    }
 }
-// --- END OF BLOCK ---
+
 // =================================================================
 // 2. DOM ELEMENT REFERENCES
 // =================================================================
@@ -33,7 +36,6 @@ const statusText = document.getElementById('status-text');
 const resultsContainer = document.getElementById('results-container');
 const speakButton = document.getElementById('speak-button');
 const actionPanel = document.querySelector('.action-panel');
-const featuresGrid = document.querySelector('.features-grid');
 
 // =================================================================
 // 3. EVENT LISTENER FOR IMAGE UPLOAD
@@ -45,7 +47,13 @@ imageUploadInput.addEventListener('change', (event) => {
 
     hideResults();
     showStatus(`Uploading ${file.name}...`);
+    statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
+    
+
+
+    // --- ORIGINAL FIREBASE LOGIC (KEEP FOR LATER) ---
+    
     const uniqueFileName = `image_${Date.now()}_${file.name}`;
     const storagePath = `uploads/${uniqueFileName}`;
     const storageRef = storage.ref(storagePath);
@@ -66,167 +74,187 @@ imageUploadInput.addEventListener('change', (event) => {
             listenForDiagnosisResult(uniqueFileName);
         }
     );
+
 });
 
 // =================================================================
-// 4. REAL-TIME LISTENER FOR DIAGNOSIS RESULTS
+// 4. REAL-TIME LISTENER FOR DIAGNOSIS RESULTS (No change needed)
 // =================================================================
 
 function listenForDiagnosisResult(diagnosisId) {
     const docRef = firestore.collection("diagnoses").doc(diagnosisId);
+    
+    const timeout = setTimeout(() => {
+        console.error("Firestore listener timed out.");
+        showStatus("Analysis is taking longer than expected. Please try again.", true);
+        unsubscribe();
+    }, 60000);
+
     const unsubscribe = docRef.onSnapshot((doc) => {
         if (doc.exists) {
+            clearTimeout(timeout);
             console.log("Diagnosis data received:", doc.data());
             const data = doc.data();
             displayDiagnosisResults(data);
             unsubscribe();
+            resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }, (error) => {
+        clearTimeout(timeout);
         console.error("Error listening to Firestore:", error);
-        showStatus("Error fetching diagnosis.", true);
+        showStatus("Error fetching diagnosis results.", true);
         unsubscribe();
     });
 }
 
 // =================================================================
-// 5. UI HELPER FUNCTIONS
+// 5. UI HELPER FUNCTIONS (No change needed)
 // =================================================================
 
 function showStatus(message, isError = false) {
     statusText.textContent = message;
     const spinner = statusIndicator.querySelector('.spinner');
     if (spinner) {
-        spinner.style.borderColor = isError ? '#dc3545' : '#e5e5e5';
-        spinner.style.borderTopColor = isError ? '#dc3545' : '#007AFF';
+        spinner.style.borderTopColor = isError ? '#dc3545' : 'var(--primary-color)';
     }
     statusIndicator.classList.remove('hidden');
     actionPanel.style.opacity = '0.5';
-    featuresGrid.style.opacity = '0.5';
 }
 
 function hideStatus() {
     statusIndicator.classList.add('hidden');
     actionPanel.style.opacity = '1';
-    featuresGrid.style.opacity = '1';
 }
 
 function hideResults() {
     resultsContainer.classList.add('hidden');
-    speakButton.classList.add('hidden');
-    // Stop any currently playing audio
-    if (window.speechSynthesis && window.speechSynthesis.speaking) {
-        window.speechSynthesis.cancel();
+    const remedyAudio = document.getElementById('remedy-audio');
+    if (remedyAudio && !remedyAudio.paused) {
+        remedyAudio.pause();
+        remedyAudio.currentTime = 0;
     }
 }
 
 // =================================================================
-// 6. FUNCTION TO DISPLAY THE RESULTS (UPGRADED FOR NEW BACKEND)
+// 6. FUNCTION TO DISPLAY THE RESULTS (No change needed)
 // =================================================================
 
 function displayDiagnosisResults(data) {
     hideStatus();
     resultsContainer.classList.remove('hidden');
 
-    // --- Populate Header ---
-    document.getElementById('result-title-english').textContent = data.disease_name_english || 'N/A';
+    document.getElementById('result-title-english').textContent = data.disease_name_english || 'Analysis Result';
     document.getElementById('result-plant-type').textContent = `(${data.plant_type || data.object_category || 'Object'})`;
     
     const confidenceSpan = document.getElementById('result-confidence');
     const confidencePercent = (data.confidence_score * 100).toFixed(0);
     confidenceSpan.textContent = `${confidencePercent}% Confident`;
     
-    // Confidence Colors (0-51 red, 52-74 yellow, 75+ green)
     if (confidencePercent >= 75) {
-        confidenceSpan.style.backgroundColor = '#d4edda';
-        confidenceSpan.style.color = '#155724';
-    } else if (confidencePercent >= 52) {
-        confidenceSpan.style.backgroundColor = '#fff3cd';
-        confidenceSpan.style.color = '#856404';
+        confidenceSpan.style.backgroundColor = 'rgba(132, 204, 22, 0.2)';
+        confidenceSpan.style.color = '#3f6212';
+    } else if (confidencePercent >= 50) {
+        confidenceSpan.style.backgroundColor = 'rgba(234, 179, 8, 0.2)';
+        confidenceSpan.style.color = '#854d0e';
     } else {
-        confidenceSpan.style.backgroundColor = '#f8d7da';
-        confidenceSpan.style.color = '#721c24';
+        confidenceSpan.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+        confidenceSpan.style.color = '#991b1b';
     }
 
-    // --- Populate Detail Cards ---
     document.getElementById('result-severity').textContent = data.severity || 'N/A';
     document.getElementById('result-risk').textContent = data.contagion_risk || 'N/A';
-    
-    // --- Populate Text Sections using the ENGLISH fields from the new backend ---
     document.getElementById('result-description-english').textContent = data.description_english || 'No description available.';
-    document.getElementById('result-description-kannada').textContent = ""; // Clear Kannada field as it's not provided now
-    
+    document.getElementById('result-description-kannada').textContent = data.description_kannada || '';
     document.getElementById('result-organic-english').textContent = data.organic_remedy_english || 'No organic remedy suggested.';
-    document.getElementById('result-organic-kannada').textContent = "";
-
+    document.getElementById('result-organic-kannada').textContent = data.organic_remedy_kannada || '';
     document.getElementById('result-chemical-english').textContent = data.chemical_remedy_english || 'No chemical remedy suggested.';
-    document.getElementById('result-chemical-kannada').textContent = "";
+    document.getElementById('result-chemical-kannada').textContent = data.chemical_remedy_kannada || '';
 
-    // --- Populate Prevention Tips ---
     const preventionDiv = document.getElementById('result-prevention');
     const tipsArray = data.prevention_tips_english || [];
-    if (tipsArray.length > 0) {
-        let tipsHtml = '<ul>';
-        tipsArray.forEach(tip => {
-            tipsHtml += `<li>${tip.trim()}</li>`;
-        });
-        tipsHtml += '</ul>';
-        preventionDiv.innerHTML = tipsHtml;
+    if (tipsArray.length > 0 && tipsArray.some(tip => tip.trim() !== '')) {
+        preventionDiv.innerHTML = '<ul>' + tipsArray.map(tip => `<li>${tip.trim()}</li>`).join('') + '</ul>';
     } else {
         preventionDiv.innerHTML = `<p>No prevention tips available.</p>`;
     }
 
-    // --- Automatically play the pre-generated audio ---
     if (data.audio_remedy_url) {
-        speakAudioFromUrl(data.audio_remedy_url);
         speakButton.classList.remove('hidden');
-        speakButton.onclick = () => speakAudioFromUrl(data.audio_remedy_url);
+        const remedyAudio = document.getElementById('remedy-audio');
+        remedyAudio.src = data.audio_remedy_url;
+        speakButton.onclick = () => {
+            if (remedyAudio.paused) { remedyAudio.play(); } 
+            else { remedyAudio.pause(); remedyAudio.currentTime = 0; }
+        };
+        remedyAudio.onplay = () => { speakButton.textContent = 'Playing... (Click to Stop)'; };
+        remedyAudio.onpause = () => { speakButton.textContent = 'Listen to Summary'; };
+        remedyAudio.onended = () => { speakButton.textContent = 'Listen to Summary'; };
+    } else {
+        speakButton.classList.add('hidden');
     }
 }
 
 // =================================================================
-// 7. FUNCTION TO PLAY AUDIO FROM A URL
+// 7. PAGE LOAD EVENT LISTENERS & ANIMATIONS (No change needed)
 // =================================================================
 
-function speakAudioFromUrl(url) {
-    if (!url) {
-        console.error("No audio URL provided.");
-        return;
-    }
+document.addEventListener('DOMContentLoaded', () => {
 
-    const remedyAudio = document.getElementById('remedy-audio');
-    const speakButton = document.getElementById('speak-button');
-
-    // Set the source of the audio player to the URL from Firebase
-    remedyAudio.src = url;
-
-    // --- Manage Button State ---
-    remedyAudio.onplay = () => {
-        speakButton.textContent = 'Playing...';
-        speakButton.disabled = true;
-    };
-
-    remedyAudio.onended = () => {
-        speakButton.textContent = 'Listen to Summary';
-        speakButton.disabled = false;
-    };
-
-    remedyAudio.onerror = (e) => {
-        console.error("Error playing audio from URL:", url, e);
-        speakButton.textContent = 'Audio Error';
-        speakButton.disabled = false; 
-    };
-
-    // --- Play the audio ---
-    const playPromise = remedyAudio.play();
-
-    // In modern browsers, play() returns a promise.
-    // This helps catch errors if the browser blocks autoplay.
-    if (playPromise !== undefined) {
-        playPromise.catch(error => {
-            console.error("Audio playback failed:", error);
-            // Autoplay was likely prevented. The user may need to click the button.
-            speakButton.textContent = 'Listen to Summary';
-            speakButton.disabled = false;
+    // --- SMOOTH SCROLL FOR ANCHOR LINKS ---
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.querySelector(this.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
         });
+    });
+
+    // --- SCROLL-BASED FADE-IN ANIMATIONS ---
+    const fadeInObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.fade-in').forEach(element => { fadeInObserver.observe(element); });
+
+    // --- DYNAMIC HEADER ON SCROLL ---
+    const header = document.querySelector('header');
+    window.addEventListener('scroll', () => {
+        header.classList.toggle('scrolled', window.scrollY > 50);
+    });
+
+    // --- NEW: NUMBER COUNT-UP ANIMATION ---
+    const animateValue = (obj, start, end, duration) => {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            const value = Math.floor(progress * (end - start) + start);
+            obj.innerHTML = `${value.toLocaleString()}+`; // Use toLocaleString for commas
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    };
+
+    const statsObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const statNumbers = entry.target.querySelectorAll('.stat-item h3');
+                statNumbers.forEach(num => {
+                    const goal = parseInt(num.dataset.goal, 10);
+                    animateValue(num, 0, goal, 2000); // Animate over 2 seconds
+                });
+                observer.unobserve(entry.target); // Animate only once
+            }
+        });
+    }, { threshold: 0.5 }); // Trigger when 50% of the section is visible
+
+    const statsSection = document.querySelector('.stats-section');
+    if (statsSection) {
+        statsObserver.observe(statsSection);
     }
-}
+});
