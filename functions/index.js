@@ -60,22 +60,50 @@ exports.analyzePlantImage = onObjectFinalized(
 
         let apiEndpoint; 
         
-        try {
-            functions.logger.info("[Auth] Fetching service account token from metadata server...");
-            const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
-            
-            if (!tokenResponse.ok) { 
-                const errorText = await tokenResponse.text();
-                functions.logger.error(`[Auth Error] Failed to fetch token. Status: ${tokenResponse.status}, Response: ${errorText}`);
-                throw new Error(`Failed to fetch access token: ${tokenResponse.statusText}`);
-            }
+        // --- START: NEW HYBRID AUTHENTICATION BLOCK ---
+try {
+    let accessToken;
 
-            const tokenData = await tokenResponse.json();
-            const accessToken = tokenData.access_token;
-            functions.logger.info(`[Auth] Access token fetched. Token expires in: ${tokenData.expires_in}s`);
+    // Check if we are running in the emulator
+    if (process.env.FUNCTIONS_EMULATOR === 'true') {
+        functions.logger.info("[Auth] Emulator detected. Fetching token from local gcloud CLI...");
+        
+        // This command asks your local gcloud setup for an auth token
+        const { exec } = require('child_process');
+        accessToken = await new Promise((resolve, reject) => {
+            exec('gcloud auth print-access-token', (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`gcloud auth error: ${stderr}`);
+                    reject(new Error('Failed to get gcloud auth token. Make sure you are logged in (`gcloud auth login`).'));
+                } else {
+                    resolve(stdout.trim());
+                }
+            });
+        });
+        functions.logger.info("[Auth] Successfully fetched local gcloud token.");
 
-            apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
-            functions.logger.info(`[AI] Using API endpoint: ${apiEndpoint}`);
+    } else {
+        // This is the original code that will run when deployed to the cloud
+        functions.logger.info("[Auth] Production environment detected. Fetching token from metadata server...");
+        const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
+        
+        if (!tokenResponse.ok) {
+            const errorText = await tokenResponse.text();
+            functions.logger.error(`[Auth Error] Failed to fetch token from metadata server. Status: ${tokenResponse.status}, Response: ${errorText}`);
+            throw new Error(`Failed to fetch access token: ${tokenResponse.statusText}`);
+        }
+
+        const tokenData = await tokenResponse.json();
+        accessToken = tokenData.access_token;
+        functions.logger.info(`[Auth] Metadata server token fetched. Expires in: ${tokenData.expires_in}s`);
+    }
+
+    // Now, the rest of your function uses the `accessToken` variable, which is now correctly populated in both environments
+    
+    apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
+    // ... the rest of your function continues here ...
+
+// --- END: NEW HYBRID AUTHENTICATION BLOCK ---
 
             const diagnosisPrompt = `You are a world-class AI agronomist for Indian farmers. Your primary task is to determine if the image contains a plant or plant part. If it does, then proceed with plant identification and diagnosis.
 
