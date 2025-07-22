@@ -21,6 +21,7 @@ const { VertexAI } = require("@google-cloud/vertexai");
 // Initialize all clients ONCE
 admin.initializeApp();
 const firestore = admin.firestore();
+const storage = admin.storage();
 const ttsClient = new TextToSpeechClient();
 
 // =================================================================
@@ -128,16 +129,36 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
 }`;
             
            
+                        // --- START OF THE ONLY CHANGE ---
+
+            // 1. Read the uploaded image file from storage into a buffer.
+            functions.logger.info(`[File Read] Reading gs://${bucketName}/${filePath} into memory...`);
+            const file = storage.bucket(bucketName).file(filePath);
+            const [imageBuffer] = await file.download();
+            
+            // 2. Convert the image buffer to a Base64 string for the API request.
+            const imageBase64 = imageBuffer.toString('base64');
+            functions.logger.info(`[File Read] File successfully read. Size: ${imageBuffer.length} bytes.`);
+            
+            // 3. Build the NEW request body with inline_data instead of file_data.
             const requestBody = { 
                 contents: [{ 
                     role: "user",
                     parts: [
-                        { file_data: { mime_type: contentType, file_uri: `gs://${bucketName}/${filePath}` } }, 
-                        { text: diagnosisPrompt }
+                        { 
+                            inline_data: {
+                                mime_type: contentType,
+                                data: imageBase64
+                            } 
+                        }, 
+                        { text: diagnosisPrompt } // Your prompt is used here, unchanged.
                     ] 
                 }] 
             };
-            functions.logger.info("[AI] Sending request to Gemini API...");
+            
+            functions.logger.info("[AI] Sending request to Gemini API with inline image data...");
+
+            // --- END OF THE ONLY CHANGE ---
             const geminiResponse = await fetch(apiEndpoint, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(requestBody) });
             const responseData = await geminiResponse.json();
             functions.logger.info("Full Diagnosis Response:", JSON.stringify(responseData, null, 2));
