@@ -17,12 +17,15 @@ const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
 // --- HIGHLIGHTED FIX: Added missing imports for your new functions ---
 const axios = require("axios");
 const { VertexAI } = require("@google-cloud/vertexai");
+// NEW, ROBUST IMPORT LINE
+const { google } = require('googleapis');
 
 // Initialize all clients ONCE
 admin.initializeApp();
 const firestore = admin.firestore();
 const storage = admin.storage();
 const ttsClient = new TextToSpeechClient();
+const discovery = google.discoveryengine("v1");
 
 // =================================================================
 // CONFIGURATION
@@ -217,6 +220,7 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
     }
 );
 
+
 // =================================================================
 // HIGHLIGHTED CHANGE: FUNCTION 2: PROACTIVE MARKET ANALYST (with Sanitized Slugs)
 // =================================================================
@@ -386,6 +390,73 @@ exports.proactiveMarketAnalyst = onSchedule(
         functions.logger.info(`[Market Analyst - Ingestion] Daily OGD API data ingestion completed. Total records processed: ${recordsProcessed}.`);
     }
 );
+// Add this to your functions/index.js file
+
+// =================================================================
+// FUNCTION 2.1: GET MARKET DROPDOWNS
+// =================================================================
+exports.getMarketDropdowns = onCall({ region: LOCATION }, async (request) => {
+    try {
+        const snapshot = await firestore.collection("market_prices").get();
+        if (snapshot.empty) {
+            throw new HttpsError('not-found', 'No market data available to build dropdowns.');
+        }
+
+        const states = new Set();
+        const markets = new Set();
+        const crops = new Set();
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.state_name) states.add(data.state_name);
+            if (data.market_name) markets.add(data.market_name);
+            if (data.crop_name) crops.add(data.crop_name);
+        });
+
+        return {
+            states: Array.from(states).sort(),
+            markets: Array.from(markets).sort(),
+            crops: Array.from(crops).sort()
+        };
+    } catch (error) {
+        functions.logger.error("Error fetching market dropdown data:", error);
+        throw new HttpsError('internal', 'Could not fetch data for market dropdowns.');
+    }
+});
+
+
+// =================================================================
+// FUNCTION 2.2: GET LIVE MARKET PRICES (FOR TABLE)
+// =================================================================
+exports.getLiveMarketPrices = onCall({ region: LOCATION }, async (request) => {
+    try {
+        const snapshot = await firestore.collection("market_prices")
+            .orderBy("ingested_at", "desc")
+            .limit(30) // Let's fetch 30 for a nice full table
+            .get();
+
+        if (snapshot.empty) {
+            return []; // Return an empty array if no data
+        }
+
+        const priceData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                commodity: data.crop_name,
+                variety: data.variety,
+                minPrice: data.price_min,
+                maxPrice: data.price_max,
+                avgPrice: data.price_modal,
+                date: new Date(data.date).toLocaleDateString('en-GB')
+            };
+        });
+
+        return priceData;
+    } catch (error) {
+        functions.logger.error("Error fetching live market prices for table:", error);
+        throw new HttpsError('internal', 'Could not fetch live market prices.');
+    }
+});
 // =================================================================
 // FUNCTION 3: KNOWLEDGE BASE UPDATER (THE LIBRARIAN) - v2 SYNTAX
 // =================================================================
@@ -1132,3 +1203,113 @@ function parseCityFromGeocodingResponse(geocodingData) {
     
     return localityComponent ? localityComponent.long_name : "Unknown Location";
 }
+
+
+// =================================================================
+// GOVERNMENT SCHEME NAVIGATOR (FEATURES 9 & 10)
+// =================================================================
+
+
+
+exports.getSchemeInfo = onRequest({ region: LOCATION, memory: "1GiB" }, async (request, response) => {
+    // Add CORS headers to allow requests from any origin
+    response.set('Access-Control-Allow-Origin', '*');
+    if (request.method === 'OPTIONS') {
+        // Handle preflight requests for CORS
+        response.set('Access-Control-Allow-Methods', 'POST');
+        response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        response.status(204).send('');
+        return;
+    }
+
+    // For onRequest, the payload is in request.body.data
+    const userQuery = request.body.data?.query;
+
+    if (!userQuery) {
+        functions.logger.error("[Scheme Q&A] Bad Request: Query text is missing.");
+        response.status(400).json({ error: { status: "INVALID_ARGUMENT", message: "A query text is required in the data payload." } });
+        return;
+    }
+    functions.logger.info(`[Scheme Q&A] Received query: "${userQuery}"`);
+
+    const DATA_STORE_ID = "YOUR_DATA_STORE_ID_HERE"; // <-- IMPORTANT: REPLACE
+    const servingConfig = `projects/${PROJECT_ID}/locations/global/collections/default_collection/dataStores/${DATA_STORE_ID}/servingConfigs/default_serving_config`;
+
+    try {
+        const searchRequest = { servingConfig, query: userQuery, pageSize: 5 };
+        const [searchResponse] = await discoveryClient.search(searchRequest);
+        const contextSnippets = searchResponse.results
+            .map(r => r.document.derivedStructData.snippets[0]?.snippet).filter(Boolean).join("\n---\n");
+
+        if (!contextSnippets) {
+            response.status(200).json({ result: { answer: "Sorry, I could not find information related to your question." } });
+            return;
+        }
+        
+        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-preview-0409" });
+        const prompt = `You are KisanAI...`; // Your full, unchanged prompt
+        
+        const resp = await generativeModel.generateContent(prompt);
+        const content = resp.response.candidates[0].content.parts[0].text;
+        
+        // Use the robust JSON parsing logic
+        let jsonString = content.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || content;
+        const firstBrace = jsonString.indexOf('{');
+        const lastBrace = jsonString.lastIndexOf('}');
+        if (firstBrace === -1 || lastBrace < firstBrace) {
+            throw new Error('AI returned a response in an invalid format.');
+        }
+        jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+        
+        const finalResult = JSON.parse(jsonString);
+        // Send success response
+        response.status(200).json({ result: finalResult });
+
+    } catch (error) {
+        functions.logger.error("[Scheme Q&A] Critical error:", error);
+        // Send error response
+        response.status(500).json({ error: { status: "INTERNAL", message: "An error occurred while fetching scheme information." } });
+    }
+});
+// --- FEATURE 2: PROACTIVE DISCOVERY ---
+exports.discoverSchemesByTopicAndState = onCall({ region: LOCATION, memory: "1GiB" }, async (request) => {
+    const { userNeed, stateName } = request.data;
+    if (!userNeed || !stateName) throw new HttpsError('invalid-argument', 'Both userNeed and stateName are required.');
+    
+    const DATA_STORE_ID = "govt-schemes-knowledge-base_1753177033369";
+    const servingConfig = `projects/${PROJECT_ID}/locations/global/collections/default_collection/dataStores/${DATA_STORE_ID}/servingConfigs/default_serving_config`;
+
+    try {
+        const searchQuery = `government agricultural schemes in ${stateName} for ${userNeed}`;
+        const searchRequest = { servingConfig, query: searchQuery, pageSize: 10 };
+        
+        // Authenticate the client
+        const auth = new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
+        google.options({ auth: await auth.getClient() });
+        
+        // Call the search method using the new client
+        const searchResponse = await discovery.projects.locations.dataStores.servingConfigs.search(searchRequest);
+
+        const contextSnippets = searchResponse.data.results
+            ?.map(r => r.document.derivedStructData.snippets[0]?.snippet).filter(Boolean).join("\n---\n") || "";
+
+        if (!contextSnippets) return { schemes: [] };
+        
+        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-preview-0409" });
+        const prompt = `From the provided Context...`; // Your full prompt
+
+        const resp = await generativeModel.generateContent(prompt);
+        // ... (rest of your JSON parsing logic is fine)
+        const content = resp.response.candidates[0].content.parts[0].text;
+        let jsonString = content.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || content;
+        const firstBrace = jsonString.indexOf('{');
+        const lastBrace = jsonString.lastIndexOf('}');
+        if (firstBrace === -1 || lastBrace < firstBrace) throw new HttpsError('internal', 'AI returned an invalid format.');
+        jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+        return JSON.parse(jsonString);
+
+    } catch (error) {
+        functions.logger.error("[Scheme Discovery by Topic] Critical error:", error);
+        throw new HttpsError('internal', 'An error occurred while discovering schemes.');
+    }
+});
