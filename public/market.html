@@ -36,27 +36,21 @@
                         <label for="state-select">State</label>
                         <select id="state-select" name="state">
                             <option value="">Select State</option>
-                            <option value="Punjab">Punjab</option>
-                            <option value="Uttar-pradesh">Uttar Pradesh</option>
-                            <option value="Maharashtra">Maharashtra</option>
+                            <!-- Options will be added here by market.js -->
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="market-select">Market</label>
                         <select id="market-select" name="market">
                             <option value="">Select Market</option>
-                            <option value="Sangrur">Sangrur</option>
-                            <option value="Tarntaran">Tarntaran</option>
-                            <option value="Patti">Patti</option>
+                            <!-- Options will be added here by market.js -->
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="crop-select">Crop</label>
                         <select id="crop-select" name="crop">
                             <option value="">Select Crop</option>
-                            <option value="Tomato">Tomato</option>
-                            <option value="Onion">Onion</option>
-                            <option value="Plum">Plum</option>
+                            <!-- Options will be added here by market.js -->
                         </select>
                     </div>
                 </div>
@@ -83,7 +77,6 @@
                         <span class="price-label">Current Avg Price</span>
                         <span id="res-price" class="price-value"></span>
                     </div>
-                    <!-- NEW: Price Meta Details -->
                     <div class="price-meta-details">
                         <p><strong>30-Day Trend:</strong> <span id="res-trend"></span></p>
                         <p><strong>Vs. Last Year:</strong> <span id="res-comparison"></span></p>
@@ -119,7 +112,7 @@
                         </tr>
                     </thead>
                     <tbody id="price-table-body">
-                        <!-- Rows will be injected by JS on page load -->
+                        <!-- Rows will be injected by market.js -->
                     </tbody>
                 </table>
             </div>
@@ -131,6 +124,11 @@
             <p>© 2024 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
         </div>
     </footer>
+    
+    <!-- This needs the Firebase compat library for functions -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
     <script src="market.js"></script>
 </body>

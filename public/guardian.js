@@ -1,3 +1,35 @@
+// =================================================================
+// 1. FIREBASE CONFIGURATION
+// =================================================================
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg",
+  authDomain: "project-kisan-new.firebaseapp.com",
+  projectId: "project-kisan-new",
+  storageBucket: "project-kisan-new.firebasestorage.app",
+  messagingSenderId: "176046173818",
+  appId: "1:176046173818:web:de8fb0e50752c8f62195c3",
+  measurementId: "G-GDJE785E2N"
+};
+
+firebase.initializeApp(firebaseConfig);
+const storage = firebase.storage();
+const firestore = firebase.firestore();
+
+if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    console.log("LOCALHOST DETECTED: Forcing connection to local emulators...");
+    try {
+        firestore.useEmulator("localhost", 8080);
+        storage.useEmulator("localhost", 9199);
+    } catch (e) {
+        console.error("Error setting up emulators. Have you started them with 'firebase emulators:start'?", e);
+    }
+}
+
+// =================================================================
+// 2. DOM ELEMENT REFERENCES
+// =================================================================
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- CROP DATA FOR MODAL (18 CROPS) ---
     const CROP_DATA = [
