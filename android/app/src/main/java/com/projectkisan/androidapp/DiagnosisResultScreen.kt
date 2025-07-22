@@ -15,82 +15,71 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.projectkisan.androidapp.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiagnosisResultScreen(viewModel: DiagnosisViewModel, result: DiagnosisResult) {
+fun DiagnosisResultScreen(
+    viewModel: DiagnosisViewModel,
+    result: DiagnosisResult,
+    onNavigateBack: () -> Unit
+) {
     val context = LocalContext.current
-    // Observe the isPlaying state from the ViewModel
     val isPlaying by viewModel.isPlaying.collectAsState()
 
-    // When this screen first appears, initialize the audio player with the URL
-    // This will only run once as long as the URL doesn't change.
     LaunchedEffect(result.audio_remedy_url) {
-        viewModel.initializePlayer(context, result.audio_remedy_url)
+        viewModel.initializePlayer(context, result.audio_remedy_url ?: "")
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
-    ) {
-        // Header Section
-        item {
-            Header(
-                title = result.disease_name_english.takeIf { it != "N/A" } ?: result.diagnosis_status,
-                subtitle = "(${result.plant_type})",
-                confidence = result.confidence_score.toFloat()
-            )
-            Divider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.surfaceVariant)
-        }
-
-        // Info Cards Section
-        item {
-            InfoCards(severity = result.severity, risk = result.contagion_risk)
-        }
-
-        // Description Section
-        item {
-            InfoSection(
-                label = "DESCRIPTION",
-                englishText = result.description_english,
-                kannadaText = result.description_kannada
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Diagnosis Result") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(painterResource(id = R.drawable.ic_arrow_back), contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
-
-        // Organic Remedy Section
-        item {
-            InfoSection(
-                label = "ORGANIC REMEDY",
-                englishText = result.organic_remedy_english,
-                kannadaText = result.organic_remedy_kannada
-            )
-        }
-
-        // Chemical Remedy Section
-        item {
-            InfoSection(
-                label = "CHEMICAL REMEDY",
-                englishText = result.chemical_remedy_english,
-                kannadaText = result.chemical_remedy_kannada
-            )
-        }
-
-        // Prevention Tips Section
-        item {
-            PreventionTips(tips = result.prevention_tips_english)
-        }
-
-        // Listen Button
-        item {
-            ListenButton(
-                isPlaying = isPlaying,
-                onClick = { viewModel.togglePlayback() }
-            )
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp)
+        ) {
+            item {
+                Header(
+                    title = result.disease_name_english.takeIf { it != "N/A" } ?: result.diagnosis_status,
+                    subtitle = "(${result.plant_type})",
+                    confidence = result.confidence_score.toFloat()
+                )
+                Divider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.surfaceVariant)
+            }
+            item { InfoCards(severity = result.severity, risk = result.contagion_risk) }
+            item { InfoSection(label = "DESCRIPTION", englishText = result.description_english, kannadaText = result.description_kannada) }
+            item { InfoSection(label = "ORGANIC REMEDY", englishText = result.organic_remedy_english, kannadaText = result.organic_remedy_kannada) }
+            item { InfoSection(label = "CHEMICAL REMEDY", englishText = result.chemical_remedy_english, kannadaText = result.chemical_remedy_kannada) }
+            item { PreventionTips(tips = result.prevention_tips_english) }
+            item {
+                if (!result.audio_remedy_url.isNullOrBlank()) {
+                    ListenButton(
+                        isPlaying = isPlaying,
+                        onClick = { viewModel.togglePlayback() }
+                    )
+                }
+            }
         }
     }
 }
@@ -104,7 +93,7 @@ fun Header(title: String, subtitle: String, confidence: Float) {
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineMedium,
@@ -114,7 +103,7 @@ fun Header(title: String, subtitle: String, confidence: Float) {
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyLarge,
-                color = TextMutedLight
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         ConfidenceBadge(score = confidence)
@@ -124,8 +113,16 @@ fun Header(title: String, subtitle: String, confidence: Float) {
 @Composable
 fun ConfidenceBadge(score: Float) {
     val confidencePercent = (score * 100).toInt()
-    val backgroundColor = if (confidencePercent > 80) Color(0xFFE4F8E9) else Color(0xFFFFF4DE)
-    val textColor = if (confidencePercent > 80) Color(0xFF27AE60) else Color(0xFFE67E22)
+    val backgroundColor = when {
+        confidencePercent > 80 -> GreenPrimary.copy(alpha = 0.1f)
+        confidencePercent > 60 -> OrangeAccent.copy(alpha = 0.1f)
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val textColor = when {
+        confidencePercent > 80 -> GreenPrimary
+        confidencePercent > 60 -> OrangeAccent
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     Box(
         modifier = Modifier
@@ -158,14 +155,13 @@ fun InfoCard(label: String, value: String, modifier: Modifier = Modifier) {
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextMutedLight
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = value,
@@ -178,18 +174,22 @@ fun InfoCard(label: String, value: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun InfoSection(label: String, englishText: String, kannadaText: String) {
+fun InfoSection(label: String, englishText: String, kannadaText: String?) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold,
-            color = TextMutedLight,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp)
         )
-        TextBubble(text = englishText, isKannada = false)
-        Spacer(modifier = Modifier.height(8.dp))
-        TextBubble(text = kannadaText, isKannada = true)
+        if (englishText != "N/A") {
+            TextBubble(text = englishText, isKannada = false)
+        }
+        if (!kannadaText.isNullOrBlank() && kannadaText != "N/A") {
+            Spacer(modifier = Modifier.height(8.dp))
+            TextBubble(text = kannadaText, isKannada = true)
+        }
     }
 }
 
@@ -211,25 +211,27 @@ fun TextBubble(text: String, isKannada: Boolean) {
 }
 
 @Composable
-fun PreventionTips(tips: List<String>) {
-    if (tips.isNotEmpty()) {
+fun PreventionTips(tips: List<String>?) {
+    if (!tips.isNullOrEmpty()) {
         Column(modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) {
             Text(
                 text = "PREVENTION TIPS",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
-                color = TextMutedLight,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     tips.forEach { tip ->
-                        Text(text = "• $tip", modifier = Modifier.padding(vertical = 4.dp))
+                        Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                            Text("• ", color = MaterialTheme.colorScheme.onSurface)
+                            Text(text = tip, color = MaterialTheme.colorScheme.onSurface)
+                        }
                     }
                 }
             }

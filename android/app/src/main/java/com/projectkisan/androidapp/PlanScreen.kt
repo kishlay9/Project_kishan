@@ -2,7 +2,6 @@ package com.projectkisan.androidapp
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,17 +10,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.projectkisan.androidapp.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun PlanScreen() {
+fun PlanScreen(navController: NavController) {
     var selectedCrop by remember { mutableStateOf("Tomato") }
     var selectedDate by remember { mutableStateOf("") }
     var selectedLocation by remember { mutableStateOf("Rohtak, Haryana") }
@@ -38,7 +37,7 @@ fun PlanScreen() {
             Text(
                 text = "Yield Maximizer",
                 style = MaterialTheme.typography.headlineLarge,
-                color = BlueSecondary,
+                color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.ExtraBold,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -62,12 +61,6 @@ fun PlanScreen() {
                 TodaysSchedule()
             }
         }
-
-        item {
-            Spacer(modifier = Modifier.height(24.dp))
-            FertilizerCalculatorButton(onClick = { /* TODO: Navigate to Calculator page */ })
-            Spacer(modifier = Modifier.height(16.dp))
-        }
     }
 }
 
@@ -88,14 +81,14 @@ fun CultivationScheduleCard(
 
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardLight),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Cultivation Schedule", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Cultivation Schedule", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Crop Name", style = MaterialTheme.typography.labelMedium, color = TextMutedLight)
+            Text("Crop Name", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ExposedDropdownMenuBox(expanded = isCropMenuExpanded, onExpandedChange = { isCropMenuExpanded = it }) {
                 OutlinedTextField(
                     value = selectedCrop,
@@ -104,8 +97,8 @@ fun CultivationScheduleCard(
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCropMenuExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GreenPrimary,
-                        unfocusedBorderColor = TextMutedLight.copy(alpha = 0.4f)
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                 )
                 ExposedDropdownMenu(expanded = isCropMenuExpanded, onDismissRequest = { isCropMenuExpanded = false }) {
@@ -119,29 +112,26 @@ fun CultivationScheduleCard(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Sowing Date", style = MaterialTheme.typography.labelMedium, color = TextMutedLight)
+            Text("Sowing Date", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedTextField(
                 value = selectedDate,
                 onValueChange = {},
                 readOnly = true,
                 placeholder = { Text("dd/mm/yyyy") },
                 trailingIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_calendar),
-                        contentDescription = "Select Date",
-                        // ▼▼▼ FIX: Set tint color for XML Vector Drawable ▼▼▼
-                        tint = TextMutedLight
-                    )
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(painter = painterResource(id = R.drawable.ic_calendar), contentDescription = "Select Date", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 },
-                modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
+                modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GreenPrimary,
-                    unfocusedBorderColor = TextMutedLight.copy(alpha = 0.4f)
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                 )
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Location", style = MaterialTheme.typography.labelMedium, color = TextMutedLight)
+            Text("Location", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ExposedDropdownMenuBox(expanded = isLocationMenuExpanded, onExpandedChange = { isLocationMenuExpanded = it }) {
                 OutlinedTextField(
                     value = selectedLocation,
@@ -150,8 +140,8 @@ fun CultivationScheduleCard(
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isLocationMenuExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GreenPrimary,
-                        unfocusedBorderColor = TextMutedLight.copy(alpha = 0.4f)
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                 )
                 ExposedDropdownMenu(expanded = isLocationMenuExpanded, onDismissRequest = { isLocationMenuExpanded = false }) {
@@ -169,7 +159,7 @@ fun CultivationScheduleCard(
                 onClick = onGenerateClick,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text("Generate Schedule", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
@@ -197,8 +187,8 @@ fun TodaysSchedule() {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Todays Schedule", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text("Generated: July 22, 2025", style = MaterialTheme.typography.bodySmall, color = TextMutedLight)
+            Text("Todays Schedule", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+            Text("Generated: July 22, 2025", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(modifier = Modifier.height(16.dp))
         scheduleItems.forEachIndexed { index, text ->
@@ -212,7 +202,7 @@ fun TodaysSchedule() {
 fun ScheduleStepItem(number: Int, text: String) {
     Card(
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardLight.copy(alpha = 0.8f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -220,55 +210,20 @@ fun ScheduleStepItem(number: Int, text: String) {
                 modifier = Modifier
                     .width(4.dp)
                     .height(60.dp)
-                    .background(BlueSecondary, shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
+                    .background(MaterialTheme.colorScheme.secondary, shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
             )
             Text(
                 text = "$number",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = BlueSecondary,
+                color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
             Text(
                 text = text,
                 modifier = Modifier.padding(end = 16.dp),
                 style = MaterialTheme.typography.bodyLarge,
-                color = TextPrimaryLight
-            )
-        }
-    }
-}
-
-@Composable
-fun FertilizerCalculatorButton(onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(70.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = BlueSecondary),
-        contentPadding = PaddingValues(horizontal = 16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_calculator),
-                contentDescription = null,
-                // ▼▼▼ FIX: Set tint color for XML Vector Drawable ▼▼▼
-                tint = Color.White
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text("Fertilizer Calculator", color = Color.White, fontWeight = FontWeight.Bold)
-                Text("Plan your nutrient application", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Icon(
-                painter = painterResource(id = R.drawable.ic_arrow_right),
-                contentDescription = "Navigate",
-                // ▼▼▼ FIX: Set tint color for XML Vector Drawable ▼▼▼
-                tint = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

@@ -3,7 +3,7 @@ package com.projectkisan.androidapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.*
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -32,7 +32,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.projectkisan.androidapp.ui.theme.*
 
-// Screen definitions
+// Screen definitions (ensure these match your files)
 sealed class Screen(val route: String, val label: String, val icon: Int) {
     object Home : Screen("home", "Home", R.drawable.ic_home)
     object Schemes : Screen("schemes", "Schemes", R.drawable.ic_schemes)
@@ -48,27 +48,29 @@ class MainActivity : ComponentActivity() {
         setContent {
             var isDarkTheme by rememberSaveable { mutableStateOf(false) }
             ProjectKisanTheme(darkTheme = isDarkTheme) {
-                MainScreen(onThemeToggle = { isDarkTheme = !isDarkTheme })
+                MainScreen(
+                    isDarkMode = isDarkTheme,
+                    onThemeToggle = { isDarkTheme = !isDarkTheme }
+                )
             }
         }
     }
 }
 
 @Composable
-fun MainScreen(onThemeToggle: () -> Unit) {
+fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Create a single ViewModel instance that will be shared across the navigation graph
     val diagnosisViewModel: DiagnosisViewModel = viewModel()
 
     Scaffold(
         topBar = {
-            // Only show the TopBar if the route is not the result screen
             if (currentRoute != "diagnosis_result") {
                 TopBar(
                     navController = navController,
+                    isDarkMode = isDarkMode,
                     onThemeToggle = onThemeToggle,
                     onHomeClick = {
                         navController.navigate(Screen.Home.route) {
@@ -80,7 +82,6 @@ fun MainScreen(onThemeToggle: () -> Unit) {
             }
         },
         bottomBar = {
-            // Only show the BottomBar if the route is not the result screen
             if (currentRoute != "diagnosis_result") {
                 BottomBar(navController = navController)
             }
@@ -91,9 +92,9 @@ fun MainScreen(onThemeToggle: () -> Unit) {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Home.route) { HomeScreen() }
+            composable(Screen.Home.route) { HomeScreen(navController = navController) }
             composable(Screen.Schemes.route) { SchemesScreen() }
-            composable(Screen.Plan.route) { PlanScreen() }
+            composable(Screen.Plan.route) { PlanScreen(navController = navController) }
             composable(Screen.Ask.route) { AskScreen() }
             composable(Screen.Diagnose.route) {
                 DiagnoseScreen(
@@ -104,10 +105,16 @@ fun MainScreen(onThemeToggle: () -> Unit) {
                 )
             }
             composable(Screen.Market.route) { MarketScreen() }
+            composable("fertilizer_calculator") {
+                FertilizerCalculatorScreen(onNavigateBack = { navController.popBackStack() })
+            }
             composable("diagnosis_result") {
                 val result = diagnosisViewModel.lastResult
                 if (result != null) {
-                    DiagnosisResultScreen(viewModel = diagnosisViewModel, result = result)
+                    DiagnosisResultScreen(
+                        viewModel = diagnosisViewModel,
+                        result = result,
+                        onNavigateBack = { navController.popBackStack() })
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("No result found. Please go back.")
@@ -132,7 +139,7 @@ fun BottomBar(navController: NavController) {
     )
 
     val selectedItemIndex = if (currentRoute == Screen.Home.route) {
-        -1 // Deselect all when on the Home (Dashboard) screen
+        -1
     } else {
         bottomNavScreens.indexOfFirst { it.route == currentRoute }
     }
@@ -196,18 +203,21 @@ fun BottomBar(navController: NavController) {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopBar(navController: NavController, onThemeToggle: () -> Unit, onHomeClick: () -> Unit) {
+fun TopBar(navController: NavController, isDarkMode: Boolean, onThemeToggle: () -> Unit, onHomeClick: () -> Unit) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val isDarkTheme = isSystemInDarkTheme()
 
-    // This state animates the rotation angle
+    var isRotating by remember { mutableStateOf(false) }
+
     val rotationAngle by animateFloatAsState(
-        targetValue = if (isDarkTheme) 360f else 0f,
-        animationSpec = tween(durationMillis = 800), // Slower animation
-        label = "themeIconRotation"
+        targetValue = if (isRotating) 360f else 0f,
+        animationSpec = tween(durationMillis = 800),
+        label = "themeIconRotation",
+        finishedListener = {
+            if (it == 360f) isRotating = false
+        }
     )
 
     Surface(
@@ -241,23 +251,17 @@ fun TopBar(navController: NavController, onThemeToggle: () -> Unit, onHomeClick:
                 }
                 IconButton(onClick = { /* TODO */ }) { Icon(painterResource(id = R.drawable.ic_top_contact), contentDescription = "Contact", modifier = Modifier.size(24.dp)) }
 
-                IconButton(onClick = onThemeToggle) {
-                    AnimatedContent(
-                        targetState = isDarkTheme,
-                        transitionSpec = {
-                            fadeIn(tween(400)) + scaleIn(tween(400), initialScale = 0.8f) togetherWith
-                                    fadeOut(tween(400)) + scaleOut(tween(400), targetScale = 0.8f)
-                        },
-                        label = "themeIconAnimation"
-                    ) { targetIsDark ->
-                        Icon(
-                            painter = if (targetIsDark) painterResource(id = R.drawable.ic_top_sun) else painterResource(id = R.drawable.ic_moon),
-                            contentDescription = "Toggle Theme",
-                            modifier = Modifier
-                                .size(24.dp)
-                                .rotate(rotationAngle)
-                        )
-                    }
+                IconButton(onClick = {
+                    onThemeToggle()
+                    isRotating = true
+                }) {
+                    Icon(
+                        painter = if (isDarkMode) painterResource(id = R.drawable.ic_top_sun) else painterResource(id = R.drawable.ic_moon),
+                        contentDescription = "Toggle Theme",
+                        modifier = Modifier
+                            .size(24.dp)
+                            .rotate(rotationAngle)
+                    )
                 }
 
                 IconButton(onClick = { /* TODO */ }) {

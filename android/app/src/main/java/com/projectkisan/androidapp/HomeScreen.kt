@@ -4,149 +4,166 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.projectkisan.androidapp.ui.theme.*
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(navController: NavController) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp)
+            .background(MaterialTheme.colorScheme.background) // Use theme color
+            .padding(16.dp)
     ) {
         item {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Dashboard", style = MaterialTheme.typography.headlineLarge, color = BlueSecondary, fontWeight = FontWeight.ExtraBold)
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        item { WeatherCard() }
-
-        item {
-            Text("Guardian AI Status", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 24.dp, bottom = 8.dp))
-            StatusCard(iconRes = R.drawable.ic_status_pest, text = "Pest Risk:", status = "Low", statusColor = Color(0xFFC0392B))
-            StatusCard(iconRes = R.drawable.ic_status_moisture, text = "Soil Moisture:", status = "Optimal", statusColor = BlueSecondary)
-        }
-
-        item {
-            Text("Community & News", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 24.dp, bottom = 8.dp))
-            NewsCard(
-                iconRes = R.drawable.ic_news_announcement,
-                title = "New Subsidy Scheme Announced",
-                description = "The state government has announced a new 50% subsidy on drip irrigation systems. ",
-                linkText = "Read more..."
-            )
-            NewsCard(
-                iconRes = R.drawable.ic_news_tip,
-                title = "Tip of the Day",
-                description = "Prevent blight on tomato plants by ensuring good air circulation and avoiding overhead watering. ",
-                linkText = "Learn how..."
+            Text(
+                text = "Dashboard",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.secondary, // Use theme color
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
+        }
+        item {
+            WeatherHeader()
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+        item {
+            Text(
+                "Guardian AI Status",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground // Use theme color
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            StatusCard(
+                iconResId = R.drawable.ic_pest,
+                text = "Pest Risk:",
+                status = "Low",
+                statusColor = MaterialTheme.colorScheme.primary // Use theme color
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            StatusCard(
+                iconResId = R.drawable.ic_moisture,
+                text = "Soil Moisture:",
+                status = "Optimal",
+                statusColor = MaterialTheme.colorScheme.secondary // Use theme color
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+        item {
+            FertilizerCalculatorButton(
+                onClick = {
+                    navController.navigate("fertilizer_calculator")
+                }
+            )
         }
     }
 }
 
-// Reusable UI components for the Home Screen
-
 @Composable
-fun WeatherCard() {
+fun WeatherHeader() {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // Use theme color
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text("Rohtak, 19 Jul", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("Clear • 27°C / 35°C", style = MaterialTheme.typography.bodyMedium, color = TextMutedLight)
+                Text(
+                    "Rohtak, 19 Jul",
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface // Use theme color
+                )
+                Text(
+                    "Clear • 27°C / 35°C",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, // Use theme color
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
-            Box(
-                modifier = Modifier.size(48.dp).clip(CircleShape).background(Color(0xFFFFF4DE)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(painterResource(id = R.drawable.ic_weather_sun), contentDescription = "Weather", tint = Color(0xFFFFA800), modifier = Modifier.size(32.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun StatusCard(iconRes: Int, text: String, status: String, statusColor: Color) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.padding(bottom = 8.dp).shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(painterResource(id = iconRes), contentDescription = null, tint = GreenPrimary, modifier = Modifier.size(24.dp))
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                buildAnnotatedString {
-                    append("$text ")
-                    withStyle(style = SpanStyle(color = statusColor, fontWeight = FontWeight.Bold)) {
-                        append(status)
-                    }
-                },
-                style = MaterialTheme.typography.bodyLarge
+            Image(
+                painter = painterResource(id = R.drawable.ic_weather_sunny),
+                contentDescription = "Weather",
+                modifier = Modifier.size(48.dp)
             )
         }
     }
 }
 
 @Composable
-fun NewsCard(iconRes: Int, title: String, description: String, linkText: String) {
+fun StatusCard(iconResId: Int, text: String, status: String, statusColor: Color) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.padding(bottom = 8.dp).shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // Use theme color
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier.size(56.dp).clip(CircleShape).background(BlueSecondary.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(painterResource(id = iconRes), contentDescription = null, tint = BlueSecondary, modifier = Modifier.size(32.dp))
-            }
-            Spacer(modifier = Modifier.width(16.dp))
+            Image(
+                painter = painterResource(id = iconResId),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text,
+                modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.onSurface // Use theme color
+            )
+            Text(status, fontWeight = FontWeight.Bold, color = statusColor)
+        }
+    }
+}
+
+@Composable
+fun FertilizerCalculatorButton(onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(70.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary), // Use theme color
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_calculator),
+                contentDescription = null,
+                tint = Color.White
+            )
+            Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(
-                    buildAnnotatedString {
-                        append(description)
-                        withStyle(style = SpanStyle(color = GreenPrimary, fontWeight = FontWeight.Bold)) {
-                            append(linkText)
-                        }
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextMutedLight
-                )
+                Text("Fertilizer Calculator", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Plan your nutrient application", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
             }
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_right),
+                contentDescription = "Navigate",
+                tint = Color.White
+            )
         }
     }
 }

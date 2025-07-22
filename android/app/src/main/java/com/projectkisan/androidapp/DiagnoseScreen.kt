@@ -42,6 +42,7 @@ fun DiagnoseScreen(viewModel: DiagnosisViewModel, onNavigateToResult: () -> Unit
     LaunchedEffect(uiState) {
         if (uiState is DiagnosisUiState.Success) {
             onNavigateToResult()
+            viewModel.resetState()
         }
     }
 
@@ -83,8 +84,8 @@ fun DiagnoseScreen(viewModel: DiagnosisViewModel, onNavigateToResult: () -> Unit
         ) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "Crop Doctor", style = MaterialTheme.typography.headlineLarge, color = BlueSecondary, fontWeight = FontWeight.ExtraBold, modifier = Modifier.fillMaxWidth())
-                Text(text = "Get an instant diagnosis for your crop by providing a photo.", style = MaterialTheme.typography.bodyLarge, color = TextMutedLight, modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 24.dp))
+                Text(text = "Crop Doctor", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.ExtraBold, modifier = Modifier.fillMaxWidth())
+                Text(text = "Get an instant diagnosis for your crop by providing a photo.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 24.dp))
             }
             item {
                 DiagnosisFlowStep(iconRes = R.drawable.ic_flow_image, title = "1. Provide a Picture", subtitle = "Use your camera or upload from your gallery.")
@@ -105,7 +106,7 @@ fun DiagnoseScreen(viewModel: DiagnosisViewModel, onNavigateToResult: () -> Unit
                 }
             }
             item {
-                Text(text = "Recent Diagnoses", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 8.dp))
+                Text(text = "Recent Diagnoses", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 8.dp))
                 RecentDiagnosisCard()
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -158,7 +159,6 @@ private fun createImageUri(context: Context): Uri {
     return FileProvider.getUriForFile(context, "com.projectkisan.androidapp.fileprovider", imageFile)
 }
 
-// ▼▼▼ THESE WERE THE MISSING FUNCTIONS ▼▼▼
 @Composable
 fun DiagnosisFlowStep(iconRes: Int, title: String, subtitle: String) {
     Card(
@@ -167,17 +167,17 @@ fun DiagnosisFlowStep(iconRes: Int, title: String, subtitle: String) {
         modifier = Modifier.fillMaxWidth(0.9f).shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(painterResource(id = iconRes), contentDescription = null, modifier = Modifier.size(32.dp), tint = TextMutedLight)
+            Icon(painterResource(id = iconRes), contentDescription = null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = TextPrimaryLight)
-            Text(subtitle, color = TextMutedLight, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+            Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
 
 @Composable
 fun FlowArrow() {
-    Text("→", fontSize = 24.sp, color = TextMutedLight, modifier = Modifier.padding(vertical = 8.dp))
+    Text("→", fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
 }
 
 @Composable
@@ -186,13 +186,13 @@ fun ActionButton(iconRes: Int, text: String, modifier: Modifier = Modifier, onCl
         onClick = onClick,
         modifier = modifier.height(120.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = ButtonGreenLight),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(painter = painterResource(id = iconRes), contentDescription = text, modifier = Modifier.size(48.dp), tint = TextPrimaryLight)
+            Icon(painter = painterResource(id = iconRes), contentDescription = text, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text, color = TextPrimaryLight, fontWeight = FontWeight.SemiBold)
+            Text(text, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -207,10 +207,9 @@ fun RecentDiagnosisCard() {
         Row(modifier = Modifier.fillMaxWidth()) {
             Box(modifier = Modifier.width(6.dp).height(70.dp).background(OrangeAccent))
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Tomato Plant: Early Blight (High Confidence)", fontWeight = FontWeight.Bold, color = TextPrimaryLight)
-                Text("Viewed 2 days ago", style = MaterialTheme.typography.bodySmall, color = TextMutedLight)
+                Text("Tomato Plant: Early Blight (High Confidence)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text("Viewed 2 days ago", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
-// ▲▲▲ END OF MISSING FUNCTIONS ▲▲▲
