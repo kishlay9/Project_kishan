@@ -18,14 +18,14 @@ const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
 const axios = require("axios");
 const { VertexAI } = require("@google-cloud/vertexai");
 // NEW, ROBUST IMPORT LINE
-const { google } = require('googleapis');
+
 
 // Initialize all clients ONCE
 admin.initializeApp();
 const firestore = admin.firestore();
 const storage = admin.storage();
 const ttsClient = new TextToSpeechClient();
-const discovery = google.discoveryengine("v1");
+
 
 // =================================================================
 // CONFIGURATION
@@ -1206,110 +1206,146 @@ function parseCityFromGeocodingResponse(geocodingData) {
 
 
 // =================================================================
-// GOVERNMENT SCHEME NAVIGATOR (FEATURES 9 & 10)
+// FUNCTION 9: GOVERNMENT SCHEME NAVIGATOR (Gemini-Only Q&A with Structured Output)
 // =================================================================
-
-
-
-exports.getSchemeInfo = onRequest({ region: LOCATION, memory: "1GiB" }, async (request, response) => {
-    // Add CORS headers to allow requests from any origin
-    response.set('Access-Control-Allow-Origin', '*');
-    if (request.method === 'OPTIONS') {
-        // Handle preflight requests for CORS
-        response.set('Access-Control-Allow-Methods', 'POST');
-        response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-        response.status(204).send('');
-        return;
-    }
-
-    // For onRequest, the payload is in request.body.data
-    const userQuery = request.body.data?.query;
-
-    if (!userQuery) {
-        functions.logger.error("[Scheme Q&A] Bad Request: Query text is missing.");
-        response.status(400).json({ error: { status: "INVALID_ARGUMENT", message: "A query text is required in the data payload." } });
-        return;
-    }
-    functions.logger.info(`[Scheme Q&A] Received query: "${userQuery}"`);
-
-    const DATA_STORE_ID = "YOUR_DATA_STORE_ID_HERE"; // <-- IMPORTANT: REPLACE
-    const servingConfig = `projects/${PROJECT_ID}/locations/global/collections/default_collection/dataStores/${DATA_STORE_ID}/servingConfigs/default_serving_config`;
-
-    try {
-        const searchRequest = { servingConfig, query: userQuery, pageSize: 5 };
-        const [searchResponse] = await discoveryClient.search(searchRequest);
-        const contextSnippets = searchResponse.results
-            .map(r => r.document.derivedStructData.snippets[0]?.snippet).filter(Boolean).join("\n---\n");
-
-        if (!contextSnippets) {
-            response.status(200).json({ result: { answer: "Sorry, I could not find information related to your question." } });
+exports.getSchemeAnswer = onRequest(
+    {
+        region: LOCATION,
+        timeoutSeconds: 60, // A 1-minute timeout is sufficient for a Q&A call
+        memory: "1GiB"
+    },
+    async (request, response) => {
+        // --- CORS handling for frontend requests ---
+        response.set('Access-Control-Allow-Origin', '*'); 
+        if (request.method === 'OPTIONS') {
+            response.set('Access-Control-Allow-Methods', 'GET, POST');
+            response.set('Access-Control-Allow-Headers', 'Content-Type');
+            response.status(204).send('');
             return;
         }
-        
-        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-preview-0409" });
-        const prompt = `You are KisanAI...`; // Your full, unchanged prompt
-        
-        const resp = await generativeModel.generateContent(prompt);
-        const content = resp.response.candidates[0].content.parts[0].text;
-        
-        // Use the robust JSON parsing logic
-        let jsonString = content.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || content;
-        const firstBrace = jsonString.indexOf('{');
-        const lastBrace = jsonString.lastIndexOf('}');
-        if (firstBrace === -1 || lastBrace < firstBrace) {
-            throw new Error('AI returned a response in an invalid format.');
+
+        let question = request.query.question || request.body.question;
+        let stateName = request.query.stateName || request.body.stateName;
+
+        try {
+            // --- 1. Authentication for Gemini API ---
+            let accessToken;
+            try {
+                const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
+                if (!tokenResponse.ok) {
+                    throw new Error("Failed to fetch access token");
+                }
+                const tokenData = await tokenResponse.json();
+                accessToken = tokenData.access_token;
+            } catch (error) {
+                functions.logger.error("[Scheme Q&A Auth Error] Could not fetch access token for Gemini API call.", error);
+                response.status(500).json({ error: "Internal server error: could not authenticate." });
+                return;
+            }
+
+            // --- 2. Input Validation ---
+            functions.logger.info(`[Scheme Q&A] Received request for Question: "${question}", State: "${stateName}"`);
+
+            if (!question || !stateName) {
+                response.status(400).json({ error: "Missing 'question' or 'stateName' in request." });
+                return;
+            }
+
+            // --- 3. Prompt Engineering (New, More Powerful Prompt) ---
+            const analysisPrompt = `You are a helpful and knowledgeable assistant for Indian farmers. Your goal is to find relevant government schemes based on a farmer's question and state, and return the information in a structured JSON format.
+
+            **IMPORTANT CONTEXT:**
+            - The user is asking about the state of: **${stateName}**
+            - The user's question is: **"${question}"**
+
+            **YOUR TASK:**
+            1.  Based on your knowledge, search for relevant agricultural schemes. You must consider BOTH **Central Government schemes** (applicable nationwide, like PM-KISAN) AND specific **State Government schemes** for **${stateName}**.
+            2.  Analyze the schemes you find and determine if they are relevant to the user's question.
+            3.  Format your findings into a single, valid JSON object with the exact structure below.
+
+            **JSON OUTPUT STRUCTURE:**
+            {
+              "schemes_found": true,
+              "schemes": [
+                {
+                  "scheme_name": "Name of the first scheme found",
+                  "government_level": "Central" or "State",
+                  "brief_description": "A simple, one-sentence summary of the scheme's purpose.",
+                  "key_benefits": [
+                    "Benefit 1 (e.g., 'Financial assistance of Rs. 6000 per year').",
+                    "Benefit 2 (e.g., 'Subsidy on seeds and fertilizers')."
+                  ],
+                  "how_to_apply": "A simple, step-by-step guide on how to apply. If you don't know the exact steps, advise the user to visit the official government portal for that scheme."
+                }
+              ],
+              "message_if_no_schemes": ""
+            }
+
+            **IMPORTANT RULES:**
+            - If you find one or more relevant schemes, populate the "schemes" array and set "schemes_found" to true. The "message_if_no_schemes" should be an empty string.
+            - If you find NO relevant schemes, the "schemes" array MUST be empty (\`[]\`), "schemes_found" MUST be false, and you must provide a helpful message in "message_if_no_schemes", like "I could not find a specific scheme for your query in ${stateName}. You can check the official state agricultural portal for more information."
+            - Do not make up facts, scheme names, or URLs. If you are unsure, it's better to state that in the "how_to_apply" section.`;
+            
+            // --- 4. AI Call ---
+            const geminiApiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
+            const geminiRequestBody = { 
+                contents: [{ 
+                    parts: [{ text: analysisPrompt }], 
+                    role: "user" 
+                }] 
+            };
+            
+            functions.logger.info("[Scheme Q&A] Sending request to Gemini API...");
+            const geminiResponse = await fetch(geminiApiEndpoint, { 
+                method: "POST", 
+                headers: { 
+                    Authorization: `Bearer ${accessToken}`, 
+                    "Content-Type": "application/json" 
+                }, 
+                body: JSON.stringify(geminiRequestBody) 
+            });
+            const geminiResponseData = await geminiResponse.json();
+            
+            const modelResponseText = geminiResponseData?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!modelResponseText) { 
+                functions.logger.error("[Scheme Q&A Error] Gemini response was empty or invalid.", { response: geminiResponseData });
+                response.status(500).json({ error: "Could not get a valid answer from the AI." });
+                return;
+            }
+            
+            // --- 5. Robust JSON Parsing and Return to Frontend ---
+            let jsonString = modelResponseText;
+            const jsonMatch = modelResponseText.match(/```json\s*([\s\S]*?)\s*```/);
+            if (jsonMatch && jsonMatch[1]) {
+                jsonString = jsonMatch[1];
+            }
+            
+            const firstBrace = jsonString.indexOf('{');
+            const lastBrace = jsonString.lastIndexOf('}');
+            if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+                functions.logger.error("[Scheme Q&A Parse Error] Could not find a valid JSON object in Gemini's response.", { rawResponse: modelResponseText });
+                response.status(500).json({ error: "AI response did not contain a valid JSON object." });
+                return;
+            }
+            const finalJsonString = jsonString.substring(firstBrace, lastBrace + 1).trim();
+
+            try {
+                const schemeData = JSON.parse(finalJsonString);
+                functions.logger.info("[Scheme Q&A] Successfully parsed scheme data from Gemini.");
+                response.status(200).json(schemeData);
+                return;
+            } catch (parseError) {
+                functions.logger.error("[Scheme Q&A Parse Error] Failed to parse Gemini's response as JSON after cleaning.", { rawResponse: modelResponseText, cleanedString: finalJsonString, error: parseError });
+                response.status(500).json({ error: "Failed to parse AI response.", details: parseError.message });
+                return;
+            }
+
+        } catch (error) {
+            functions.logger.error(`[CRITICAL Scheme Q&A Error] Error processing request for question "${question}":`, error, { structuredData: true });
+            if (!response.headersSent) {
+                response.status(500).json({ error: "Failed to get an answer.", details: error.message });
+            }
         }
-        jsonString = jsonString.substring(firstBrace, lastBrace + 1);
-        
-        const finalResult = JSON.parse(jsonString);
-        // Send success response
-        response.status(200).json({ result: finalResult });
-
-    } catch (error) {
-        functions.logger.error("[Scheme Q&A] Critical error:", error);
-        // Send error response
-        response.status(500).json({ error: { status: "INTERNAL", message: "An error occurred while fetching scheme information." } });
     }
-});
-// --- FEATURE 2: PROACTIVE DISCOVERY ---
-exports.discoverSchemesByTopicAndState = onCall({ region: LOCATION, memory: "1GiB" }, async (request) => {
-    const { userNeed, stateName } = request.data;
-    if (!userNeed || !stateName) throw new HttpsError('invalid-argument', 'Both userNeed and stateName are required.');
-    
-    const DATA_STORE_ID = "govt-schemes-knowledge-base_1753177033369";
-    const servingConfig = `projects/${PROJECT_ID}/locations/global/collections/default_collection/dataStores/${DATA_STORE_ID}/servingConfigs/default_serving_config`;
-
-    try {
-        const searchQuery = `government agricultural schemes in ${stateName} for ${userNeed}`;
-        const searchRequest = { servingConfig, query: searchQuery, pageSize: 10 };
-        
-        // Authenticate the client
-        const auth = new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
-        google.options({ auth: await auth.getClient() });
-        
-        // Call the search method using the new client
-        const searchResponse = await discovery.projects.locations.dataStores.servingConfigs.search(searchRequest);
-
-        const contextSnippets = searchResponse.data.results
-            ?.map(r => r.document.derivedStructData.snippets[0]?.snippet).filter(Boolean).join("\n---\n") || "";
-
-        if (!contextSnippets) return { schemes: [] };
-        
-        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-preview-0409" });
-        const prompt = `From the provided Context...`; // Your full prompt
-
-        const resp = await generativeModel.generateContent(prompt);
-        // ... (rest of your JSON parsing logic is fine)
-        const content = resp.response.candidates[0].content.parts[0].text;
-        let jsonString = content.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || content;
-        const firstBrace = jsonString.indexOf('{');
-        const lastBrace = jsonString.lastIndexOf('}');
-        if (firstBrace === -1 || lastBrace < firstBrace) throw new HttpsError('internal', 'AI returned an invalid format.');
-        jsonString = jsonString.substring(firstBrace, lastBrace + 1);
-        return JSON.parse(jsonString);
-
-    } catch (error) {
-        functions.logger.error("[Scheme Discovery by Topic] Critical error:", error);
-        throw new HttpsError('internal', 'An error occurred while discovering schemes.');
-    }
-});
+);
