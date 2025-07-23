@@ -3455,3 +3455,20 @@ header.scrolled {
         font-size: 1.3rem;
     }
 }
+.threat-details {
+  display: flex;                 /* Use flexbox for alignment */
+  justify-content: space-between;  /* Push the two items to opposite ends */
+  align-items: flex-start;       /* Align them to the top */
+  width: 100%;                   /* Ensure it takes the full width of the card */
+  margin-bottom: 1rem;           /* Add some space below before the reasoning box */
+}
+
+/* This styles the individual label/value pairs */
+.threat-details p {
+    margin: 0; /* Remove default paragraph margin */
+}
+
+/* This ensures the "Risk Level" text itself is right-aligned */
+.threat-details p:last-child {
+    text-align: right;
+}

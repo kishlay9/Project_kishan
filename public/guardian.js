@@ -1,9 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- CROP DATA FOR MODAL (18 CROPS) ---
-    const CROP_DATA = [
-        { name: "Apple", emoji: "🍎", id: 'apple', img: 'images/apple.png' }, { name: "Bean", emoji: "🫘", id: 'bean', img: 'images/red-beans.png' }, { name: "Black & Green Gram", emoji: "🌱", id: 'gram', img: 'images/bg_gram.png' }, { name: "Brinjal", emoji: "🍆", id: 'brinjal', img: 'images/brinjal.png' }, { name: "Chickpea & Gram", emoji: "🌱", id: 'chickpea', img: 'images/chickpea.png' }, { name: "Cotton", emoji: "☁️", id: 'cotton', img: 'images/cotton.png' }, { name: "Cucumber", emoji: "🥒", id: 'cucumber', img: 'images/cucumber.png' }, { name: "Maize", emoji: "🌽", id: 'maize', img: 'images/maize.png' }, { name: "Melon", emoji: "🍉", id: 'melon', img: 'images/watermelon.png' }, { name: "Okra", emoji: "👌", id: 'okra', img: 'images/okra.png' }, { name: "Onion", emoji: "🧅", id: 'onion', img: 'images/onion.png' }, { name: "Peanut", emoji: "🥜", id: 'peanut', img: 'images/peanuts.png' }, { name: "Potato", emoji: "🥔", id: 'potato', img: 'images/potato.png' }, { name: "Rice", emoji: "🍚", id: 'rice', img: 'images/rice.png' }, { name: "Sorghum", emoji: "🌾", id: 'sorghum', img: 'images/sorghum.png' }, { name: "Soybean", emoji: "🌱", id: 'soybean', img: 'images/soyabean.png' }, { name: "Sugarcane", emoji: "🎋", id: 'sugarcane', img: 'images/sugarcane.png' }, { name: "Tomato", emoji: "🍅", id: 'tomato', img: 'images/tomato.png' }, { name: "Wheat", emoji: "🌾", id: 'wheat', img: 'images/wheat.png' }
-    ];
-
+    // --- CROP DATA & DISEASE LIBRARY ---
+    // This is efficient and remains as is.
+    const CROP_DATA = [ { name: "Apple", emoji: "🍎", id: 'apple', img: 'images/apple.png' }, { name: "Bean", emoji: "🫘", id: 'bean', img: 'images/red-beans.png' }, { name: "Black & Green Gram", emoji: "🌱", id: 'gram', img: 'images/bg_gram.png' }, { name: "Brinjal", emoji: "🍆", id: 'brinjal', img: 'images/brinjal.png' }, { name: "Chickpea & Gram", emoji: "🌱", id: 'chickpea', img: 'images/chickpea.png' }, { name: "Cotton", emoji: "☁️", id: 'cotton', img: 'images/cotton.png' }, { name: "Cucumber", emoji: "🥒", id: 'cucumber', img: 'images/cucumber.png' }, { name: "Maize", emoji: "🌽", id: 'maize', img: 'images/maize.png' }, { name: "Melon", emoji: "🍉", id: 'melon', img: 'images/watermelon.png' }, { name: "Okra", emoji: "👌", id: 'okra', img: 'images/okra.png' }, { name: "Onion", emoji: "🧅", id: 'onion', img: 'images/onion.png' }, { name: "Peanut", emoji: "🥜", id: 'peanut', img: 'images/peanuts.png' }, { name: "Potato", emoji: "🥔", id: 'potato', img: 'images/potato.png' }, { name: "Rice", emoji: "🍚", id: 'rice', img: 'images/rice.png' }, { name: "Sorghum", emoji: "🌾", id: 'sorghum', img: 'images/sorghum.png' }, { name: "Soybean", emoji: "🌱", id: 'soybean', img: 'images/soyabean.png' }, { name: "Sugarcane", emoji: "🎋", id: 'sugarcane', img: 'images/sugarcane.png' }, { name: "Tomato", emoji: "🍅", id: 'tomato', img: 'images/tomato.png' }, { name: "Wheat", emoji: "🌾", id: 'wheat', img: 'images/wheat.png' } ];
+    
     // --- COMPLETE DISEASE LIBRARY DATABASE (ALL 18 CROPS) ---
     const diseaseLibraryData = {
         apple: {
@@ -127,15 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
             "Heading & Flowering Stage": [{ img: 'images/fusarium-head-blight.jpg', type: 'Fungus', name: 'Fusarium Head Blight (Scab)', symptoms: ['One or more spikelets on the head are prematurely bleached white.', 'A pinkish or orange fungal growth may be visible at the base of the spikelets.', 'Infected kernels are shriveled, lightweight, and chalky white or pink.', 'Produces mycotoxins (DON/vomitoxin).'], prevention: ['Use tolerant varieties.', 'Apply specific triazole fungicides at early flowering (anthesis).', 'Crop rotation and residue management can help.', 'Time irrigation to avoid wetness during flowering.'], cause: 'A fungus (Fusarium graminearum) that infects during flowering in warm, wet conditions.' }, { img: 'images/stem-rust.jpg', type: 'Fungus', name: 'Stem Rust (Black Rust)', symptoms: ['Large, brick-red, elongated pustules on stems, leaves, and heads.', 'The pustules rupture the plant epidermis, giving a ragged appearance.', 'Can cause stems to weaken and break.', 'A historically devastating disease.'], prevention: ['Plant resistant varieties (crucial).', 'Eradicate alternate hosts like barberry bushes.', 'Apply foliar fungicides.', 'Early maturing varieties may escape the worst of the epidemic.'], cause: 'A fungus (Puccinia graminis) that can cause severe lodging and yield loss.' }, { img: 'images/loose-smut.jpg', type: 'Fungus', name: 'Loose Smut', symptoms: ['The entire head, except for the central stalk (rachis), is replaced by a mass of black, powdery spores.', 'The spores are easily blown away by the wind, leaving a bare stalk.', 'Infection is not obvious until heading.', 'Infected plants are often taller than healthy ones.'], prevention: ['Use resistant varieties.', 'Use certified disease-free seed.', 'Treat seeds with a systemic fungicide.', 'Hot water seed treatment can also work but is difficult.'], cause: 'A fungus (Ustilago tritici) that infects the flower and grows systemically within the seed embryo.' }, { img: 'images/ergot.jpg', type: 'Fungus', name: 'Ergot', symptoms: ['A sticky, sugary honeydew is exuded from infected florets.', 'Hard, purplish-black, horn-like fungal bodies (sclerotia or ergot bodies) replace the grain.', 'The ergot bodies are toxic to humans and animals.', 'More common in open-pollinated crops like rye.'], prevention: ['Rotate crops.', 'Plow deep to bury ergot bodies.', 'Mow grassy weeds around the field before they flower.', 'Use clean seed free from ergot bodies.'], cause: 'A fungus (Claviceps purpurea) that infects the ovary of the flower.' }, { img: 'images/armyworms.jpg', type: 'Insect', name: 'Armyworms', symptoms: ['Chewed leaves and clipped heads.', 'Larvae feed on foliage and can cut the stem just below the head.', 'Damage can occur very quickly as larvae march "like an army".', 'Look for larvae on the ground or hiding in debris during the day.'], prevention: ['Monitor fields closely, especially in lush, thick stands.', 'Apply insecticides when larval counts reach economic thresholds.', 'Control grassy weeds, which are preferred hosts.', 'Natural enemies can help regulate populations.'], cause: 'Caterpillars of several moth species that can migrate into fields in large numbers.' }]
         }
     };
-
-    // --- MOCK DATA FOR DYNAMIC CONTENT ---
-     const weatherData = { location: "Sangrur, Punjab", temp: "31°C", humidity: "75%", rain: "40%", wind: "12 km/h" };
-
-    const mockThreatData = {
-        threatName: "Fungal Diseases (e.g., Early Blight, Late Blight, Septoria Leaf Spot)",
-        riskLevel: "Medium", // Can be 'High', 'Medium', or 'Low'
-        reasoning: "Extended periods of high humidity (70-85%) and moderate to high temperatures (27-34°C) over multiple days create favorable conditions for fungal pathogen development and spread in tomatoes. The presence of rain and cloud cover further exacerbates the risk by increasing leaf wetness duration."
-    };
+    console.log("📚 [Library] Disease data object loaded.");
 
     // --- DOM ELEMENT REFERENCES ---
     const guardianForm = document.getElementById('guardian-form');
@@ -155,8 +146,150 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalDiseaseSymptoms = document.getElementById('modal-disease-symptoms');
     const modalDiseasePrevention = document.getElementById('modal-disease-prevention');
     const modalDiseaseCause = document.getElementById('modal-disease-cause');
+    const weatherLocationEl = document.getElementById('weather-location');
+    const weatherTempEl = document.getElementById('weather-temp');
+    const weatherHumidityEl = document.getElementById('weather-humidity');
+    const weatherRainEl = document.getElementById('weather-rain');
+    const weatherWindEl = document.getElementById('weather-wind');
+    
+    // --- CORE LOGIC ---
 
-    // --- MODAL FUNCTIONS ---
+    async function fetchWeatherOnLoad() {
+        console.log("🌦️ [Weather] Attempting to get user location...");
+        weatherLocationEl.textContent = 'Fetching location...';
+        if (!navigator.geolocation) {
+            console.error("[Weather] Geolocation is not supported by this browser.");
+            weatherLocationEl.textContent = 'Geolocation not supported';
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { latitude, longitude } = position.coords;
+            console.log(`[Weather] Location found: Lat ${latitude}, Lon ${longitude}`);
+            try {
+                const apiUrl = 'https://asia-south1-project-kisan-new.cloudfunctions.net/getWeatherAndAqi';
+                const requestUrl = `${apiUrl}?lat=${latitude}&lon=${longitude}`;
+                console.log(`[Weather] Fetching data from: ${requestUrl}`);
+                const response = await fetch(requestUrl);
+                if (!response.ok) throw new Error(`Weather API failed with status ${response.status}`);
+                const data = await response.json();
+                console.log("[Weather] Data received successfully:", data);
+                populateWeatherData(data);
+            } catch (error) {
+                console.error("[Weather] Failed to fetch weather data:", error);
+                weatherLocationEl.textContent = 'Could not fetch weather';
+            }
+        }, (error) => {
+            console.error("[Weather] Geolocation error:", error.message);
+            weatherLocationEl.textContent = 'Location access denied by browser';
+            alert("Please allow location access in your browser settings to see local weather information.");
+        });
+    }
+
+    guardianForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log("🛡️ [Guardian] Activation form submitted.");
+        const crop = document.getElementById('g-crop-select').value;
+        const sowingDate = document.getElementById('g-sowing-date').value;
+        const locationCity = document.getElementById('g-location').value;
+
+        if (!crop || !sowingDate || !locationCity) {
+            alert('Please fill out all fields to activate the Guardian.');
+            return;
+        }
+
+        guardianOutput.classList.add('hidden');
+        statusIndicator.classList.remove('hidden');
+        statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        const farmId = 'testFarm01';
+        const userId = 'testUser123';
+
+        try {
+            const apiUrl = 'https://asia-south1-project-kisan-new.cloudfunctions.net/activateGuardian';
+            const payload = { currentCrop: crop, sowingDate: sowingDate, locationCity: locationCity, farmId: farmId, userId: userId };
+            console.log("[Guardian] Sending activation request with payload:", payload);
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({error: 'Unknown server error'}));
+                throw new Error(errorData.error || `Server responded with status ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log("[Guardian] Activation successful. Response received:", result);
+
+            statusIndicator.classList.add('hidden');
+            displayThreatAssessment(result.initialThreats);
+            guardianOutput.classList.remove('hidden');
+            guardianOutput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (error) {
+            console.error("[Guardian] Activation failed:", error);
+            statusIndicator.classList.add('hidden');
+            alert(`Guardian activation failed. Please try again. \nError: ${error.message}`);
+        }
+    });
+
+    // --- UI POPULATION FUNCTIONS ---
+
+    function populateWeatherData(data) {
+        console.log("[DEBUG] Populating weather UI with received data.");
+        weatherLocationEl.textContent = data.location?.city || 'N/A';
+        weatherTempEl.textContent = `${Math.round(data.weather?.maxTemp) || '--'}°C`;
+        weatherHumidityEl.textContent = `${data.weather?.humidity || '--'}%`;
+        weatherRainEl.textContent = `${data.sprayingConditions?.reason || 'Not available'}`;
+        weatherWindEl.textContent = `${Math.round(data.weather?.windSpeed) || '--'} km/h`;
+    }
+
+    function displayThreatAssessment(threats) {
+        console.log(`[DEBUG] Displaying ${threats ? threats.length : 0} threats.`);
+        guardianOutput.innerHTML = ''; 
+
+        const containerCard = document.createElement('div');
+        containerCard.className = 'guardian-result-card';
+        containerCard.innerHTML = '<h3>Threat Assessment</h3>'; 
+
+        if (!threats || threats.length === 0) {
+            const noThreatsHTML = `
+                <div class="threat-assessment">
+                    <div class="threat-details">
+                        <p><span>Identified Threat</span><strong>No Immediate High-Risk Threats</strong></p>
+                        <p><span>Risk Level</span><span class="risk-badge risk-low">Low</span></p>
+                    </div>
+                    <div class="gemini-warning">
+                        <img src="images/ai-guardian.svg" alt="AI Icon">
+                        <p>Guardian AI has analyzed your local conditions and found no high or medium-risk threats. Continue to monitor your crops.</p>
+                    </div>
+                </div>`;
+            containerCard.insertAdjacentHTML('beforeend', noThreatsHTML);
+        } else {
+            threats.forEach(threat => {
+                const riskLevel = threat.riskLevel || 'Unknown';
+                const riskClass = `risk-${riskLevel.toLowerCase()}`;
+                const threatHTML = `
+                    <div class="threat-assessment" style="margin-top: 20px;">
+                        <div class="threat-details">
+                            <p><span>Identified Threat</span><strong>${threat.threatName || 'N/A'}</strong></p>
+                            <p><span>Risk Level</span><span class="risk-badge ${riskClass}">${riskLevel}</span></p>
+                        </div>
+                        <div class="gemini-warning">
+                            <img src="images/ai-guardian.svg" alt="AI Icon">
+                            <p>${threat.reasoning || 'No details available.'}</p>
+                        </div>
+                    </div>`;
+                containerCard.insertAdjacentHTML('beforeend', threatHTML);
+            });
+        }
+        guardianOutput.appendChild(containerCard);
+        console.log("[DEBUG] All threat cards have been added to the UI inside a single container.");
+    }
+
+    // --- MODAL & LIBRARY FUNCTIONS ---
+
     function openModal() { cropModal.classList.remove('hidden'); }
     function closeModal() { cropModal.classList.add('hidden'); }
 
@@ -170,14 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             item.dataset.cropId = crop.id;
             item.dataset.cropName = crop.name;
             item.dataset.cropEmoji = crop.emoji;
-
-            item.innerHTML = `
-                <div class="crop-item-icon">
-                    <img src="${crop.img}" alt="${crop.name}">
-                </div>
-                <span class="crop-item-name">${crop.name}</span>
-            `;
-
+            item.innerHTML = `<div class="crop-item-icon"><img src="${crop.img}" alt="${crop.name}"></div><span class="crop-item-name">${crop.name}</span>`;
             item.addEventListener('click', () => {
                 selectedCropNameEl.textContent = `${crop.emoji} ${crop.name}`;
                 populateDiseaseLibrary(crop.id);
@@ -186,134 +312,107 @@ document.addEventListener('DOMContentLoaded', () => {
             cropGrid.appendChild(item);
         });
     }
+    
+    function populateDiseaseLibrary(crop) {
+        console.log(`📚 [Library] Populating for crop: '${crop}'`);
+        const existingCards = diseaseLibraryContainer.querySelectorAll('.stage-card');
+        existingCards.forEach(card => card.remove());
 
-    // --- DISEASE DETAIL MODAL FUNCTIONS ---
+        const dataForCrop = diseaseLibraryData[crop];
+        if (!dataForCrop || Object.keys(dataForCrop).length === 0) {
+            console.error(`[Library] No disease data found for crop ID: '${crop}'. Library will be empty.`);
+            const noDataCard = document.createElement('div');
+            noDataCard.className = 'stage-card';
+            noDataCard.innerHTML = `<p style="padding: 20px;">Sorry, detailed disease information for this crop is not yet available in the library.</p>`;
+            diseaseLibraryContainer.appendChild(noDataCard);
+            return;
+        }
+
+        for (const stageName in dataForCrop) {
+            const stageCard = document.createElement('div');
+            stageCard.className = 'stage-card';
+            
+            const carouselContainer = document.createElement('div');
+            carouselContainer.className = 'stage-carousel';
+
+            dataForCrop[stageName].forEach(disease => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'disease-card';
+                cardElement.innerHTML = `
+                    <img src="${disease.img}" alt="${disease.name}">
+                    <div class="disease-card-content">
+                        <span>${disease.type}</span>
+                        <h4>${disease.name}</h4>
+                    </div>`;
+                
+                // Attach the event listener directly to the element
+                cardElement.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log("[DEBUG] Disease card clicked. Data:", disease);
+                    openDiseaseModal(disease);
+                });
+                carouselContainer.appendChild(cardElement);
+            });
+
+            stageCard.innerHTML = `<div class="stage-header"><h3>${stageName}</h3></div>`;
+            stageCard.appendChild(carouselContainer);
+            diseaseLibraryContainer.appendChild(stageCard);
+        }
+        console.log(`[Library] Finished populating library for '${crop}'.`);
+    }
+
     function openDiseaseModal(diseaseData) {
-        if (!diseaseData.symptoms || diseaseData.symptoms.length === 0) return;
+        console.log("[DEBUG] openDiseaseModal called with:", diseaseData);
+        if (!diseaseData) {
+            console.error("[Modal Error] openDiseaseModal was called with no data.");
+            return;
+        }
 
-        modalDiseaseImage.src = diseaseData.img;
-        modalDiseaseImage.alt = diseaseData.name;
-        modalDiseaseName.textContent = diseaseData.name;
-
+        modalDiseaseImage.src = diseaseData.img || 'images/placeholder.png';
+        modalDiseaseImage.alt = diseaseData.name || 'Disease Image';
+        modalDiseaseName.textContent = diseaseData.name || 'Unknown Disease';
+        modalDiseaseCause.textContent = diseaseData.cause || 'The exact cause is not specified in the library.';
+        
         modalDiseaseSymptoms.innerHTML = '';
-        diseaseData.symptoms.forEach(symptom => {
-            const li = document.createElement('li');
-            li.textContent = symptom;
-            modalDiseaseSymptoms.appendChild(li);
-        });
+        if (diseaseData.symptoms && Array.isArray(diseaseData.symptoms)) {
+            diseaseData.symptoms.forEach(symptom => {
+                const li = document.createElement('li');
+                li.textContent = symptom;
+                modalDiseaseSymptoms.appendChild(li);
+            });
+        } else {
+            modalDiseaseSymptoms.innerHTML = '<li>Symptom information not available.</li>';
+        }
 
         modalDiseasePrevention.innerHTML = '';
-        diseaseData.prevention.forEach(tip => {
-            const li = document.createElement('li');
-            li.textContent = tip;
-            modalDiseasePrevention.appendChild(li);
-        });
-
-        modalDiseaseCause.textContent = diseaseData.cause;
+        if (diseaseData.prevention && Array.isArray(diseaseData.prevention)) {
+            diseaseData.prevention.forEach(tip => {
+                const li = document.createElement('li');
+                li.textContent = tip;
+                modalDiseasePrevention.appendChild(li);
+            });
+        } else {
+            modalDiseasePrevention.innerHTML = '<li>Prevention information not available.</li>';
+        }
 
         diseaseDetailModal.classList.remove('hidden');
+        console.log("[DEBUG] Disease detail modal is now visible.");
     }
 
     function closeDiseaseModal() {
         diseaseDetailModal.classList.add('hidden');
     }
 
-    // --- PAGE CONTENT FUNCTIONS ---
-    function populateWeatherData() {
-        document.getElementById('weather-location').textContent = weatherData.location;
-        document.getElementById('weather-temp').textContent = weatherData.temp;
-        document.getElementById('weather-humidity').textContent = weatherData.humidity;
-        document.getElementById('weather-rain').textContent = weatherData.rain;
-        document.getElementById('weather-wind').textContent = weatherData.wind;
-    }
-
-    function populateDiseaseLibrary(crop) {
-        const existingCards = diseaseLibraryContainer.querySelectorAll('.stage-card');
-        existingCards.forEach(card => card.remove());
-
-        const cropData = diseaseLibraryData[crop] || {};
-        for (const stageName in cropData) {
-            const stageCard = document.createElement('div');
-            stageCard.className = 'stage-card';
-
-            let carouselHTML = '';
-            cropData[stageName].forEach(disease => {
-                carouselHTML += `
-                    <div class="disease-card" data-disease-name="${disease.name}">
-                        <img src="${disease.img}" alt="${disease.name}">
-                        <div class="disease-card-content">
-                            <span>${disease.type}</span>
-                            <h4>${disease.name}</h4>
-                        </div>
-                    </div>`;
-            });
-
-            stageCard.innerHTML = `
-                <div class="stage-header"><h3>${stageName}</h3><a href="#" class="view-all-link">View All</a></div>
-                <div class="stage-carousel">${carouselHTML}<a href="#" class="view-all-card"><span>View All</span></a></div>`;
-
-            diseaseLibraryContainer.appendChild(stageCard);
-
-            const diseaseCardsInStage = stageCard.querySelectorAll('.disease-card');
-            diseaseCardsInStage.forEach((card, index) => {
-                const diseaseData = cropData[stageName][index];
-                card.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    openDiseaseModal(diseaseData);
-                });
-            });
-        }
-    }
-
-    function displayThreatAssessment(data) {
-        document.getElementById('threat-name').textContent = data.threatName;
-        document.getElementById('threat-reasoning').textContent = data.reasoning;
-
-        const riskBadge = document.getElementById('threat-risk');
-        riskBadge.textContent = data.riskLevel;
-        riskBadge.className = 'risk-badge';
-        if (data.riskLevel === 'High') {
-            riskBadge.classList.add('risk-high');
-        } else if (data.riskLevel === 'Medium') {
-            riskBadge.classList.add('risk-medium');
-        } else {
-            riskBadge.classList.add('risk-low');
-        }
-    }
-
     // --- EVENT LISTENERS ---
     modalTrigger.addEventListener('click', openModal);
     closeModalButton.addEventListener('click', closeModal);
-    cropModal.addEventListener('click', (e) => {
-        if (e.target === cropModal) { closeModal(); }
-    });
-    searchInput.addEventListener('input', (e) => {
-        populateCropModal(e.target.value);
-    });
-
+    cropModal.addEventListener('click', (e) => { if (e.target === cropModal) closeModal(); });
+    searchInput.addEventListener('input', (e) => { populateCropModal(e.target.value); });
     diseaseModalCloseButton.addEventListener('click', closeDiseaseModal);
-    diseaseDetailModal.addEventListener('click', (e) => {
-        if (e.target === diseaseDetailModal) {
-            closeDiseaseModal();
-        }
-    });
-
-    guardianForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        guardianOutput.classList.add('hidden');
-        statusIndicator.classList.remove('hidden');
-        statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-        setTimeout(() => {
-            statusIndicator.classList.add('hidden');
-            displayThreatAssessment(mockThreatData); 
-            guardianOutput.classList.remove('hidden');
-            guardianOutput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 2000);
-    });
+    diseaseDetailModal.addEventListener('click', (e) => { if (e.target === diseaseDetailModal) closeDiseaseModal(); });
 
     // --- RUN ON STARTUP ---
-    populateWeatherData();
+    fetchWeatherOnLoad();
     populateCropModal();
-    populateDiseaseLibrary('apple');
+    populateDiseaseLibrary('apple'); // Default to showing apple library on load
 });
