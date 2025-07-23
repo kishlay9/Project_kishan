@@ -1,11 +1,9 @@
---- START OF FILE login.html ---
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Project Kisan</title>
+    <title>Sign Up - Project Kisan</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,6 +23,7 @@
                 <a href="index.html">Home</a>
                 <a href="market.html">Market Prices</a>
                 <a href="guardian.html">Guardian AI</a>
+                <!-- UPDATED LOGIN BUTTON -->
                 <a href="login.html" class="login-button active">
                     <img src="images/user-icon.png" alt="Login Icon">
                     <span>Login</span>
@@ -36,10 +35,24 @@
     <main class="login-main">
         <div class="login-container">
             <div class="login-header">
-                <h2>Login to Your Account</h2>
-                <p>Welcome back! Access your personalized dashboard and tools.</p>
+                <h2>Create Your Account</h2>
+                <p>Join our community to unlock powerful farming tools.</p>
             </div>
-            <form id="login-form">
+            <form id="signup-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first-name">First Name</label>
+                        <input type="text" id="first-name" name="first_name" placeholder="John" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="last-name">Last Name</label>
+                        <input type="text" id="last-name" name="last_name" placeholder="Doe" required>
+                    </div>
+                </div>
+                 <div class="form-group">
+                    <label for="mobile">Mobile Number</label>
+                    <input type="tel" id="mobile" name="mobile" placeholder="e.g., 9876543210" required>
+                </div>
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <input type="email" id="email" name="email" placeholder="you@example.com" required>
@@ -48,11 +61,10 @@
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="cta-button">Login</button>
+                <button type="submit" class="cta-button">Create Account</button>
             </form>
             <div class="signup-link">
-                <!-- THE CRITICAL LINK IS HERE. IT MUST BE href="signup.html" -->
-                <p>Don't have an account? <a href="signup.html">Sign Up</a></p>
+                <p>Already have an account? <a href="login.html">Login</a></p>
             </div>
         </div>
     </main>
@@ -66,6 +78,7 @@
                 <h3>Project Kisan</h3>
             </div>
     
+            
             <!-- 3. Team Information -->
             <div class="footer-section" id="footer-team">
                 <h4>Our Team: Algo Agni</h4>
@@ -100,6 +113,7 @@
             <p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
         </div>
     </footer>
-
+    
+    <script src="signup.js"></script>
 </body>
 </html>

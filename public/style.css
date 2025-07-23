@@ -1,3 +1,4 @@
+--- START OF FILE style.css ---
 /* --- THEME, FONTS & GLOBAL SETUP --- */
 :root {
     --primary-color: #65a30d;
@@ -2090,6 +2091,15 @@ main {
     margin-top: 10px;
 }
 
+/* ▼▼▼ NEW STYLE FOR SIGNUP FORM ▼▼▼ */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+/* ▲▲▲ END OF NEW STYLE ▲▲▲ */
+
+
 .form-options {
     display: flex;
     justify-content: flex-end;
@@ -2127,6 +2137,12 @@ main {
     .login-container {
         padding: 25px;
     }
+    /* ▼▼▼ NEW MEDIA QUERY FOR SIGNUP FORM ▼▼▼ */
+    .form-row {
+        grid-template-columns: 1fr; /* Stack name fields on mobile */
+        gap: 0; /* Remove gap when stacked */
+    }
+    /* ▲▲▲ END OF NEW MEDIA QUERY ▲▲▲ */
 }
 
 /* --- [NEW] YIELD MAXIMIZER PAGE STYLES --- */
@@ -3439,4 +3455,3 @@ header.scrolled {
         font-size: 1.3rem;
     }
 }
-
