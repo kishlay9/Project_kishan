@@ -929,7 +929,9 @@ exports.generateMasterPlan = onCall(
             }, { merge: true }); // Use merge:true to avoid overwriting other farm data
 
             functions.logger.info(`[Master Plan] Successfully generated and saved a ${planData.masterPlan.length}-week plan for farm ${farmId}.`);
-            return {
+            return { success: true, message: "Master plan created successfully." };
+
+        return {
                 success: true,
                 message: "Plan saved successfully.",
                 farmId: farmId, // Return the ID of the document we just saved
