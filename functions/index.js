@@ -49,6 +49,9 @@ const vertex_ai = new VertexAI({ project: PROJECT_ID, location: LOCATION });
 // OGD API Base URL
 const OGD_RESOURCE_ID = "9ef84268-d588-465a-a308-a864a43d0070";
 const OGD_API_BASE_URL = `https://api.data.gov.in/resource/${OGD_RESOURCE_ID}`;
+const POTENTIAL_CROPS = [
+    "Tomato", "Marigold", "Okra", "Millet (Bajra)", "Onion", "Cotton", "Sugarcane"
+];
 
 
 // =================================================================
