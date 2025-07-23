@@ -1421,45 +1421,67 @@ async function getGeminiAnalysisForScheme(question, stateName) {
 
 
 // =================================================================
-// FUNCTION 10: GEOCODE ADDRESS HELPER
+// FUNCTION 10: GEOCODE ADDRESS HELPER (CORRECTED FOR CORS)
 // =================================================================
-exports.geocodeAddress = onCall(
+// We are changing this from onCall to onRequest to handle CORS explicitly and robustly.
+exports.geocodeAddress = onRequest(
     {
         region: LOCATION,
-        secrets: ["GOOGLE_MAPS_API_KEY"] // Ensure this secret is set in Firebase
+        secrets: ["GOOGLE_MAPS_API_KEY"]
     },
-    async (request) => {
-        const address = request.data.address;
+    async (request, response) => {
+        // --- Explicit CORS Handling ---
+        // This gives permission to any origin ('*'). For production, you might restrict
+        // this to your actual website's domain.
+        response.set('Access-Control-Allow-Origin', '*');
+
+        // This is for the browser's "preflight" request that happens first.
+        if (request.method === 'OPTIONS') {
+            response.set('Access-Control-Allow-Methods', 'POST');
+            response.set('Access-Control-Allow-Headers', 'Content-Type');
+            response.set('Access-Control-Max-Age', '3600');
+            response.status(204).send('');
+            return;
+        }
+        // --- End of CORS Handling ---
+
+        // The actual logic of the function
+        const address = request.body.data.address; // For callable compatibility, data is nested
         if (!address) {
-            throw new HttpsError('invalid-argument', 'The function must be called with an "address" argument.');
+            response.status(400).json({ error: { message: 'The function must be called with an "address" argument.' } });
+            return;
         }
 
         const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+        if (!GOOGLE_MAPS_API_KEY) {
+            console.error("GOOGLE_MAPS_API_KEY secret not loaded.");
+            response.status(500).json({ error: { message: 'Server configuration error.' } });
+            return;
+        }
+        
         const geocodingApiUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_MAPS_API_KEY}`;
         
         try {
-            const response = await axios.get(geocodingApiUrl);
-            const data = response.data;
+            const geocodeResponse = await axios.get(geocodingApiUrl);
+            const data = geocodeResponse.data;
 
             if (data.status !== 'OK' || !data.results || data.results.length === 0) {
-                functions.logger.warn(`Geocoding failed for address: ${address}`, { status: data.status });
-                throw new HttpsError('not-found', `Could not find coordinates for the location: "${address}". Please try a more specific address.`);
+                console.warn(`Geocoding failed for address: ${address}`, { status: data.status });
+                response.status(404).json({ error: { message: `Could not find coordinates for the location: "${address}".` } });
+                return;
             }
 
-            const location = data.results[0].geometry.location; // { lat, lng }
-            functions.logger.info(`Geocoded "${address}" to:`, location);
-            return {
-                latitude: location.lat,
-                longitude: location.lng
-            };
+            const location = data.results[0].geometry.location;
+            console.info(`Geocoded "${address}" to:`, location);
+            // Send the successful response back, nested in a `data` object for compatibility
+            response.status(200).json({ data: { latitude: location.lat, longitude: location.lng } });
 
         } catch (error) {
-            functions.logger.error(`Error during geocoding for address: ${address}`, error);
-            throw new HttpsError('internal', 'Failed to geocode address.');
+            console.error(`Error during geocoding for address: ${address}`, error);
+            response.status(500).json({ error: { message: 'Failed to geocode address due to an internal error.' } });
         }
     }
 );
-
 // =================================================================
 // FUNCTION 10: Generate Opportunity (V2) - FINAL CORRECTED
 // =================================================================
