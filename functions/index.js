@@ -926,11 +926,16 @@ exports.generateMasterPlan = onCall(
             }, { merge: true }); // Use merge:true to avoid overwriting other farm data
 
             functions.logger.info(`[Master Plan] Successfully generated and saved a ${planData.masterPlan.length}-week plan for farm ${farmId}.`);
-            return { success: true, message: "Master plan created successfully." };
+            return {
+                success: true,
+                message: "Plan saved successfully.",
+                farmId: farmId, // Return the ID of the document we just saved
+                dailyTasks: fullPlanData.recommendedDailyTasks // Return the generic tasks
+            };
 
         } catch (error) {
             functions.logger.error(`[Master Plan] Failed to generate plan for farm ${farmId}:`, error);
-            throw new HttpsError('internal', 'An error occurred while generating the master crop plan.');
+            throw new HttpsError('internal', 'An error occurred while generating the master crop plan.', error.message);
         }
     }
 );
@@ -1413,3 +1418,212 @@ async function getGeminiAnalysisForScheme(question, stateName) {
         throw new Error("Failed to parse AI response.");
     }
 }
+
+
+// =================================================================
+// FUNCTION 10: GEOCODE ADDRESS HELPER
+// =================================================================
+exports.geocodeAddress = onCall(
+    {
+        region: LOCATION,
+        secrets: ["GOOGLE_MAPS_API_KEY"] // Ensure this secret is set in Firebase
+    },
+    async (request) => {
+        const address = request.data.address;
+        if (!address) {
+            throw new HttpsError('invalid-argument', 'The function must be called with an "address" argument.');
+        }
+
+        const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+        const geocodingApiUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_MAPS_API_KEY}`;
+        
+        try {
+            const response = await axios.get(geocodingApiUrl);
+            const data = response.data;
+
+            if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+                functions.logger.warn(`Geocoding failed for address: ${address}`, { status: data.status });
+                throw new HttpsError('not-found', `Could not find coordinates for the location: "${address}". Please try a more specific address.`);
+            }
+
+            const location = data.results[0].geometry.location; // { lat, lng }
+            functions.logger.info(`Geocoded "${address}" to:`, location);
+            return {
+                latitude: location.lat,
+                longitude: location.lng
+            };
+
+        } catch (error) {
+            functions.logger.error(`Error during geocoding for address: ${address}`, error);
+            throw new HttpsError('internal', 'Failed to geocode address.');
+        }
+    }
+);
+
+// =================================================================
+// FUNCTION 10: Generate Opportunity (V2) - FINAL CORRECTED
+// =================================================================
+
+
+
+
+exports.generateOpportunity = onCall(
+    {
+        region: LOCATION,
+        memory: "2GiB",
+        timeoutSeconds: 180,
+        concurrency: 5,
+        secrets: ["GOOGLE_MAPS_API_KEY"]
+    },
+    async (request) => {
+        const { location, landSize, budget, waterAccess } = request.data;
+        if (!location || !landSize || !budget || !waterAccess) {
+            throw new HttpsError('invalid-argument', 'Missing required constraints.');
+        }
+        // CORRECTED: Added backticks for template literal string
+        functions.logger.info(`[Opportunity Engine V2] Request for land: ${landSize} acres, budget: ₹${budget}`);
+
+        try {
+            // STEP 1: Determine Location (State & District)
+            const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+            if (!GOOGLE_MAPS_API_KEY) {
+                functions.logger.error("[Opportunity Engine V2] GOOGLE_MAPS_API_KEY secret not found.");
+                throw new HttpsError('internal', 'Server configuration error: Missing API key.');
+            }
+            functions.logger.info(`[Opportunity Engine V2] Geocoding location...`);
+            const geocodeResponse = await mapsClient.reverseGeocode({
+                params: { latlng: { latitude: location.latitude, longitude: location.longitude }, key: GOOGLE_MAPS_API_KEY }
+            });
+
+            let state = null;
+            let district = null;
+            const addressComponents = geocodeResponse.data.results[0]?.address_components;
+            if (addressComponents) {
+                state = addressComponents.find(c => c.types.includes('administrative_area_level_1'))?.long_name;
+                district = addressComponents.find(c => c.types.includes('administrative_area_level_2'))?.long_name;
+                if (!district) {
+                    district = addressComponents.find(c => c.types.includes('locality'))?.long_name;
+                    functions.logger.warn(`[Opportunity Engine V2] Falling back to Locality: ${district}`);
+                }
+            }
+            if (!state) {
+                functions.logger.error("[Opportunity Engine V2] Could not determine a State from geocoding response.", { response: geocodeResponse.data });
+                throw new HttpsError('not-found', "Could not determine a valid State from the provided location.");
+            }
+            // CORRECTED: Added backticks
+            functions.logger.info(`[Opportunity Engine V2] Location identified: ${district || 'N/A'}, ${state}`);
+
+            // STEP 2: Generate Foundational Agronomic Data
+            functions.logger.info(`[Opportunity Engine V2] Generating agronomic data with AI...`);
+            const agronomicModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+            
+            // CORRECTED: Added backticks to the entire multi-line string
+            const agronomicPrompt = `
+                You are an expert Indian agronomist. For the following list of crops, provide their general agronomic and financial data.
+                Crops: ${POTENTIAL_CROPS.join(", ")}
+                Respond ONLY with a single valid JSON object. The top-level keys should be the crop names. Each crop object must have these exact keys:
+                - "water_need": A string ('Low', 'Medium', 'High', 'Very High').
+                - "risk_profile": A string ('Low', 'Medium', 'High').
+                - "typical_cost_per_acre_inr": An integer representing the average seed and preparation cost per acre.
+                - "typical_yield_quintal_per_acre": An integer for the average yield in quintals per acre.
+                - "avg_market_price_inr_per_quintal": An integer for the typical national average market price per quintal.
+            `;
+            const agronomicResp = await agronomicModel.generateContent(agronomicPrompt);
+            const agronomicContent = agronomicResp.response.candidates[0].content.parts[0].text;
+            let CROP_KNOWLEDGE_BASE;
+            try {
+                // CORRECTED: Fixed regex to look for ```json
+                let jsonString = agronomicContent.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || agronomicContent;
+                const firstBrace = jsonString.indexOf('{');
+                const lastBrace = jsonString.lastIndexOf('}');
+                jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+                CROP_KNOWLEDGE_BASE = JSON.parse(jsonString.trim());
+                if (!CROP_KNOWLEDGE_BASE || Object.keys(CROP_KNOWLEDGE_BASE).length === 0) {
+                   throw new Error("Parsed JSON from agronomic prompt is empty or invalid.");
+                }
+            } catch (e) {
+                functions.logger.error("[Opportunity Engine V2] CRITICAL: Failed to parse agronomic data from AI.", { rawResponse: agronomicContent, error: e.message });
+                throw new HttpsError('internal', 'Failed to generate the required internal crop knowledge base.');
+            }
+
+            // STEP 3: Gather Supporting Context Data
+            // CORRECTED: Added backticks
+            const climateSummary = `The region of ${district || state} typically experiences a hot, dry summer followed by a moderate to heavy monsoon season from July to September.`;
+            let marketDataSummary = "Recent Market Data Summary for your specific district:\n";
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+            const marketDataPromises = Object.keys(CROP_KNOWLEDGE_BASE).map(async (crop) => {
+                let query = firestore.collectionGroup("historical_prices").where("crop_name", "==", crop).where("state_name", "==", state).where("date", ">=", sevenDaysAgoStr);
+                if (district) {
+                    query = query.where("district_name", "==", district);
+                }
+                const querySnapshot = await query.get();
+                if (!querySnapshot.empty) {
+                    let total = 0;
+                    querySnapshot.forEach(doc => { total += doc.data().price_modal; });
+                    const averagePrice = Math.round(total / querySnapshot.size);
+                    // CORRECTED: Added backticks
+                    return `- ${crop}: The average price in your district over the last week was ₹${averagePrice} per quintal.`;
+                }
+                // CORRECTED: Added backticks
+                return `- ${crop}: No recent price data found for your specific district in the last week. The national average is around ₹${CROP_KNOWLEDGE_BASE[crop].avg_market_price_inr_per_quintal}.`;
+            });
+            const results = await Promise.all(marketDataPromises);
+            marketDataSummary += results.join("\n");
+
+            // STEP 4: Consult the AI Strategist
+            functions.logger.info(`[Opportunity Engine V2] Generating final prompt for Gemini...`);
+            const strategyModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+            // CORRECTED: Added backticks
+            const prompt = `
+                You are an expert agricultural business strategist for small-scale Indian farmers. Your goal is to generate profitable, hyper-personalized, and realistic business plans.
+                
+                **Farmer's Constraints:**
+                - Location: District of ${district}, State of ${state}
+                - Land Size: ${landSize} acres
+                - Total Investment Budget: ₹${budget}
+                - Water Access: ${waterAccess}
+
+                **External and Generated Data:**
+                - **Climate Outlook:** ${climateSummary}
+                - **Recent Market Prices (Specific to Farmer's District):**
+                ${marketDataSummary}
+                - **General Agronomic & Financial Data (AI Generated):**
+                ${JSON.stringify(CROP_KNOWLEDGE_BASE, null, 2)}
+
+                **Your Task:**
+                Based on ALL the data above, act as a business consultant. Generate a list of the **Top 3 most profitable and suitable crop plans** for this specific farmer.
+                1. The total cost for each plan must be within the farmer's budget.
+                2. The water needs of the crop must match the farmer's water access.
+                3. For each plan, calculate an estimated total upfront cost and a potential total profit for their land size. Use the AI-generated typical costs and yields, but adjust your profit expectation based on the more current, local market prices if available.
+                4. For each plan, provide a short, bulleted list of "Pros" and "Cons".
+                5. Your reasoning must be sound and based on all the data provided.
+
+                **Output Format:**
+                Respond ONLY with a single, valid JSON object with a single key, "crop_plans". The value should be an array of exactly three plan objects. Each plan object must have these keys: "crop_name" (string), "estimated_profit_inr" (integer), "estimated_cost_inr" (integer), "pros" (an array of strings), and "cons" (an array of strings).
+            `;
+            
+            const resp = await strategyModel.generateContent(prompt);
+            const content = resp.response.candidates[0].content.parts[0].text;
+            let analysis;
+            try {
+                // CORRECTED: Fixed regex
+                let jsonString = content.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || content;
+                const firstBrace = jsonString.indexOf('{');
+                const lastBrace = jsonString.lastIndexOf('}');
+                jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+                analysis = JSON.parse(jsonString.trim());
+            } catch (parsingError) {
+                functions.logger.error("[Opportunity Engine V2] Failed to parse final plans from Gemini.", { rawResponse: content });
+                throw new HttpsError('internal', 'The AI returned a response in an unexpected format.');
+            }
+            return analysis;
+
+        } catch (error) {
+            functions.logger.error("[Opportunity Engine V2] Critical error:", error);
+            if (error instanceof HttpsError) throw error;
+            throw new HttpsError('internal', 'An error occurred while generating opportunities.');
+        }
+    }
+);
