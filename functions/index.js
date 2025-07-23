@@ -866,14 +866,13 @@ Respond ONLY with a single, valid JSON object with the exact structure and keys 
     }
 );
 // =================================================================
-// FUNCTION 6: YIELD MAXIMIZER - GENERATE MASTER PLAN
+// FUNCTION 6: YIELD MAXIMIZER - GENERATE MASTER PLAN (CORRECTED)
 // =================================================================
 exports.generateMasterPlan = onCall(
     {
         region: LOCATION,
         memory: "1GiB",
-        timeoutSeconds: 120, // Allow 2 minutes for AI to generate a detailed plan
-        concurrency: 5
+        timeoutSeconds: 120,
     },
     async (request) => {
         // 1. Validate Input from the Frontend
@@ -882,60 +881,66 @@ exports.generateMasterPlan = onCall(
         if (!farmId || !crop || !sowingDate || !location) {
             throw new HttpsError('invalid-argument', 'Missing required data: farmId, crop, sowingDate, and location are all required.');
         }
-        functions.logger.info(`[Master Plan] Received request to generate plan for farm: ${farmId}, crop: ${crop}`);
+        functions.logger.info(`[Master Plan] Request for farm: ${farmId}, crop: ${crop}, variety: ${variety || 'N/A'}`);
 
         try {
             // 2. The AI's Job: Create the comprehensive plan
             const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+            
+            // CORRECTED PROMPT: Asks for both masterPlan and dailyTasks
             const prompt = `
-                You are a master agronomist for the Indian subcontinent. Your task is to create a comprehensive, week-by-week cultivation plan.
-                
+                You are a master agronomist for the Indian subcontinent. Your task is to create a complete cultivation content package.
+
                 **Farmer's Details:**
                 - Crop: ${crop}
                 - Variety: ${variety || 'General'}
-                - Geographic Location (for climate context): Latitude ${location.latitude}, Longitude ${location.longitude}
+                - Location: Latitude ${location.latitude}, Longitude ${location.longitude}
                 - Sowing Date: ${sowingDate}
 
                 **Task:**
-                Generate a detailed master plan covering the entire lifecycle of the crop, from land preparation to final harvest. Structure the plan by week number (e.g., Week 1, Week 2). For each week, provide a concise summary of the key activities and goals for that stage. Cover these topics where relevant:
-                1. Land Preparation & Soil Health
-                2. Sowing/Transplanting Details
-                3. Irrigation Schedule & Water Needs
-                4. Nutrient Management (mentioning key nutrients like N, P, K for each stage)
-                5. Pest & Disease Scouting (preventative actions)
-                6. Weeding and other essential cultural practices
-                7. Special care during flowering, fruiting, or maturity stages.
-                8. Harvesting indicators and methods.
+                Generate a single, valid JSON object that contains TWO main parts: "masterPlan" and "recommendedDailyTasks".
 
-                Respond ONLY with a single, valid JSON object. The top-level key must be "masterPlan". Its value must be an array of objects. Each object in the array represents one week and MUST have these two keys: "weekNumber" (an integer) and "activities" (a descriptive string summarizing the tasks for that week).
+                1.  **masterPlan**: A week-by-week plan for the crop's lifecycle. This MUST be an array of objects. Each object must have "weekNumber" (integer) and "activities" (string).
+                
+                2.  **recommendedDailyTasks**: A list of 3 generic, essential daily tasks. This MUST be an array of 3 objects. Each object must have "title" (string), "icon" (string: "diagnose-crop", "ai-guardian", or "marketshop"), and "description" (string).
+
+                Respond ONLY with the single, valid JSON object and nothing else.
             `;
 
             const resp = await generativeModel.generateContent(prompt);
             const content = resp.response.candidates[0].content.parts[0].text;
-            const planData = JSON.parse(content.replace(/```json/g, '').replace(/```/g, '').trim());
+            
+            // Robustly parse the JSON response from the AI
+            let jsonString = content.replace(/```json/g, '').replace(/```/g, '').trim();
+            const firstBrace = jsonString.indexOf('{');
+            const lastBrace = jsonString.lastIndexOf('}');
+            if (firstBrace === -1 || lastBrace === -1) throw new Error("AI response was not valid JSON.");
+            const finalJsonString = jsonString.substring(firstBrace, lastBrace + 1);
+            const fullPlanData = JSON.parse(finalJsonString);
 
-            if (!planData.masterPlan || !Array.isArray(planData.masterPlan)) {
-                throw new Error("AI did not return the masterPlan in the expected format.");
+            // Validate the structure of the AI's response
+            if (!fullPlanData.masterPlan || !fullPlanData.recommendedDailyTasks) {
+                throw new Error("AI did not return the data in the expected format (masterPlan and recommendedDailyTasks).");
             }
 
-            // 3. Save the Master Plan to the farm's document in Firestore
+            // 3. Save the specific Master Plan to the farm's document in Firestore
             await firestore.collection('userFarms').doc(farmId).set({
                 activePlan: {
                     crop: crop,
                     variety: variety || 'General',
                     sowingDate: sowingDate,
-                    masterPlan: planData.masterPlan
+                    masterPlan: fullPlanData.masterPlan // Only the master plan is saved
                 }
-            }, { merge: true }); // Use merge:true to avoid overwriting other farm data
+            }, { merge: true });
 
-            functions.logger.info(`[Master Plan] Successfully generated and saved a ${planData.masterPlan.length}-week plan for farm ${farmId}.`);
-            return { success: true, message: "Master plan created successfully." };
-
-        return {
+            functions.logger.info(`[Master Plan] Successfully generated and saved plan for farm ${farmId}.`);
+            
+            // 4. Return the farmId and the generic daily tasks to the client
+            return {
                 success: true,
                 message: "Plan saved successfully.",
-                farmId: farmId, // Return the ID of the document we just saved
-                dailyTasks: fullPlanData.recommendedDailyTasks // Return the generic tasks
+                farmId: farmId,
+                dailyTasks: fullPlanData.recommendedDailyTasks
             };
 
         } catch (error) {
@@ -944,6 +949,49 @@ exports.generateMasterPlan = onCall(
         }
     }
 );
+
+// =================================================================
+// FUNCTION 10: GEOCODE ADDRESS HELPER (CORRECTED to onCall)
+// =================================================================
+exports.geocodeAddress = onCall(
+    {
+        region: LOCATION,
+        secrets: ["GOOGLE_MAPS_API_KEY"]
+    },
+    async (request) => {
+        const address = request.data.address;
+        if (!address) {
+            throw new HttpsError('invalid-argument', 'The function must be called with an "address" argument.');
+        }
+
+        const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+        if (!GOOGLE_MAPS_API_KEY) {
+            functions.logger.error("FATAL: GOOGLE_MAPS_API_KEY secret not loaded.");
+            throw new HttpsError('internal', 'Server configuration error for geocoding.');
+        }
+        
+        const geocodingApiUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_MAPS_API_KEY}`;
+        
+        try {
+            const response = await axios.get(geocodingApiUrl);
+            const data = response.data;
+
+            if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+                throw new HttpsError('not-found', `Could not find coordinates for the location: "${address}".`);
+            }
+
+            const location = data.results[0].geometry.location;
+            return { latitude: location.lat, longitude: location.lng };
+
+        } catch (error) {
+            if (error instanceof HttpsError) throw error;
+            functions.logger.error(`Error during geocoding for address: ${address}`, error);
+            throw new HttpsError('internal', 'Failed to geocode address.');
+        }
+    }
+);
+
+// Your other functions...
 
 // =================================================================
 // FUNCTION 7: YIELD MAXIMIZER - GENERATE DAILY TASKS (CORRECTED)
@@ -1425,68 +1473,7 @@ async function getGeminiAnalysisForScheme(question, stateName) {
 }
 
 
-// =================================================================
-// FUNCTION 10: GEOCODE ADDRESS HELPER (CORRECTED FOR CORS)
-// =================================================================
-// We are changing this from onCall to onRequest to handle CORS explicitly and robustly.
-exports.geocodeAddress = onRequest(
-    {
-        region: LOCATION,
-        secrets: ["GOOGLE_MAPS_API_KEY"]
-    },
-    async (request, response) => {
-        // --- Explicit CORS Handling ---
-        // This gives permission to any origin ('*'). For production, you might restrict
-        // this to your actual website's domain.
-        response.set('Access-Control-Allow-Origin', '*');
 
-        // This is for the browser's "preflight" request that happens first.
-        if (request.method === 'OPTIONS') {
-            response.set('Access-Control-Allow-Methods', 'POST');
-            response.set('Access-Control-Allow-Headers', 'Content-Type');
-            response.set('Access-Control-Max-Age', '3600');
-            response.status(204).send('');
-            return;
-        }
-        // --- End of CORS Handling ---
-
-        // The actual logic of the function
-        const address = request.body.data.address; // For callable compatibility, data is nested
-        if (!address) {
-            response.status(400).json({ error: { message: 'The function must be called with an "address" argument.' } });
-            return;
-        }
-
-        const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
-        if (!GOOGLE_MAPS_API_KEY) {
-            console.error("GOOGLE_MAPS_API_KEY secret not loaded.");
-            response.status(500).json({ error: { message: 'Server configuration error.' } });
-            return;
-        }
-        
-        const geocodingApiUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_MAPS_API_KEY}`;
-        
-        try {
-            const geocodeResponse = await axios.get(geocodingApiUrl);
-            const data = geocodeResponse.data;
-
-            if (data.status !== 'OK' || !data.results || data.results.length === 0) {
-                console.warn(`Geocoding failed for address: ${address}`, { status: data.status });
-                response.status(404).json({ error: { message: `Could not find coordinates for the location: "${address}".` } });
-                return;
-            }
-
-            const location = data.results[0].geometry.location;
-            console.info(`Geocoded "${address}" to:`, location);
-            // Send the successful response back, nested in a `data` object for compatibility
-            response.status(200).json({ data: { latitude: location.lat, longitude: location.lng } });
-
-        } catch (error) {
-            console.error(`Error during geocoding for address: ${address}`, error);
-            response.status(500).json({ error: { message: 'Failed to geocode address due to an internal error.' } });
-        }
-    }
-);
 // =================================================================
 // FUNCTION 10: Generate Opportunity (V2) - FINAL CORRECTED
 // =================================================================
