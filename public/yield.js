@@ -1,5 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Data extracted from your CSV file.
+    // Check if Firebase was initialized correctly in the HTML
+    if (typeof firebase === 'undefined' || !firebase.apps.length) {
+        const errorMsg = "❌ [CRITICAL] Firebase is not initialized. Make sure the Firebase SDK scripts and your app's config are loaded correctly in yield.html *before* this script.";
+        console.error(errorMsg);
+        alert("A critical error occurred with the application setup. Please contact support.");
+        document.getElementById('yield-form').querySelector('button').disabled = true;
+        return;
+    }
+    
+    // --- FIREBASE SDK INITIALIZATION FOR PRODUCTION ---
+    const functions = firebase.app().functions('asia-south1');
+    const firestore = firebase.firestore();
+    console.log("✅ [DEBUG] Firebase services ready. Functions region: 'asia-south1'.");
+
+    // Data for dropdowns
     const cropData = {
         "Ajwan": ["Ajwan", "Other"],
         "Amaranthus": ["Amaranthus", "Other"],
@@ -200,82 +214,122 @@ document.addEventListener('DOMContentLoaded', () => {
         "gulli": ["Gulli"]
     };
 
+    // --- DOM ELEMENT REFERENCES ---
     const yieldForm = document.getElementById('yield-form');
     const statusIndicator = document.getElementById('yield-status');
     const yieldOutput = document.getElementById('yield-output');
     const cropSelect = document.getElementById('crop-select');
     const varietySelect = document.getElementById('variety-select');
+    const masterPlanGrid = document.querySelector('.week-plan-grid');
+    const dailyTasksGrid = document.querySelector('.daily-tasks-grid');
 
-    // --- Populate the Crop Dropdown ---
-    // Get all crop names (the keys from our data object), sort them alphabetically
+    // --- DYNAMICALLY POPULATE DROPDOWNS ---
     const crops = Object.keys(cropData).sort();
-    
-    // Create an option element for each crop and add it to the select dropdown
-    crops.forEach(crop => {
-        const option = document.createElement('option');
-        option.value = crop;
-        option.textContent = crop;
-        cropSelect.appendChild(option);
-    });
+    crops.forEach(crop => { const option = document.createElement('option'); option.value = crop; option.textContent = crop; cropSelect.appendChild(option); });
+    cropSelect.addEventListener('change', () => { const selectedCrop = cropSelect.value; varietySelect.innerHTML = ''; if (selectedCrop && cropData[selectedCrop]) { varietySelect.disabled = false; let defaultOption = document.createElement('option'); defaultOption.value = ""; defaultOption.textContent = "Select a Variety"; varietySelect.appendChild(defaultOption); cropData[selectedCrop].forEach(variety => { const option = document.createElement('option'); option.value = variety; option.textContent = variety; varietySelect.appendChild(option); }); } else { varietySelect.disabled = true; let placeholderOption = document.createElement('option'); placeholderOption.value = ""; placeholderOption.textContent = "Select Crop First"; varietySelect.appendChild(placeholderOption); } });
 
-    // --- Event Listener for Crop Selection ---
-    cropSelect.addEventListener('change', () => {
-        const selectedCrop = cropSelect.value;
+    // --- FORM SUBMISSION LOGIC ---
+    yieldForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        console.log("📝 [DEBUG] Form submitted.");
         
-        // Clear previous variety options
-        varietySelect.innerHTML = ''; 
+        const crop = cropSelect.value;
+        const variety = varietySelect.value;
+        const sowingDate = document.getElementById('sowing-date').value;
+        const locationText = document.getElementById('location').value;
 
-        if (selectedCrop && cropData[selectedCrop]) {
-            // Enable the variety dropdown
-            varietySelect.disabled = false;
+        if (!crop || !variety || !sowingDate || !locationText) {
+            alert('Please fill out all fields to generate a plan.');
+            return;
+        }
+
+        yieldOutput.classList.add('hidden');
+        statusIndicator.classList.remove('hidden');
+        statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        const farmId = 'testFarm01';
+
+        try {
+            const dataToSend = {
+                farmId: farmId,
+                crop: crop,
+                variety: variety,
+                sowingDate: sowingDate,
+                location: { latitude: 28.6139, longitude: 77.2090 } 
+            };
             
-            // Add a default, placeholder option
-            let defaultOption = document.createElement('option');
-            defaultOption.value = "";
-            defaultOption.textContent = "Select a Variety";
-            varietySelect.appendChild(defaultOption);
+            const generateMasterPlanCallable = functions.httpsCallable('generateMasterPlan');
+            console.log("🚀 [DEBUG] Calling 'generateMasterPlan' with payload:", dataToSend);
+            
+            const result = await generateMasterPlanCallable(dataToSend);
+            console.log("✅ [DEBUG] Received response from callable function:", result.data);
+            
+            if (!result.data || !result.data.dailyTasks) {
+                throw new Error("The function response from the server was incomplete.");
+            }
+            const dailyTasks = result.data.dailyTasks;
+            
+            const masterPlan = await fetchMasterPlanFromFirestore(farmId);
 
-            // Populate with new varieties
-            const varieties = cropData[selectedCrop];
-            varieties.forEach(variety => {
-                const option = document.createElement('option');
-                option.value = variety;
-                option.textContent = variety;
-                varietySelect.appendChild(option);
-            });
-        } else {
-            // If no crop is selected, disable the variety dropdown and show a placeholder
-            varietySelect.disabled = true;
-            let placeholderOption = document.createElement('option');
-            placeholderOption.value = "";
-            placeholderOption.textContent = "Select Crop First";
-            varietySelect.appendChild(placeholderOption);
+            displayMasterPlan(masterPlan);
+            displayDailyTasks(dailyTasks);
+
+            statusIndicator.classList.add('hidden');
+            yieldOutput.classList.remove('hidden');
+            yieldOutput.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        } catch (error) {
+            console.error("❌ [CRITICAL ERROR] Failed to generate plan:", error);
+            statusIndicator.classList.add('hidden');
+            alert(`Failed to generate your plan. Please try again. \nError: ${error.message}`);
         }
     });
 
-    // --- Form Submission Logic (Unchanged) ---
-    yieldForm.addEventListener('submit', (event) => {
-        // 1. Prevent the form from actually submitting
-        event.preventDefault();
+    async function fetchMasterPlanFromFirestore(farmId) {
+        console.log(`[DEBUG] Fetching master plan for farm '${farmId}' from Firestore...`);
+        try {
+            const farmDocRef = firestore.collection('userFarms').doc(farmId);
+            const docSnap = await farmDocRef.get();
 
-        // 2. Hide any previous results and show the loading spinner
-        yieldOutput.classList.add('hidden');
-        statusIndicator.classList.remove('hidden');
+            // --- THIS IS THE FIX ---
+            // Changed from docSnap.exists() to docSnap.exists
+            if (docSnap.exists && docSnap.data().activePlan && docSnap.data().activePlan.masterPlan) {
+                console.log("✅ [DEBUG] Found master plan in Firestore.");
+                return docSnap.data().activePlan.masterPlan;
+            } else {
+                throw new Error("Could not find the generated master plan in the database.");
+            }
+        } catch (error) {
+            console.error("Firestore read failed:", error);
+            throw error;
+        }
+    }
 
-        // 3. Scroll to the spinner so the user knows something is happening
-        statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    function displayMasterPlan(plan) {
+        masterPlanGrid.innerHTML = '';
+        if (!plan || !Array.isArray(plan)) {
+            masterPlanGrid.innerHTML = '<p>Could not load master plan.</p>';
+            return;
+        }
+        plan.forEach(week => {
+            const weekCard = document.createElement('div');
+            weekCard.className = 'week-card';
+            weekCard.innerHTML = `<h4>Week ${week.weekNumber}</h4><p>${week.activities}</p>`;
+            masterPlanGrid.appendChild(weekCard);
+        });
+    }
 
-        // 4. Simulate a delay for the "AI" to generate the plan
-        setTimeout(() => {
-            // 5. Hide the spinner
-            statusIndicator.classList.add('hidden');
-
-            // 6. Show the results container
-            yieldOutput.classList.remove('hidden');
-
-            // 7. Scroll to the newly visible results
-            yieldOutput.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-        }, 2000); // 2-second delay for simulation
-    });
+    function displayDailyTasks(tasks) {
+        dailyTasksGrid.innerHTML = '';
+        if (!tasks || !Array.isArray(tasks)) {
+            dailyTasksGrid.innerHTML = '<p>Could not load daily tasks.</p>';
+            return;
+        }
+        tasks.forEach(task => {
+            const taskCard = document.createElement('div');
+            taskCard.className = 'daily-task-card';
+            taskCard.innerHTML = `<img src="images/${task.icon}.svg" alt="${task.title} Icon"><h4>${task.title}</h4><p>${task.description}</p>`;
+            dailyTasksGrid.appendChild(taskCard);
+        });
+    }
 });

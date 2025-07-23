@@ -72,7 +72,7 @@
         <section id="yield-output" class="hidden">
             <!-- Card 1: Master Plan -->
             <div class="plan-card">
-                <h3>Your 14-Week Master Plan</h3>
+                <h3>Your Weekly Master Plan</h3>
                 <p class="plan-subtitle">A strategic overview for your crop's entire lifecycle, from seed to harvest.</p>
                 <div class="week-plan-grid">
                     <!-- 14 Weeks will be generated here. This is a sample -->
@@ -162,7 +162,31 @@
         <p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
     </div>
 </footer>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 
+    <!-- 2. THEN, load the other Firebase services you need              -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <!-- 3. NOW, you can initialize Firebase using the loaded library    -->
+    <script>
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg",
+        authDomain: "project-kisan-new.firebaseapp.com",
+        projectId: "project-kisan-new",
+        storageBucket: "project-kisan-new.firebasestorage.app",
+        messagingSenderId: "176046173818",
+        appId: "1:176046173818:web:de8fb0e50752c8f62195c3",
+        measurementId: "G-GDJE785E2N"
+        };
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      console.log("✅ [DEBUG] Firebase App Initialized Successfully.");
+    </script>
+    
+    <!-- 4. FINALLY, load your custom script that uses Firebase          -->
     <script src="yield.js"></script>
 </body>
 </html>
