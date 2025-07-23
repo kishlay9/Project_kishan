@@ -792,14 +792,13 @@ Respond ONLY with a single, valid JSON object with the exact structure and keys 
   "analysis_date": "${todayStr}",
   "current_price_inr": ${currentPriceForAI},
   "price_trend_description": "A concise description of the current trend (e.g., 'Prices are moderately rising, up 5% in the last 7 days.').",
-  "influencing_factors": ["Factor 1 (e.g., 'Monsoon rains improving yield expectation.')", "Factor 2 (e.g., 'Increased demand for local festivals.')"],
-  "farmer_opinion_and_advice": "Actionable advice for farmers (e.g., 'Consider holding stock as prices are expected to rise further due to...').",
-  "price_outlook_short_term": "A qualitative outlook for price movement in the next 7-15 days (e.g., 'Prices are likely to rise', 'Expect stabilization', 'Possible slight dip').",
-  "buy_sell_hold_recommendation": "Direct recommendation: 'Buy', 'Sell', 'Hold', or 'Monitor'. Include a brief reason.", // HIGHLIGHTED CHANGE: New field for buy/sell/hold
+  "influencing_factors": ["An array of strings. Each string is a potential influencing factor, presented as a complete sentence."],
+  "farmer_opinion_and_advice": "A string containing actionable advice for farmers. Format this advice as a single paragraph or as a few concise bullet points using markdown like '* Point 1' or '- Point 1'. The advice must be practical.",
+  "price_outlook_short_term": "A qualitative outlook for price movement in the next 7-15 days (e.g., 'Prices are likely to rise', 'Expect stabilization', 'Possible slight dip'). If the data is insufficient to form a strong opinion, provide a cautious but definitive-sounding outlook based on general market principles for this crop, for example, 'Prices may see some volatility due to seasonal shifts' instead of stating 'Insufficient data'or 'limited data' .",
+  "buy_sell_hold_recommendation": "Direct recommendation: 'Buy', 'Sell', 'Hold', or 'Monitor'. ",
   "chart_data": ${JSON.stringify(chartDataArray)}, 
   "data_completeness": "${dataCompleteness}"
 }`;
-            
             const geminiApiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
             const geminiRequestBody = { contents: [{ parts: [{ text: analysisPrompt }], role: "user" }] };
             
