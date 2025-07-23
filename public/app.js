@@ -1,5 +1,5 @@
 // =================================================================
-// 1. FIREBASE CONFIGURATION
+// 1. FIREBASE CONFIGURATION & EMULATOR CONNECTION
 // =================================================================
 
 const firebaseConfig = {
@@ -19,17 +19,16 @@ const firestore = firebase.firestore();
 if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
     console.log("LOCALHOST DETECTED: Forcing connection to local emulators...");
     try {
-        firestore.useEmulator("localhost", 8080);
-        storage.useEmulator("localhost", 9199);
+        firestore.useEmulator("127.0.0.1", 8080); // Using IP for robustness
+        storage.useEmulator("127.0.0.1", 9199);   // Using IP for robustness
     } catch (e) {
-        console.error("Error setting up emulators. Have you started them with 'firebase emulators:start'?", e);
+        console.error("Error setting up emulators.", e);
     }
 }
 
 // =================================================================
 // 2. DOM ELEMENT REFERENCES
 // =================================================================
-
 const imageUploadInput = document.getElementById('image-upload-input');
 const statusIndicator = document.getElementById('status-indicator');
 const statusText = document.getElementById('status-text');
@@ -38,9 +37,8 @@ const speakButton = document.getElementById('speak-button');
 const actionPanel = document.querySelector('.action-panel');
 
 // =================================================================
-// 3. EVENT LISTENER FOR IMAGE UPLOAD
+// 3. CORE LOGIC: IMAGE UPLOAD (WITH ROBUST PROMISE-BASED FIX)
 // =================================================================
-
 imageUploadInput.addEventListener('change', (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -48,52 +46,54 @@ imageUploadInput.addEventListener('change', (event) => {
     hideResults();
     showStatus(`Uploading ${file.name}...`);
     statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    
-
-
-    // --- ORIGINAL FIREBASE LOGIC (KEEP FOR LATER) ---
     
     const uniqueFileName = `image_${Date.now()}_${file.name}`;
     const storagePath = `uploads/${uniqueFileName}`;
     const storageRef = storage.ref(storagePath);
     const uploadTask = storageRef.put(file);
 
-    uploadTask.on('state_changed', 
-        (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            showStatus(`Uploading... ${Math.round(progress)}%`);
-        }, 
-        (error) => {
-            console.error("Upload failed:", error);
-            showStatus("Upload failed. Please try again.", true);
-        }, 
-        () => {
-            console.log('Upload complete! Waiting for analysis...');
+    // Attach a listener for progress updates
+    uploadTask.on('state_changed', (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        showStatus(`Uploading... ${Math.round(progress)}%`);
+    });
+
+    // Use .then() for success and .catch() for failure
+    uploadTask
+        .then(snapshot => {
+            console.log('SUCCESS: Upload is confirmed complete by the server.');
             showStatus("Analyzing image with AI...");
             listenForDiagnosisResult(uniqueFileName);
-        }
-    );
-
+        })
+        .catch(error => {
+            console.error("!!! UPLOAD FAILED:", error);
+            let errorMessage = `Upload failed: ${error.code}.`;
+            if (error.code === 'storage/unauthorized') {
+                errorMessage += " Check your storage.rules.";
+            } else if (error.code === 'storage/unknown') {
+                errorMessage += " Network error. Is the emulator running?";
+            }
+            showStatus(errorMessage, true);
+        });
 });
 
-// =================================================================
-// 4. REAL-TIME LISTENER FOR DIAGNOSIS RESULTS (No change needed)
-// =================================================================
 
+// =================================================================
+// 4. REAL-TIME LISTENER FOR DIAGNOSIS RESULTS
+// =================================================================
 function listenForDiagnosisResult(diagnosisId) {
     const docRef = firestore.collection("diagnoses").doc(diagnosisId);
     
     const timeout = setTimeout(() => {
         console.error("Firestore listener timed out.");
-        showStatus("Analysis is taking longer than expected. Please try again.", true);
+        showStatus("Analysis is taking longer than expected. Please check function logs.", true);
         unsubscribe();
     }, 60000);
 
     const unsubscribe = docRef.onSnapshot((doc) => {
         if (doc.exists) {
             clearTimeout(timeout);
-            console.log("Diagnosis data received:", doc.data());
+            console.log("SUCCESS: Diagnosis data received from Firestore:", doc.data());
             const data = doc.data();
             displayDiagnosisResults(data);
             unsubscribe();
@@ -108,14 +108,14 @@ function listenForDiagnosisResult(diagnosisId) {
 }
 
 // =================================================================
-// 5. UI HELPER FUNCTIONS (No change needed)
+// 5. UI HELPER FUNCTIONS TO MANAGE PAGE STATE
 // =================================================================
 
 function showStatus(message, isError = false) {
     statusText.textContent = message;
     const spinner = statusIndicator.querySelector('.spinner');
     if (spinner) {
-        spinner.style.borderTopColor = isError ? '#dc3545' : 'var(--primary-color)';
+        spinner.style.borderTopColor = isError ? '#ef4444' : 'var(--primary-color)';
     }
     statusIndicator.classList.remove('hidden');
     actionPanel.style.opacity = '0.5';
@@ -136,7 +136,7 @@ function hideResults() {
 }
 
 // =================================================================
-// 6. FUNCTION TO DISPLAY THE RESULTS (No change needed)
+// 6. FUNCTION TO DISPLAY THE FINAL RESULTS ON THE PAGE
 // =================================================================
 
 function displayDiagnosisResults(data) {
@@ -150,6 +150,7 @@ function displayDiagnosisResults(data) {
     const confidencePercent = (data.confidence_score * 100).toFixed(0);
     confidenceSpan.textContent = `${confidencePercent}% Confident`;
     
+    // Set confidence badge colors based on value
     if (confidencePercent >= 75) {
         confidenceSpan.style.backgroundColor = 'rgba(132, 204, 22, 0.2)';
         confidenceSpan.style.color = '#3f6212';
@@ -164,7 +165,7 @@ function displayDiagnosisResults(data) {
     document.getElementById('result-severity').textContent = data.severity || 'N/A';
     document.getElementById('result-risk').textContent = data.contagion_risk || 'N/A';
     document.getElementById('result-description-english').textContent = data.description_english || 'No description available.';
-    document.getElementById('result-description-kannada').textContent = data.description_kannada || '';
+    document.getElementById('result-description-kannada').textContent = data.description_kannada || ''; // Assuming backend might provide this later
     document.getElementById('result-organic-english').textContent = data.organic_remedy_english || 'No organic remedy suggested.';
     document.getElementById('result-organic-kannada').textContent = data.organic_remedy_kannada || '';
     document.getElementById('result-chemical-english').textContent = data.chemical_remedy_english || 'No chemical remedy suggested.';
@@ -184,9 +185,9 @@ function displayDiagnosisResults(data) {
         remedyAudio.src = data.audio_remedy_url;
         speakButton.onclick = () => {
             if (remedyAudio.paused) { remedyAudio.play(); } 
-            else { remedyAudio.pause(); remedyAudio.currentTime = 0; }
+            else { remedyAudio.pause(); }
         };
-        remedyAudio.onplay = () => { speakButton.textContent = 'Playing... (Click to Stop)'; };
+        remedyAudio.onplay = () => { speakButton.textContent = 'Playing... (Click to Pause)'; };
         remedyAudio.onpause = () => { speakButton.textContent = 'Listen to Summary'; };
         remedyAudio.onended = () => { speakButton.textContent = 'Listen to Summary'; };
     } else {
@@ -195,12 +196,11 @@ function displayDiagnosisResults(data) {
 }
 
 // =================================================================
-// 7. PAGE LOAD EVENT LISTENERS & ANIMATIONS (No change needed)
+// 7. PAGE LOAD ANIMATIONS & HELPERS (FROM NEW FRONTEND)
 // =================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-
-    // --- SMOOTH SCROLL FOR ANCHOR LINKS ---
+    // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- SCROLL-BASED FADE-IN ANIMATIONS ---
+    // Scroll-based fade-in animations
     const fadeInObserver = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -219,42 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: 0.1 });
     document.querySelectorAll('.fade-in').forEach(element => { fadeInObserver.observe(element); });
 
-    // --- DYNAMIC HEADER ON SCROLL ---
+    // Dynamic header on scroll
     const header = document.querySelector('header');
     window.addEventListener('scroll', () => {
         header.classList.toggle('scrolled', window.scrollY > 50);
     });
-
-    // --- NEW: NUMBER COUNT-UP ANIMATION ---
-    const animateValue = (obj, start, end, duration) => {
-        let startTimestamp = null;
-        const step = (timestamp) => {
-            if (!startTimestamp) startTimestamp = timestamp;
-            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-            const value = Math.floor(progress * (end - start) + start);
-            obj.innerHTML = `${value.toLocaleString()}+`; // Use toLocaleString for commas
-            if (progress < 1) {
-                window.requestAnimationFrame(step);
-            }
-        };
-        window.requestAnimationFrame(step);
-    };
-
-    const statsObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const statNumbers = entry.target.querySelectorAll('.stat-item h3');
-                statNumbers.forEach(num => {
-                    const goal = parseInt(num.dataset.goal, 10);
-                    animateValue(num, 0, goal, 2000); // Animate over 2 seconds
-                });
-                observer.unobserve(entry.target); // Animate only once
-            }
-        });
-    }, { threshold: 0.5 }); // Trigger when 50% of the section is visible
-
-    const statsSection = document.querySelector('.stats-section');
-    if (statsSection) {
-        statsObserver.observe(statsSection);
-    }
 });

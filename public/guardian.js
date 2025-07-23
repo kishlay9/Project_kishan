@@ -1,35 +1,3 @@
-// =================================================================
-// 1. FIREBASE CONFIGURATION
-// =================================================================
-
-const firebaseConfig = {
-  apiKey: "AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg",
-  authDomain: "project-kisan-new.firebaseapp.com",
-  projectId: "project-kisan-new",
-  storageBucket: "project-kisan-new.firebasestorage.app",
-  messagingSenderId: "176046173818",
-  appId: "1:176046173818:web:de8fb0e50752c8f62195c3",
-  measurementId: "G-GDJE785E2N"
-};
-
-firebase.initializeApp(firebaseConfig);
-const storage = firebase.storage();
-const firestore = firebase.firestore();
-
-if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-    console.log("LOCALHOST DETECTED: Forcing connection to local emulators...");
-    try {
-        firestore.useEmulator("localhost", 8080);
-        storage.useEmulator("localhost", 9199);
-    } catch (e) {
-        console.error("Error setting up emulators. Have you started them with 'firebase emulators:start'?", e);
-    }
-}
-
-// =================================================================
-// 2. DOM ELEMENT REFERENCES
-// =================================================================
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- CROP DATA FOR MODAL (18 CROPS) ---
     const CROP_DATA = [
@@ -161,19 +129,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- MOCK DATA FOR DYNAMIC CONTENT ---
-    const weatherData = { location: "Sangrur, Punjab", temp: "31°C", humidity: "75%", rain: "40%", wind: "12 km/h" };
-    const scheduleData = {
-        threat: "Fungal blight due to high humidity.", risk: "High",
-        message: "Gemini AI analysis indicates a high probability of fungal growth. Increase scouting frequency and ensure proper air circulation.",
-        watering: "Water early in the morning at the base of the plants. Avoid wetting the leaves. Reduce frequency if soil is still moist.",
-        fertilizer: "Apply a balanced NPK fertilizer (e.g., 19-19-19) at the recommended dose. Avoid over-fertilizing.",
-        precautions: "Scout for early signs of blight every 2 days. Remove and destroy any infected leaves immediately. Prepare a preventative bio-fungicide spray."
+     const weatherData = { location: "Sangrur, Punjab", temp: "31°C", humidity: "75%", rain: "40%", wind: "12 km/h" };
+
+    const mockThreatData = {
+        threatName: "Fungal Diseases (e.g., Early Blight, Late Blight, Septoria Leaf Spot)",
+        riskLevel: "Medium", // Can be 'High', 'Medium', or 'Low'
+        reasoning: "Extended periods of high humidity (70-85%) and moderate to high temperatures (27-34°C) over multiple days create favorable conditions for fungal pathogen development and spread in tomatoes. The presence of rain and cloud cover further exacerbates the risk by increasing leaf wetness duration."
     };
 
     // --- DOM ELEMENT REFERENCES ---
     const guardianForm = document.getElementById('guardian-form');
     const statusIndicator = document.getElementById('guardian-status');
-    const scheduleOutput = document.getElementById('schedule-output');
+    const guardianOutput = document.getElementById('guardian-output');
     const diseaseLibraryContainer = document.getElementById('disease-library-container');
     const modalTrigger = document.getElementById('crop-modal-trigger');
     const cropModal = document.getElementById('crop-modal');
@@ -298,20 +265,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function displayScheduleResults(data) {
-        document.getElementById('threat-name').textContent = data.threat;
-        document.getElementById('threat-message').textContent = data.message;
+    function displayThreatAssessment(data) {
+        document.getElementById('threat-name').textContent = data.threatName;
+        document.getElementById('threat-reasoning').textContent = data.reasoning;
 
         const riskBadge = document.getElementById('threat-risk');
-        riskBadge.textContent = data.risk;
+        riskBadge.textContent = data.riskLevel;
         riskBadge.className = 'risk-badge';
-        if (data.risk === 'High') riskBadge.classList.add('risk-high');
-        else if (data.risk === 'Medium') riskBadge.classList.add('risk-medium');
-        else riskBadge.classList.add('risk-low');
-
-        document.getElementById('action-watering').textContent = data.watering;
-        document.getElementById('action-fertilizer').textContent = data.fertilizer;
-        document.getElementById('action-precautions').textContent = data.precautions;
+        if (data.riskLevel === 'High') {
+            riskBadge.classList.add('risk-high');
+        } else if (data.riskLevel === 'Medium') {
+            riskBadge.classList.add('risk-medium');
+        } else {
+            riskBadge.classList.add('risk-low');
+        }
     }
 
     // --- EVENT LISTENERS ---
@@ -333,15 +300,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     guardianForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        scheduleOutput.classList.add('hidden');
+        guardianOutput.classList.add('hidden');
         statusIndicator.classList.remove('hidden');
         statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
         setTimeout(() => {
             statusIndicator.classList.add('hidden');
-            displayScheduleResults(scheduleData);
-            scheduleOutput.classList.remove('hidden');
-            scheduleOutput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            displayThreatAssessment(mockThreatData); 
+            guardianOutput.classList.remove('hidden');
+            guardianOutput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 2000);
     });
 

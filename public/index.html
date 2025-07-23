@@ -23,6 +23,16 @@
                 <a href="#hero">Home</a>
                 <a href="#diagnose-tool">AI Tool</a>
                 <a href="#features">Features</a>
+                <!-- UPDATED LOGIN BUTTON -->
+                <a href="login.html" class="login-button">
+                    <!-- Add your user icon PNG here (e.g., 24x24px) -->
+                    <img src="images/user-icon.png" alt="Login Icon">
+                    <span>Login</span>
+                </a>
+                <a href="#" class="login-button" style="background-color: rgb(23, 135, 23); color: white; border: none;">
+                    <span>Get App</span>
+                    
+                </a>
             </nav>
         </div>
     </header>
@@ -121,38 +131,52 @@
         </section>
     </main>
 
-    <!-- FULL SUITE OF TOOLS SECTION (ENHANCED FEATURES GRID) -->
     <section id="features" class="more-features-section">
         <div class="container">
             <h2 class="section-title fade-in">A Complete Toolkit for the Modern Farmer</h2>
             <p class="section-subtitle fade-in">
                 Beyond diagnostics, Project Kisan offers a suite of tools to manage and grow your farming business.
             </p>
-            <div class="features-grid">
-                <!-- ...to this: -->
+            <!-- UPDATED FEATURES GRID WITH NEW ICONS -->
+            <div class="features-grid-5">
                 <a href="market.html" class="feature-card-link">
-                    <div class="feature-card fade-in" style="animation-delay: 0.1s;">
-                        <img src="images/marketshop.svg" alt="Market Icon">
+                    <div class="feature-card fade-in">
+                        <!-- Create an icon named 'icon-market.png' -->
+                        <img src="images/marketshop.svg" alt="Market Prices Icon">
                         <h3>Market Prices</h3>
                     </div>
                 </a>
-                <div class="feature-card fade-in" style="animation-delay: 0.2s;">
-                    <img src="images/scheme.svg" alt="Schemes Icon">
-                    <h3>Govt. Schemes</h3>
-                </div>
-                <div class="feature-card fade-in" style="animation-delay: 0.3s;">
-                    <img src="images/pesticide-execution.png" alt="Yield Maximizer">
-                    <h3>Yield Console</h3>
-                </div>
+                <a href="fertilizer.html" class="feature-card-link">
+                    <div class="feature-card fade-in">
+                        <!-- Create an icon named 'icon-fertilizer.png' -->
+                        <img src="images/remedy.png" alt="Fertilizer Calculator Icon">
+                        <h3>Fertilizer Calculator</h3>
+                    </div>
+                </a>
+                <a href="yield.html" class="feature-card-link">
+                    <div class="feature-card fade-in">
+                        <!-- Create an icon named 'icon-yield.png' -->
+                        <img src="images/pesticide-execution.png" alt="Yield Maximizer Icon">
+                        <h3>Yield Maximizer</h3>
+                    </div>
+                </a>
+                <a href="schemes.html" class="feature-card-link">
+                    <div class="feature-card fade-in">
+                        <img src="images/scheme.svg" alt="Govt. Schemes Icon">
+                        <h3>Govt. Schemes</h3>
+                    </div>
+                </a>
                 <a href="guardian.html" class="feature-card-link">
-                    <div class="feature-card highlight fade-in" style="animation-delay: 0.4s;">
-                        <img src="images/ai-guardian.svg" alt="Guardian Icon">
+                    <div class="feature-card fade-in">
+                        <!-- Create an icon named 'icon-guardian.png' -->
+                        <img src="images/ai-guardian.svg" alt="Guardian AI Icon">
                         <h3>Guardian AI</h3>
                     </div>
                 </a>
             </div>
         </div>
     </section>
+
 
     <!-- WHY CHOOSE PROJECT KISAN? SECTION -->
     <section class="feature-spotlight-section">
@@ -251,17 +275,49 @@
 
 
     <footer class="site-footer">
-        <div class="container footer-container">
-            <div class="footer-brand">
-                <img src="images/LOGO.png" alt="Project Kisan Logo">
-                <h3>Project Kisan</h3>
-                <p class="footer-tagline">Technology for the heart of India.</p>
+    <div class="footer-content-wrapper">
+
+        <!-- 1. Brand -->
+        <div class="footer-brand">
+            <img src="images/LOGO.png" alt="Project Kisan Logo">
+            <h3>Project Kisan</h3>
+        </div>
+
+        
+        <!-- 3. Team Information -->
+        <div class="footer-section" id="footer-team">
+            <h4>Our Team: Algo Agni</h4>
+            <div class="team-members-grid">
+                <div class="team-member-card">
+                    <h5>Lakshay Pal</h5>
+                    <p><a href="tel:+919315674123">9315674123</a></p>
+                    <p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Kishlay</h5>
+                    <p><a href="tel:+918368139841">8368139841</a></p>
+                    <p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Jatin Gupta</h5>
+                    <p><a href="tel:+919034602219">9034602219</a></p>
+                    <p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Krrish Barsiwal</h5>
+                    <p><a href="tel:+918094951456">8094951456</a></p>
+                    <p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p>
+                </div>
             </div>
         </div>
-        <div class="footer-bottom">
-            <p>© 2024 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
-        </div>
-    </footer>
+
+    </div>
+    
+    <!-- 4. Bottom Copyright Line -->
+    <div class="footer-bottom">
+        <p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
+    </div>
+</footer>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
@@ -270,6 +326,7 @@
 
     <!-- Your App's Logic -->
     <script src="app.js"></script>
+    <script src="home.js"></script>
 
 </body>
 

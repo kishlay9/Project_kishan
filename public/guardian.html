@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guardian AI - Project Kisan</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Icon Library for search and dropdown icons -->
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
 <body class="market-page-body">
 
@@ -20,6 +18,10 @@
                 <a href="index.html">Home</a>
                 <a href="market.html">Market Prices</a>
                 <a href="guardian.html" class="active">Guardian AI</a>
+                <a href="login.html" class="login-button">
+                    <img src="images/user-icon.png" alt="Login Icon">
+                    <span>Login</span>
+                </a>
             </nav>
         </div>
     </header>
@@ -47,8 +49,8 @@
             <div class="generator-panel-grid">
                 <div class="generator-info">
                     <img src="images/ai-guardian.svg" alt="Guardian AI Icon">
-                    <h3>Your Proactive Farming Schedule</h3>
-                    <p>Our Guardian AI uses your crop, sowing date, and local weather to generate a custom 7-day plan, helping you prevent threats before they happen.</p>
+                    <h3>Your Proactive Guardian Engine</h3>
+                    <p>Our Guardian AI uses your crop, sowing date, and local weather helping you prevent threats before they happen.</p>
                 </div>
                 <form id="guardian-form" class="generator-form">
                     <div class="form-group">
@@ -69,16 +71,19 @@
                         <label for="g-location">Your Location (City)</label>
                         <input type="text" id="g-location" name="location" placeholder="e.g., Sangrur">
                     </div>
-                    <button type="submit" class="cta-button">Generate Schedule</button>
+                    <!-- ▼▼▼ BUTTON RENAMED ▼▼▼ -->
+                    <button type="submit" class="cta-button">Activate Proactive Guardian</button>
                 </form>
             </div>
         </section>
 
         <!-- Section 3: Generated Schedule Output (Initially Hidden) -->
         <div id="guardian-status" class="hidden"><div class="spinner"></div><p>Guardian AI is analyzing data and building your schedule...</p></div>
-        <section id="schedule-output" class="hidden">
-             <div class="schedule-card">
-                <h3>Threat Assessment for the Next 7 Days</h3>
+        
+        <!-- ▼▼▼ ENTIRE OUTPUT SECTION SIMPLIFIED ▼▼▼ -->
+        <section id="guardian-output" class="hidden">
+             <div class="guardian-result-card">
+                <h3>Threat Assessment </h3>
                 <div class="threat-assessment">
                     <div class="threat-details">
                         <p><span>Primary Threat</span><strong id="threat-name"></strong></p>
@@ -86,18 +91,14 @@
                     </div>
                     <div id="gemini-warning" class="gemini-warning">
                         <img src="images/ai-guardian.svg" alt="AI Icon">
-                        <p id="threat-message"></p>
+                        <!-- The reasoning from your backend will go here -->
+                        <p id="threat-reasoning"></p>
                     </div>
                 </div>
-
-                <h3>Your 7-Day Action Plan</h3>
-                <div class="action-plan-grid">
-                    <div class="action-item"><h4>Watering Schedule</h4><p id="action-watering"></p></div>
-                    <div class="action-item"><h4>Fertilizer & Nutrition</h4><p id="action-fertilizer"></p></div>
-                    <div class="action-item"><h4>Scouting & Precautions</h4><p id="action-precautions"></p></div>
-                </div>
+                <!-- ▲▲▲ 7-DAY ACTION PLAN HAS BEEN REMOVED ▲▲▲ -->
             </div>
         </section>
+
 
         <!-- Section 4: Pests & Diseases Library with Modal Trigger -->
         <section id="disease-library-container">
@@ -107,7 +108,7 @@
                     <label>See information for:</label>
                     <button id="crop-modal-trigger" class="crop-select-button">
                         <span id="selected-crop-name">🍎 Apple</span>
-                        <i class='bx bx-chevron-down'></i>
+                        <span>▼</span>
                     </button>
                 </div>
             </div>
@@ -123,11 +124,10 @@
                 <button id="modal-close-button" class="close-button">×</button>
             </div>
             <div class="modal-search-wrapper">
-                <i class='bx bx-search'></i>
                 <input type="text" id="crop-search-input" placeholder="Search for your crop...">
             </div>
             <div class="modal-info-banner">
-                <i class='bx bxs-info-circle'></i>
+                <i>ℹ️</i>
                 <span>This feature is only available for a limited selection of crops.</span>
             </div>
             <div id="crop-grid" class="crop-grid-container">
@@ -160,10 +160,50 @@
     </div>
 </div>
     <footer class="site-footer">
-        <div class="footer-bottom">
-            <p>© 2024 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
+    <div class="footer-content-wrapper">
+
+        <!-- 1. Brand -->
+        <div class="footer-brand">
+            <img src="images/LOGO.png" alt="Project Kisan Logo">
+            <h3>Project Kisan</h3>
         </div>
-    </footer>
+
+        
+
+        <!-- 3. Team Information -->
+        <div class="footer-section" id="footer-team">
+            <h4>Our Team: Algo Agni</h4>
+            <div class="team-members-grid">
+                <div class="team-member-card">
+                    <h5>Lakshay Pal</h5>
+                    <p><a href="tel:+919315674123">9315674123</a></p>
+                    <p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Kishlay</h5>
+                    <p><a href="tel:+918368139841">8368139841</a></p>
+                    <p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Jatin Gupta</h5>
+                    <p><a href="tel:+919034602219">9034602219</a></p>
+                    <p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Krrish Barsiwal</h5>
+                    <p><a href="tel:+918094951456">8094951456</a></p>
+                    <p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- 4. Bottom Copyright Line -->
+    <div class="footer-bottom">
+        <p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
+    </div>
+</footer>
     
     <script src="guardian.js"></script>
 </body>

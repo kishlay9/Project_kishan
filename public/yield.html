@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yield Maximizer - Project Kisan</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="market-page-body">
+
+    <header>
+        <div class="header-container">
+            <div class="logo-container">
+                <a href="index.html" class="logo-link">
+                    <img src="images/LOGO.png" alt="Project Kisan Logo" class="logo">
+                    <h1>Project Kisan</h1>
+                </a>
+            </div>
+            <nav class="header-nav">
+                <a href="index.html">Home</a>
+                <a href="market.html">Market Prices</a>
+                <a href="guardian.html">Guardian AI</a>
+                <a href="login.html" class="login-button">
+                    <img src="images/user-icon.png" alt="Login Icon">
+                    <span>Login</span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container-wide">
+        <!-- Input Section -->
+        <section class="search-panel">
+            <h2>Yield Maximizer Plan</h2>
+            <p>Enter your crop details to generate a customized 14-week growth and protection plan.</p>
+            <form id="yield-form">
+                <div class="search-form-grid">
+                    <div class="form-group">
+                        <label for="crop-select">Your Crop</label>
+                        <select id="crop-select" name="crop" required>
+                            <option value="">Select a Crop</option>
+                            <option value="Tomato">Tomato</option>
+                            <option value="Wheat">Wheat</option>
+                            <option value="Rice">Rice</option>
+                            <option value="Maize">Maize</option>
+                            <option value="Cotton">Cotton</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sowing-date">Sowing Date</label>
+                        <input type="date" id="sowing-date" name="sowing_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Your Location</label>
+                        <input type="text" id="location" name="location" placeholder="e.g., Ludhiana, Punjab" required>
+                    </div>
+                </div>
+                <button type="submit" class="cta-button">Generate Plan</button>
+            </form>
+        </section>
+
+        <!-- Status Indicator (Initially Hidden) -->
+        <div id="yield-status" class="hidden">
+            <div class="spinner"></div>
+            <p>Our AI is crafting your personalized yield plan...</p>
+        </div>
+
+        <!-- Output Section (Initially Hidden) -->
+        <section id="yield-output" class="hidden">
+            <!-- Card 1: Master Plan -->
+            <div class="plan-card">
+                <h3>Your 14-Week Master Plan</h3>
+                <p class="plan-subtitle">A strategic overview for your crop's entire lifecycle, from seed to harvest.</p>
+                <div class="week-plan-grid">
+                    <!-- 14 Weeks will be generated here. This is a sample -->
+                    <div class="week-card"><h4>Week 1: Germination</h4><p>Focus on consistent moisture. Protect seedlings from cutworms and damping-off disease.</p></div>
+                    <div class="week-card"><h4>Week 2: Seedling Care</h4><p>Apply a light starter fertilizer. Scout for early pests like aphids and flea beetles.</p></div>
+                    <div class="week-card"><h4>Week 3: Vegetative Growth</h4><p>Begin regular, deep watering. Apply first round of nitrogen-rich fertilizer.</p></div>
+                    <div class="week-card"><h4>Week 4: Canopy Development</h4><p>Monitor for leaf diseases like early blight. Ensure good air circulation.</p></div>
+                    <div class="week-card"><h4>Week 5: Nutrient Boost</h4><p>Apply micronutrients (Zinc, Boron) based on soil test. Continue scouting for pests.</p></div>
+                    <div class="week-card"><h4>Week 6: Pre-Flowering</h4><p>Ensure soil has adequate phosphorus and potassium. Prepare for flowering stage support.</p></div>
+                    <div class="week-card"><h4>Week 7: Flowering Stage</h4><p>Crucial watering period. Avoid nutrient stress. Monitor for flower-dropping issues.</p></div>
+                    <div class="week-card"><h4>Week 8: Pollination & Fruit Set</h4><p>Protect pollinators. Scout for fruit borers. Apply calcium to prevent rot.</p></div>
+                    <div class="week-card"><h4>Week 9: Fruit Development</h4><p>Maintain consistent watering. Apply a balanced NPK fertilizer. Watch for stink bugs.</p></div>
+                    <div class="week-card"><h4>Week 10: Sizing Up</h4><p>Ensure potassium levels are optimal for fruit/grain size. Manage canopy for sunlight.</p></div>
+                    <div class="week-card"><h4>Week 11: Maturation</h4><p>Reduce nitrogen application. Scout for late-season diseases like powdery mildew.</p></div>
+                    <div class="week-card"><h4>Week 12: Ripening</h4><p>Reduce watering frequency to increase sugar content and improve quality.</p></div>
+                    <div class="week-card"><h4>Week 13: Harvest Prep</h4><p>Prepare storage and equipment. Monitor for pre-harvest pests and rots.</p></div>
+                    <div class="week-card"><h4>Week 14: Harvest Window</h4><p>Harvest at peak maturity based on visual cues and weather forecasts for best quality.</p></div>
+                </div>
+            </div>
+
+            <!-- Card 2: Daily Tasks -->
+            <div class="plan-card">
+                <h3>Recommended Daily Tasks</h3>
+                <p class="plan-subtitle">Simple, actionable steps to take every day to ensure your plan's success.</p>
+                <div class="daily-tasks-grid">
+                    <div class="daily-task-card">
+                        <img src="images/diagnose-crop.svg" alt="Watering Icon">
+                        <h4>Watering & Moisture</h4>
+                        <p>Check soil moisture 2 inches deep. Water early in the morning if dry, avoiding leaf wetness to prevent fungal growth.</p>
+                    </div>
+                    <div class="daily-task-card">
+                        <img src="images/ai-guardian.svg" alt="Scouting Icon">
+                        <h4>Scouting & Monitoring</h4>
+                        <p>Walk your fields. Look for signs of pests (under leaves), diseases (spots), and nutrient deficiencies (yellowing).</p>
+                    </div>
+                    <div class="daily-task-card">
+                        <img src="images/marketshop.svg" alt="Weather Icon">
+                        <h4>Weather Check</h4>
+                        <p>Review the next 24-48 hour forecast. Plan sprays or irrigation based on predicted rain, wind, and temperature changes.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="site-footer">
+    <div class="footer-content-wrapper">
+
+        <!-- 1. Brand -->
+        <div class="footer-brand">
+            <img src="images/LOGO.png" alt="Project Kisan Logo">
+            <h3>Project Kisan</h3>
+        </div>
+
+        <!-- 3. Team Information -->
+        <div class="footer-section" id="footer-team">
+            <h4>Our Team: Algo Agni</h4>
+            <div class="team-members-grid">
+                <div class="team-member-card">
+                    <h5>Lakshay Pal</h5>
+                    <p><a href="tel:+919315674123">9315674123</a></p>
+                    <p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Kishlay</h5>
+                    <p><a href="tel:+918368139841">8368139841</a></p>
+                    <p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Jatin Gupta</h5>
+                    <p><a href="tel:+919034602219">9034602219</a></p>
+                    <p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Krrish Barsiwal</h5>
+                    <p><a href="tel:+918094951456">8094951456</a></p>
+                    <p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- 4. Bottom Copyright Line -->
+    <div class="footer-bottom">
+        <p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
+    </div>
+</footer>
+
+    <script src="yield.js"></script>
+</body>
+</html>

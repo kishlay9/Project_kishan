@@ -19,8 +19,12 @@
             </div>
             <nav class="header-nav">
                 <a href="index.html">Home</a>
-                <a href="#search-section" class="active">Market Prices</a>
-                <a href="index.html#features">Features</a>
+                <a href="market.html" class="active">Market Prices</a>
+                <a href="guardian.html">Guardian AI</a>
+                <a href="login.html" class="login-button">
+                    <img src="images/user-icon.png" alt="Login Icon">
+                    <span>Login</span>
+                </a>
             </nav>
         </div>
     </header>
@@ -29,28 +33,34 @@
         <!-- Search Panel -->
         <section id="search-section" class="search-panel">
             <h2>Find Your Crop's Value</h2>
-            <p>Select your crop and market to get a detailed price analysis.</p>
+            <p>Select your crop and market to get a detailed price analysis and recent price history.</p>
             <form id="price-form">
                 <div class="search-form-grid">
                     <div class="form-group">
                         <label for="state-select">State</label>
                         <select id="state-select" name="state">
                             <option value="">Select State</option>
-                            <!-- Options will be added here by market.js -->
+                            <option value="Punjab">Punjab</option>
+                            <option value="Uttar-pradesh">Uttar Pradesh</option>
+                            <option value="Maharashtra">Maharashtra</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="market-select">Market</label>
                         <select id="market-select" name="market">
                             <option value="">Select Market</option>
-                            <!-- Options will be added here by market.js -->
+                            <option value="Sangrur">Sangrur</option>
+                            <option value="Tarntaran">Tarntaran</option>
+                            <option value="Patti">Patti</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="crop-select">Crop</label>
-                        <select id="crop-select" name="crop">
+                        <select id="crop-select" name="crop" required>
                             <option value="">Select Crop</option>
-                            <!-- Options will be added here by market.js -->
+                            <option value="Tomato">Tomato</option>
+                            <option value="Onion">Onion</option>
+                            <option value="Plum">Plum</option>
                         </select>
                     </div>
                 </div>
@@ -96,23 +106,24 @@
             </div>
         </section>
 
-        <!-- Live Price Table Section (Always Visible) -->
-        <section id="price-table-container">
-            <h3 class="table-title">Today's Mandi Prices</h3>
+        <!-- Price Table Section (Initially Hidden) -->
+        <section id="price-table-container" class="hidden">
+            <!-- UPDATED TITLE -->
+            <h3 class="table-title">Recent Mandi Prices for <span id="history-table-title"></span></h3>
             <div class="table-wrapper">
                 <table class="price-table">
                     <thead>
+                        <!-- UPDATED TABLE HEADERS -->
                         <tr>
                             <th>Commodity</th>
-                            <th>Variety</th>
                             <th>Min Price</th>
                             <th>Max Price</th>
                             <th>Avg Price</th>
-                            <th>Arrival Date</th>
+                            <th>Date</th>
                         </tr>
                     </thead>
                     <tbody id="price-table-body">
-                        <!-- Rows will be injected by market.js -->
+                        <!-- Rows will be injected by JS -->
                     </tbody>
                 </table>
             </div>
@@ -120,15 +131,49 @@
     </main>
 
     <footer class="site-footer">
-        <div class="footer-bottom">
-            <p>© 2024 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
+    <div class="footer-content-wrapper">
+
+        <!-- 1. Brand -->
+        <div class="footer-brand">
+            <img src="images/LOGO.png" alt="Project Kisan Logo">
+            <h3>Project Kisan</h3>
         </div>
-    </footer>
+
+
+        <!-- 3. Team Information -->
+        <div class="footer-section" id="footer-team">
+            <h4>Our Team: Algo Agni</h4>
+            <div class="team-members-grid">
+                <div class="team-member-card">
+                    <h5>Lakshay Pal</h5>
+                    <p><a href="tel:+919315674123">9315674123</a></p>
+                    <p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Kishlay</h5>
+                    <p><a href="tel:+918368139841">8368139841</a></p>
+                    <p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Jatin Gupta</h5>
+                    <p><a href="tel:+919034602219">9034602219</a></p>
+                    <p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p>
+                </div>
+                <div class="team-member-card">
+                    <h5>Krrish Barsiwal</h5>
+                    <p><a href="tel:+918094951456">8094951456</a></p>
+                    <p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p>
+                </div>
+            </div>
+        </div>
+
+    </div>
     
-    <!-- This needs the Firebase compat library for functions -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- 4. Bottom Copyright Line -->
+    <div class="footer-bottom">
+        <p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
+    </div>
+</footer>
     
     <script src="market.js"></script>
 </body>
