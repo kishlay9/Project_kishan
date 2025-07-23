@@ -23,6 +23,7 @@ const contentType = require('content-type');
 // --- HIGHLIGHTED FIX: Added missing imports for your new functions ---
 const axios = require("axios");
 const { VertexAI } = require("@google-cloud/vertexai");
+const cors = require('cors')({origin: true});
 // NEW, ROBUST IMPORT LINE
 
 
@@ -1639,5 +1640,142 @@ exports.generateOpportunity = onCall(
             if (error instanceof HttpsError) throw error;
             throw new HttpsError('internal', 'An error occurred while generating opportunities.');
         }
+    }
+);
+
+// At the top of your index.js file, make sure you have this line
+
+
+// =================================================================
+// FUNCTION: ACTIVATE PROACTIVE GUARDIAN (CORRECTED onRequest VERSION FOR TESTING)
+// =================================================================
+exports.activateGuardian = onRequest(
+    {
+        region: LOCATION,
+        memory: "1GiB",
+        timeoutSeconds: 120,
+        secrets: ["GOOGLE_MAPS_API_KEY", "WEATHER_API_KEY"],
+        concurrency: 5
+    },
+    (request, response) => {
+        // Use the cors middleware to handle all CORS preflight requests
+        cors(request, response, async () => {
+            try {
+                // For a standard HTTPS request, data comes from the request body
+                const { currentCrop, sowingDate, locationCity, farmId, userId } = request.body;
+                
+                // Validate the input from the request body
+                if (!currentCrop || !sowingDate || !locationCity || !farmId || !userId) {
+                    response.status(400).json({ error: 'Missing required data. All fields are required.' });
+                    return;
+                }
+                functions.logger.info(`[Activate Guardian] Request for farm: ${farmId}, Crop: ${currentCrop}, City: ${locationCity}`);
+
+                // Load secrets from environment
+                const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+                const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
+
+                if (!GOOGLE_MAPS_API_KEY || !WEATHER_API_KEY) {
+                    functions.logger.error("[Activate Guardian] Server configuration error: Missing API keys.");
+                    response.status(500).json({ error: 'Server configuration error.' });
+                    return;
+                }
+
+                // --- STEP A: GEOCODE THE CITY NAME TO GET COORDINATES ---
+                const geocodeResponse = await mapsClient.geocode({
+                    params: {
+                        address: locationCity,
+                        key: GOOGLE_MAPS_API_KEY,
+                    }
+                });
+
+                if (geocodeResponse.data.status !== 'OK' || geocodeResponse.data.results.length === 0) {
+                    response.status(404).json({ error: `Could not find geographic coordinates for the location: "${locationCity}".` });
+                    return;
+                }
+                const locationCoords = geocodeResponse.data.results[0].geometry.location;
+                const firestoreGeopoint = new admin.firestore.GeoPoint(locationCoords.lat, locationCoords.lng);
+
+                // --- STEP B: SAVE/ENROLL THE FARM DATA IN FIRESTORE ---
+                const farmData = {
+                    userId: userId,
+                    currentCrop: currentCrop,
+                    sowingDate: sowingDate,
+                    location: firestoreGeopoint,
+                    guardianIsActive: true,
+                    lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+                };
+                await firestore.collection('userFarms').doc(farmId).set(farmData, { merge: true });
+                functions.logger.info(`[Activate Guardian] Successfully enrolled farm ${farmId}.`);
+                
+                // --- STEP C: RUN AN IMMEDIATE, INITIAL RISK ANALYSIS ---
+                functions.logger.info(`[Activate Guardian] Running initial risk analysis for farm ${farmId}.`);
+                
+                // 1. Fetch Weather Data using the new coordinates
+                const weatherApiUrl = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${WEATHER_API_KEY}&location.latitude=${locationCoords.lat}&location.longitude=${locationCoords.lng}&days=7`;
+                const weatherResponse = await axios.get(weatherApiUrl);
+    
+                if (!weatherResponse.data || !Array.isArray(weatherResponse.data.forecastDays) || weatherResponse.data.forecastDays.length === 0) {
+                    response.status(503).json({ error: 'Could not retrieve valid weather data for the location.' });
+                    return;
+                }
+                const dailyWeather = weatherResponse.data.forecastDays;
+
+                // 2. Call Gemini for the risk assessment
+                const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+                const prompt = `
+                    You are an expert agricultural entomologist for Indian farming conditions.
+                    **Context:**
+                    - Crop: ${currentCrop}
+                    - Weather Forecast (next 7 days): ${JSON.stringify(dailyWeather.map(d => ({maxTemp: d.maxTemperature?.degrees, minTemp: d.minTemperature?.degrees, humidity: d.daytimeForecast?.relativeHumidity, precipitation: d.daytimeForecast?.precipitation?.qpf?.quantity})))}
+                    **Task:**
+                    Predict the risk of common pests and diseases for this crop based on the weather. Respond ONLY with a valid JSON array of objects. Each object must have these keys: "threatName" (descriptive name with examples), "threatType" (general category), "riskLevel" ('Low', 'Medium', or 'High'), and "reasoning".
+                `;
+                const resp = await generativeModel.generateContent(prompt);
+                const content = resp.response.candidates[0].content.parts[0].text;
+                let threats;
+                try {
+                    let jsonString = content.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || content;
+                    const firstBrace = jsonString.indexOf('[');
+                    const lastBrace = jsonString.lastIndexOf(']');
+                    jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+                    threats = JSON.parse(jsonString.trim());
+                } catch(e) {
+                    functions.logger.error(`[Activate Guardian] Failed to parse JSON from Gemini`, {rawResponse: content});
+                    response.status(500).json({ error: 'AI returned an invalid response.' });
+                    return;
+                }
+
+                // --- STEP D: SAVE ANY HIGH/MEDIUM RISK ALERTS TO FIRESTORE ---
+                const highRiskAlerts = [];
+                for (const threat of threats) {
+                    if (threat.riskLevel === 'High' || threat.riskLevel === 'Medium') {
+                        const today = new Date().toISOString().split('T')[0];
+                        const sanitizedThreatName = threat.threatName.replace(/\s+/g, '').replace(/[.,()]/g, '-');
+                        const alertId = `${farmId}_${sanitizedThreatName}_${today}`;
+                        const alertData = {
+                            userId, farmId, crop: currentCrop,
+                            threatName: threat.threatName, threatType: threat.threatType,
+                            riskLevel: threat.riskLevel, reasoning: threat.reasoning,
+                            timestamp: admin.firestore.FieldValue.serverTimestamp()
+                        };
+                        await firestore.collection('pestAlerts').doc(alertId).set(alertData);
+                        highRiskAlerts.push(alertData);
+                        functions.logger.info(`[Activate Guardian] Saved high-risk alert: ${threat.threatName}`);
+                    }
+                }
+                
+                functions.logger.info(`[Activate Guardian] Completed activation and initial analysis for farm ${farmId}. Found ${highRiskAlerts.length} risks.`);
+                
+                // --- STEP E: RETURN THE INITIAL THREATS TO THE APP ---
+                response.status(200).json({ success: true, initialThreats: highRiskAlerts });
+
+            } catch (error) {
+                functions.logger.error(`[Activate Guardian] An error occurred:`, error);
+                if (!response.headersSent) {
+                    response.status(500).json({ error: 'An unexpected error occurred while activating the Guardian Engine.' });
+                }
+            }
+        });
     }
 );
