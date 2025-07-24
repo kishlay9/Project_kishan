@@ -1,14 +1,27 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- STATE & DATA ---
-    const INDIAN_LOCATIONS = [
-        "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh",
-        "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", "Gujarat", "Haryana",
-        "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep",
-        "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry",
-        "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand",
-        "West Bengal"
-    ];
-    let selectedLocation = null;
+    // --- FIREBASE SDK INITIALIZATION ---
+    // IMPORTANT: Replace this with your actual Firebase project configuration.
+    const firebaseConfig = {
+    apiKey: "AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg",
+    authDomain: "project-kisan-new.firebaseapp.com",
+    projectId: "project-kisan-new",
+    storageBucket: "project-kisan-new.firebasestorage.app",
+    messagingSenderId: "176046173818",
+    appId: "1:176046173818:web:de8fb0e50752c8f62195c3",
+    measurementId: "G-GDJE785E2N"
+    };
+
+    // Initialize Firebase
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    // --- CRUCIAL FIX: Specify the correct region for your functions ---
+    const functions = firebase.app().functions('asia-south1');
+    console.log("✅ [Firebase Init] SDK initialized and pointed to 'asia-south1' region.");
+    
+    // To use local emulators for testing, uncomment the line below
+    // functions.useEmulator("localhost", 5001);
 
     // --- DOM ELEMENTS ---
     const plannerForm = document.getElementById('planner-form');
@@ -16,121 +29,126 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsSection = document.getElementById('planner-results-section');
     const resultsGrid = document.getElementById('planner-results-grid');
     
-    // Searchable Dropdown Elements
-    const locationDropdown = document.getElementById('location-dropdown');
-    const searchInput = document.getElementById('location-search-input');
-    const dropdownPanel = document.getElementById('location-dropdown-panel');
-    const locationList = document.getElementById('location-list');
-
-    // --- SEARCHABLE DROPDOWN LOGIC (Adapted from schemes.js) ---
-    const openDropdown = () => dropdownPanel.classList.add('open');
-    const closeDropdown = () => dropdownPanel.classList.remove('open');
-
-    const populateLocationList = (filter = '') => {
-        locationList.innerHTML = '';
-        const filtered = INDIAN_LOCATIONS.filter(loc => loc.toLowerCase().includes(filter.toLowerCase()));
-        if (filtered.length === 0) {
-            locationList.innerHTML = '<li class="no-results">No states found</li>';
-            return;
-        }
-        filtered.forEach(locationName => {
-            const li = document.createElement('li');
-            li.textContent = locationName;
-            li.addEventListener('click', () => {
-                searchInput.value = locationName;
-                selectedLocation = locationName;
-                closeDropdown();
-            });
-            locationList.appendChild(li);
-        });
-    };
-
-    searchInput.addEventListener('input', () => {
-        openDropdown();
-        populateLocationList(searchInput.value);
-    });
-    searchInput.addEventListener('focus', () => {
-        openDropdown();
-        populateLocationList(searchInput.value);
-    });
-    document.addEventListener('click', (e) => {
-        if (!locationDropdown.contains(e.target)) {
-            closeDropdown();
-        }
-    });
-
-    // --- FORM SUBMISSION LOGIC ---
-    plannerForm.addEventListener('submit', (event) => {
+    // --- FORM SUBMISSION LOGIC WITH DEBUGGING ---
+    plannerForm.addEventListener('submit', async (event) => {
         event.preventDefault();
+        console.log("🚀 [Event] Form submitted.");
+
+        // 1. Get user input from the form
+        const waterAccess = document.getElementById('water-access').value;
+        const landSize = parseFloat(document.getElementById('land-size').value);
+        const budget = parseInt(document.getElementById('budget').value, 10);
         
-        if (!selectedLocation) {
-            alert('Please select a state from the dropdown list.');
+        console.log(`📝 [Input] Form data collected: water='${waterAccess}', land=${landSize}, budget=${budget}`);
+
+        if (!waterAccess || isNaN(landSize) || isNaN(budget)) {
+            alert('Please fill out all fields correctly.');
+            console.error("❌ [Validation] Form validation failed.");
             return;
         }
 
         resultsSection.classList.add('hidden');
         statusIndicator.classList.remove('hidden');
         statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        try {
+            // 2. Get the user's browser location
+            console.log("🌎 [Geolocation] Requesting user's location...");
+            const userLocation = await getUserCoordinates();
+            console.log("✅ [Geolocation] Location acquired:", userLocation);
 
-        // Simulate AI analysis delay
-        setTimeout(() => {
-            displayResults();
+            // 3. Prepare the data payload
+            const requestData = {
+                location: userLocation,
+                landSize: landSize,
+                budget: budget,
+                waterAccess: waterAccess
+            };
+
+            // 4. Call the 'generateOpportunity' Callable Function
+            console.log("☁️ [Firebase] Getting reference to 'generateOpportunity' callable function.");
+            const generateOpportunity = functions.httpsCallable('generateOpportunity');
+            
+            console.log("📡 [Firebase] Executing callable function with data:", requestData);
+            const result = await generateOpportunity(requestData);
+            console.log("✅ [Firebase] Successfully received response from function:", result);
+
+            // 5. Check if the response data is as expected
+            if (!result.data || !result.data.crop_plans) {
+                throw new Error("The function response was successful but did not contain the expected 'crop_plans' data.");
+            }
+            console.log("📊 [Data Check] 'crop_plans' data is present in the response.");
+
+            // 6. Display the results
+            displayResults(result.data.crop_plans);
             statusIndicator.classList.add('hidden');
             resultsSection.classList.remove('hidden');
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 2500);
+
+        } catch (error) {
+            console.error("❌ [CRITICAL ERROR] Failed to generate opportunity:", error);
+            statusIndicator.classList.add('hidden');
+            // Provide a more detailed error for the user
+            alert(`An error occurred while generating your plan. \n\nType: ${error.code || 'N/A'} \nMessage: ${error.message}`);
+        }
     });
 
-    // --- DISPLAY RESULTS FUNCTION ---
-    const displayResults = () => {
-        // Clear previous results
-        resultsGrid.innerHTML = '';
-
-        // Mock data for demonstration
-        const recommendations = [
-            {
-                cropName: 'jatin ',
-                profit: 50000,
-                cost: 8500,
-                pros: ['High market demand in your area', 'Good profit margin', 'Multiple harvests possible'],
-                cons: ['Needs consistent watering', 'Higher risk of pests like fruit borer', 'Sensitive to extreme weather']
-            },
-            {
-                cropName: 'Drought-Tolerant Millet',
-                profit: 22000,
-                cost: 4000,
-                pros: ['Excellent for low water access', 'Low input costs', 'Improves soil health'],
-                cons: ['Lower market price than cash crops', 'Risk of bird damage during grain filling']
-            },
-            {
-                cropName: 'Quick-Turnaround Spinach',
-
-                profit: 15000,
-                cost: 3500,
-                pros: ['Very short growth cycle (40-50 days)', 'Can be planted between main crops', 'Consistent local demand'],
-                cons: ['Highly perishable, needs quick sale', 'Sensitive to high temperatures']
+    // --- HELPER FUNCTION to get user's coordinates (Unchanged) ---
+    function getUserCoordinates() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error("Geolocation is not supported by your browser."));
             }
-        ];
-        
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    resolve({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    });
+                },
+                (error) => {
+                    let errorMessage = "An unknown error occurred while getting location.";
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = "Permission to access location was denied. Please enable it in your browser settings.";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = "Location information is unavailable.";
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = "The request to get user location timed out.";
+                            break;
+                    }
+                    reject(new Error(errorMessage));
+                }
+            );
+        });
+    }
+
+    // --- DISPLAY RESULTS FUNCTION (Unchanged) ---
+    const displayResults = (recommendations) => {
+        resultsGrid.innerHTML = '';
+        if (!recommendations || recommendations.length === 0) {
+            resultsGrid.innerHTML = '<p>Sorry, we could not find any suitable crop recommendations for your specific constraints. Please try adjusting your budget or other parameters.</p>';
+            return;
+        }
         recommendations.forEach(rec => {
             const card = document.createElement('div');
             card.className = 'plan-recommendation-card';
-
-            const prosList = rec.pros.map(pro => `<li>${pro}</li>`).join('');
-            const consList = rec.cons.map(con => `<li>${con}</li>`).join('');
-
+            const prosList = Array.isArray(rec.pros) ? rec.pros.map(pro => `<li>${pro}</li>`).join('') : '<li>N/A</li>';
+            const consList = Array.isArray(rec.cons) ? rec.cons.map(con => `<li>${con}</li>`).join('') : '<li>N/A</li>';
             card.innerHTML = `
                 <div class="plan-card-header">
-                    <h3>${rec.cropName}</h3>
+                    <h3>${rec.crop_name}</h3>
                 </div>
                 <div class="plan-card-metrics">
                     <div class="metric-item">
                         <span>Estimated Profit</span>
-                        <p>₹${rec.profit.toLocaleString('en-IN')}</p>
+                        <p>₹${(rec.estimated_profit_inr || 0).toLocaleString('en-IN')}</p>
                     </div>
                     <div class="metric-item">
                         <span>Estimated Cost</span>
-                        <p>₹${rec.cost.toLocaleString('en-IN')}</p>
+                        <p>₹${(rec.estimated_cost_inr || 0).toLocaleString('en-IN')}</p>
                     </div>
                 </div>
                 <div class="plan-card-pros">
@@ -145,7 +163,4 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsGrid.appendChild(card);
         });
     };
-
-    // --- INITIALIZE ---
-    populateLocationList();
 });
