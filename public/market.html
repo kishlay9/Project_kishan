@@ -80,16 +80,25 @@
                         <h3 id="res-title"></h3>
                         <p id="res-analysis-date" class="analysis-date-text"></p>
                     </div>
+                    <span id="res-completeness" class="confidence-badge"></span>
                 </div>
                 <div class="price-display">
                     <div class="price-point">
                         <span class="price-label">Current Avg Price</span>
                         <span id="res-price" class="price-value"></span>
                     </div>
+                    <!-- ▼▼▼ HTML STRUCTURE UPDATED FOR BETTER STYLING ▼▼▼ -->
                     <div class="price-meta-details">
-                        <p><strong>Market Trend:</strong> <span id="res-trend"></span></p>
-                        <p><strong>Sell Status:</strong> <span id="res-comparison"></span></p>
+                        <div class="status-item">
+                            <strong>Market Trend:</strong>
+                            <span id="res-trend"></span>
+                        </div>
+                        <div class="status-item">
+                           <strong style="background-color: #178717; border-radius: 20px;border: none; color: white;padding: 7px;">Sell Status:</strong>
+                            <span id="res-comparison"></span>
+                        </div>
                     </div>
+                    <!-- ▲▲▲ END OF UPDATE ▲▲▲ -->
                 </div>
                 <p class="analysis-subtitle"><strong>Price Outlook:</strong> <span id="res-outlook"></span></p>
                 <div class="details-grid">
@@ -134,7 +143,7 @@
 
         <!-- 1. Brand -->
         <div class="footer-brand">
-            <img src="images/LOGO.png" alt="Project Kisan Logo">
+            <img src="images/LOGO.png" alt="Project Kisan Logo" class="logo">
             <h3>Project Kisan</h3>
         </div>
 

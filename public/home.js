@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Select all the clickable link elements that wrap the feature cards
-    const featureCardLinks = document.querySelectorAll('.features-grid-5 .feature-card-link');
+    const featureCardLinks = document.querySelectorAll('.features-grid-6 .feature-card-link');
 
     // Loop through each of the card links to add the click functionality
     featureCardLinks.forEach(link => {

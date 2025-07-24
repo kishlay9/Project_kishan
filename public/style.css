@@ -1,4 +1,3 @@
---- START OF FILE style.css ---
 /* --- THEME, FONTS & GLOBAL SETUP --- */
 :root {
     --primary-color: #65a30d;
@@ -458,14 +457,6 @@ main {
 .more-features-section {
     padding: 80px 0;
     background-color: var(--light-green-bg);
-}
-
-/* Changed background to white */
-.features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 30px;
-    margin-top: 50px;
 }
 
 .feature-card {
@@ -2276,19 +2267,33 @@ main {
     }
 }
 
-/* --- [UPDATE] 5-CARD FEATURES GRID --- */
-.features-grid-5 {
+/* --- [UPDATE] 6-CARD FEATURES GRID --- */
+.features-grid-6 {
     display: grid;
-    grid-template-columns: repeat(5, 1fr); /* 5 columns on desktop */
+    grid-template-columns: repeat(6, 1fr); /* 6 columns on desktop */
     gap: 25px;
     margin-top: 50px;
     align-items: center;
 }
 
-@media (min-width: 1200px) {
-    .features-grid-5 {
-        /* On very large screens, explicitly set 5 columns */
-        grid-template-columns: repeat(5, 1fr);
+@media (max-width: 1200px) {
+    .features-grid-6 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .features-grid-6 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .features-grid-6 {
+        gap: 15px;
+    }
+    .feature-card h3 {
+        font-size: 1rem;
     }
 }
 
@@ -3130,223 +3135,6 @@ main {
     gap: 50px; /* Space between major sections */
 }
 
-.footer-brand img {
-    width: 60px; /* Slightly larger logo */
-    margin-bottom: 10px;
-}
-.footer-brand h3 {
-    margin: 0;
-    font-size: 1.8rem;
-    color: white;
-}
-
-/* Philosophy and Team Sections */
-.footer-section {
-    width: 100%;
-}
-.footer-section h4 {
-    color: white;
-    font-size: 1.5rem;
-    margin: 0 0 20px 0;
-}
-#footer-philosophy p, #footer-philosophy ul {
-    max-width: 800px;
-    margin-left: auto;
-    margin-right: auto;
-    text-align: left; /* Keep bullet points aligned left for readability */
-}
-#footer-philosophy ul {
-    list-style: none;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-#footer-philosophy li strong {
-    color: white;
-}
-.tool-type-badge {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-weight: 700;
-    font-size: 0.8rem;
-    margin-right: 8px;
-}
-
-/* Team Section Grid */
-.team-members-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 columns on desktop */
-    gap: 25px;
-    margin-top: 30px;
-}
-.team-member-card {
-    background-color: rgba(255, 255, 255, 0.05);
-    padding: 20px;
-    border-radius: 12px;
-    transition: background-color 0.3s;
-}
-.team-member-card:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-.team-member-card h5 {
-    color: white;
-    font-size: 1.1rem;
-    margin: 0 0 10px 0;
-}
-.team-member-card p {
-    margin: 5px 0;
-    font-size: 0.9rem;
-}
-.team-member-card a {
-    color: rgba(255, 255, 255, 0.7);
-    text-decoration: none;
-    transition: color 0.2s;
-}
-.team-member-card a:hover {
-    color: white;
-}
-
-/* Bottom Copyright Line */
-.footer-bottom {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 30px;
-    margin-top: 50px;
-    font-size: 0.9rem;
-}
-
-/* Responsive adjustments for the new footer */
-@media (max-width: 1024px) {
-    .team-members-grid {
-        grid-template-columns: repeat(2, 1fr); /* 2 columns on tablets */
-    }
-}
-
-@media (max-width: 600px) {
-    .team-members-grid {
-        grid-template-columns: 1fr; /* 1 column on mobile */
-    }
-    .footer-section h4 {
-        font-size: 1.3rem;
-    }
-}
-
-/* --- THEME, FONTS & GLOBAL SETUP --- */
-:root {
-    --primary-color: #65a30d;
-    --accent-color: #84cc16;
-    --dark-bg: #111827;
-    --background-color: #f8fafc;
-    --card-background: #ffffff;
-    --text-color: #111827;
-    --subtle-text: #4b5563;
-    --border-color: #e5e7eb;
-    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --light-green-bg: #f7fee7; 
-}
-
-html {
-    scroll-behavior: smooth;
-}
-
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    margin: 0;
-    line-height: 1.6;
-}
-
-/* ... (All other styles remain the same) ... */
-
-.container {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-.section-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-/* --- HEADER --- */
-header {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 25px 0;
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    transition: all 0.3s ease-in-out;
-}
-.header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-.logo-container {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.logo {
-    width: 40px;
-    height: 40px;
-    color: var(--primary-color);
-}
-h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0;
-    color: var(--text-color);
-}
-.header-nav a {
-    text-decoration: none;
-    color: var(--subtle-text);
-    font-weight: 600;
-    margin-left: 30px;
-    transition: color 0.2s ease;
-    vertical-align: middle;
-}
-.header-nav a:hover {
-    color: var(--primary-color);
-}
-header.scrolled {
-    background: var(--card-background);
-    box-shadow: var(--shadow);
-    padding-top: 10px;
-    padding-bottom: 10px;
-}
-
-/* ... (All other styles up to the footer remain the same) ... */
-
-/* --- [REDESIGNED] FOOTER STYLES --- */
-.site-footer {
-    background-color: var(--dark-bg);
-    color: rgba(255, 255, 255, 0.7);
-    padding: 60px 20px 30px 20px;
-    text-align: center; /* Center all content by default */
-}
-
-.footer-content-wrapper {
-    max-width: 1100px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 50px; /* Space between major sections */
-}
-
 /* ▼▼▼ THIS IS THE CORRECTED LINE ▼▼▼ */
 .footer-brand {
     text-align: center; /* Ensures the brand block itself is centered */
@@ -3454,6 +3242,188 @@ header.scrolled {
     .footer-section h4 {
         font-size: 1.3rem;
     }
+}
+
+/* --- [NEW & UPDATED] CROP PLANNER PAGE STYLES --- */
+#planner-status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    color: var(--subtle-text);
+    padding: 40px 0;
+}
+
+/* ▼▼▼ THIS IS THE KEY CHANGE FOR HORIZONTAL LAYOUT ▼▼▼ */
+#planner-results-section {
+    max-width: 100%; /* Allow section to span full width for scrolling */
+    margin: 20px auto 0 auto;
+}
+
+.planner-results-grid {
+    display: flex; /* 1. Use Flexbox */
+    overflow-x: auto; /* 2. Enable horizontal scrolling */
+    gap: 30px;
+    padding: 10px 20px 20px 20px; /* Add padding for aesthetics */
+    scroll-snap-type: x mandatory; /* Smooth snapping effect */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Hide scrollbar for a cleaner look but keep it functional */
+.planner-results-grid::-webkit-scrollbar {
+    display: none;
+}
+.planner-results-grid {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+/* ▲▲▲ END OF KEY CHANGE ▲▲▲ */
+
+
+.plan-recommendation-card {
+    flex: 0 0 360px; /* 3. Set a fixed width for each card */
+    scroll-snap-align: start; /* Snap to the start of each card */
+
+    /* Existing styles below */
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.plan-recommendation-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.plan-card-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+}
+
+.plan-card-header img {
+    width: 40px;
+    height: 40px;
+}
+
+.plan-card-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-color);
+}
+
+.plan-card-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    text-align: center;
+}
+
+.metric-item span {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--subtle-text);
+    margin-bottom: 5px;
+}
+
+.metric-item p {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.plan-card-pros, .plan-card-cons {
+    background-color: var(--background-color);
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.plan-card-pros h4, .plan-card-cons h4 {
+    margin: 0 0 10px 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.plan-card-pros h4 { color: #166534; } /* Dark Green */
+.plan-card-cons h4 { color: #991b1b; } /* Dark Red */
+
+.plan-card-pros h4 img, .plan-card-cons h4 img {
+    width: 20px;
+    height: 20px;
+}
+
+.plan-card-pros ul, .plan-card-cons ul {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--subtle-text);
+    font-size: 0.95rem;
+}
+
+.plan-card-pros ul li, .plan-card-cons ul li {
+    margin-bottom: 5px;
+}
+
+/* --- MARKET PAGE: SELL STATUS STYLING --- */
+
+/* Updated container for trend and status */
+.price-meta-details {
+    margin-top: 25px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    text-align: center;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap; /* Allows wrapping on small screens */
+    justify-content: center;
+}
+
+.status-item strong {
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.status-item span {
+    color: var(--subtle-text);
+}
+
+/* Base style for the new badge */
+#res-comparison.status-badge {
+    display: inline-block;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: white;
+    border: none;
+    line-height: 1.2;
+}
+
+/* Color variations for the badge */
+.status-badge.status-sell {
+    background-color: var(--primary-color); /* Green */
+}
+
+.status-badge.status-monitor {
+    background-color: #f97316; /* Orange */
+}
+
+.status-badge.status-hold {
+    background-color: #ef4444; /* Red */
 }
 .threat-details {
   display: flex;                 /* Use flexbox for alignment */
