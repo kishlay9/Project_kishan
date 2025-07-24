@@ -188,16 +188,16 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
 
             let textToSpeak = "";
             if (diagnosisData.object_category === "Plant") {
-                textToSpeak = `Plant Type: ${diagnosisData.plant_type}. Diagnosis: ${diagnosisData.diagnosis_status}. Disease: ${diagnosisData.disease_name_english}. Description: ${diagnosisData.description_english}. Organic Remedy: ${diagnosisData.organic_remedy_english}.`;
+                textToSpeak = `Plant Type: ${diagnosisData.plant_type}. Description: ${diagnosisData.description_english}. For prevention: ${diagnosisData.prevention_tips_english?.join(', ') || 'No specific prevention tips available.'}.`;
             } else if (diagnosisData.object_category === "Non-Plant Object") {
                 textToSpeak = `This appears to be a non-plant object. Description: ${diagnosisData.description_english}. Please upload an image of a plant for diagnosis.`;
             } else { 
                 textToSpeak = `The object in the image is ambiguous or unclear. Description: ${diagnosisData.description_english}. Please ensure the image clearly shows a plant.`;
             }
             
-            const ttsRequest = { 
+                        const ttsRequest = { 
                 input: { text: textToSpeak }, 
-                voice: { languageCode: 'en-US', name: 'en-US-Wavenet-A' }, 
+                voice: { languageCode: 'en-IN', name: 'en-IN-Wavenet-D' }, // HIGHLIGHTED CHANGE: Indian English Female Voice
                 audioConfig: { audioEncoding: 'MP3' } 
             };
             
@@ -1220,18 +1220,21 @@ exports.getWeatherAndAqi = onRequest(
             }
 
 
-            // --- 4. Assemble the Final JSON Response for the Frontend ---
+                        // --- 4. Assemble the Final JSON Response for the Frontend ---
             const finalResponse = {
                 location: {
-                    city: cityName, // From Geocoding API
-                    date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) // e.g., "22 Jul"
+                    city: cityName, 
+                    date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                 },
                 weather: {
                     currentTemp: weatherData.daytimeForecast?.temperature?.degrees,
                     condition: weatherData.daytimeForecast?.weatherCondition?.description?.text,
                     minTemp: weatherData.minTemperature?.degrees,
                     maxTemp: weatherData.maxTemperature?.degrees,
-                    iconUri: weatherData.daytimeForecast?.weatherCondition?.iconBaseUri
+                    iconUri: weatherData.daytimeForecast?.weatherCondition?.iconBaseUri,
+                    // --- HIGHLIGHTED CHANGE: Add windSpeed and humidity ---
+                    windSpeed: weatherData.daytimeForecast?.wind?.speed?.value,
+                    humidity: weatherData.daytimeForecast?.relativeHumidity
                 },
                 aqi: {
                     value: aqiData.indexes[0]?.aqi,
