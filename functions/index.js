@@ -24,6 +24,7 @@ const contentType = require('content-type');
 const axios = require("axios");
 const { VertexAI } = require("@google-cloud/vertexai");
 const cors = require('cors')({origin: true});
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 // NEW, ROBUST IMPORT LINE
 
 
@@ -1887,3 +1888,88 @@ exports.askAiAssistant = onCall(
         }
     }
 );
+
+// =================================================================
+// FUNCTION 12: CREATE USER ACCOUNT (Sign Up)
+// =================================================================
+exports.createUserAccount = onCall({ region: LOCATION }, async (request) => {
+    const { email, password, firstName, lastName, mobileNumber } = request.data;
+
+    // --- Input Validation ---
+    if (!email || !password || !firstName || !lastName || !mobileNumber) {
+        throw new HttpsError('invalid-argument', 'Missing required fields. All fields are required.');
+    }
+    if (password.length < 6) {
+        throw new HttpsError('invalid-argument', 'Password must be at least 6 characters long.');
+    }
+
+    try {
+        // --- 1. Create the user in Firebase Authentication ---
+        functions.logger.info(`[Auth] Attempting to create user for email: ${email}`);
+        const userRecord = await admin.auth().createUser({
+            email: email,
+            password: password,
+            displayName: `${firstName} ${lastName}`,
+        });
+        functions.logger.info(`[Auth] Successfully created user with UID: ${userRecord.uid}`);
+
+        // --- 2. Save the user's profile data to Firestore ---
+        const userProfile = {
+            firstName: firstName,
+            lastName: lastName,
+            mobileNumber: mobileNumber,
+            email: email, // Store email for easy access
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+        
+        // Use the user's new UID as the document ID in the 'users' collection
+        await firestore.collection('users').doc(userRecord.uid).set(userProfile);
+        functions.logger.info(`[Firestore] Successfully created profile for user: ${userRecord.uid}`);
+
+        // --- 3. Return a success message and the new user's UID ---
+        return { 
+            success: true, 
+            message: "User account created successfully.",
+            uid: userRecord.uid 
+        };
+
+    } catch (error) {
+        functions.logger.error(`[Auth Error] Failed to create user for email ${email}:`, error);
+        // Convert Firebase Auth errors into user-friendly messages
+        if (error.code === 'auth/email-already-exists') {
+            throw new HttpsError('already-exists', 'An account with this email address already exists.');
+        }
+        throw new HttpsError('internal', 'An error occurred while creating the account.');
+    }
+});
+
+// =================================================================
+// FUNCTION 13: GET USER PROFILE (After Login)
+// =================================================================
+exports.getUserProfile = onCall({ region: LOCATION }, async (request) => {
+    // --- 1. Check for Authentication ---
+    if (!request.auth) {
+        // This error is thrown if the function is called without a valid Firebase ID token.
+        throw new HttpsError('unauthenticated', 'You must be logged in to access this feature.');
+    }
+
+    const uid = request.auth.uid;
+    functions.logger.info(`[Profile] Fetching profile for authenticated user: ${uid}`);
+
+    try {
+        // --- 2. Fetch the user's document from the 'users' collection ---
+        const userDoc = await firestore.collection('users').doc(uid).get();
+
+        if (!userDoc.exists) {
+            functions.logger.error(`[Profile Error] No profile document found for user: ${uid}`);
+            throw new HttpsError('not-found', 'User profile not found.');
+        }
+
+        // --- 3. Return the user's profile data ---
+        return userDoc.data();
+
+    } catch (error) {
+        functions.logger.error(`[Profile Error] Failed to fetch profile for user ${uid}:`, error);
+        throw new HttpsError('internal', 'An error occurred while fetching the user profile.');
+    }
+});
