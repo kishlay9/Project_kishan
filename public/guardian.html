@@ -56,22 +56,19 @@
                     <div class="form-group">
                         <label for="g-crop-select">Select Your Crop</label>
                         <select id="g-crop-select" name="crop">
-                            <option value="apple">Apple</option>
-                            <option value="tomato">Tomato</option>
-                            <option value="wheat">Wheat</option>
-                            <option value="rice">Rice</option>
-                            <option value="potato">Potato</option>
+                            <!-- Options will be dynamically inserted here -->
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="g-sowing-date">Sowing Date</label>
                         <input type="date" id="g-sowing-date" name="sowing_date">
                     </div>
+                    <!-- ▼▼▼ LOCATION INPUT REPLACED WITH STATE/UT DROPDOWN TRIGGER ▼▼▼ -->
                     <div class="form-group">
-                        <label for="g-location">Your Location (City)</label>
-                        <input type="text" id="g-location" name="location" placeholder="e.g., Sangrur">
+                        <label for="g-state-input">Your Location (State/UT)</label>
+                        <input type="text" id="g-state-input" name="location_display" placeholder="Click to select a State/UT" readonly>
                     </div>
-                    <!-- ▼▼▼ BUTTON RENAMED ▼▼▼ -->
+                    <!-- ▲▲▲ LOCATION INPUT REPLACED ▲▲▲ -->
                     <button type="submit" class="cta-button">Activate Proactive Guardian</button>
                 </form>
             </div>
@@ -80,7 +77,6 @@
         <!-- Section 3: Generated Schedule Output (Initially Hidden) -->
         <div id="guardian-status" class="hidden"><div class="spinner"></div><p>Guardian AI is analyzing data and building your schedule...</p></div>
         
-        <!-- ▼▼▼ ENTIRE OUTPUT SECTION SIMPLIFIED ▼▼▼ -->
         <section id="guardian-output" class="hidden">
              <div class="guardian-result-card">
                 <h3>Threat Assessment </h3>
@@ -91,14 +87,11 @@
                     </div>
                     <div id="gemini-warning" class="gemini-warning">
                         <img src="images/ai-guardian.svg" alt="AI Icon">
-                        <!-- The reasoning from your backend will go here -->
                         <p id="threat-reasoning"></p>
                     </div>
                 </div>
-                <!-- ▲▲▲ 7-DAY ACTION PLAN HAS BEEN REMOVED ▲▲▲ -->
             </div>
         </section>
-
 
         <!-- Section 4: Pests & Diseases Library with Modal Trigger -->
         <section id="disease-library-container">
@@ -135,30 +128,45 @@
             </div>
         </div>
     </div>
-    <div id="disease-detail-modal" class="modal-overlay hidden">
-    <div class="disease-modal-content">
-        <button id="disease-modal-close-button" class="close-button">×</button>
-        <img id="modal-disease-image" src="" alt="Disease Image">
-        <div class="modal-text-content">
-            <h2 id="modal-disease-name">Disease Name</h2>
-            
-            <div class="modal-section">
-                <h4>Symptoms</h4>
-                <ul id="modal-disease-symptoms"></ul>
-            </div>
 
-            <div class="modal-section">
-                <h4>Preventive Measures</h4>
-                <ul id="modal-disease-prevention"></ul>
+    <!-- ▼▼▼ NEW STATE/UT SELECTION MODAL ▼▼▼ -->
+    <div id="state-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Select your State/UT</h2>
+                <button id="state-modal-close-button" class="close-button">×</button>
             </div>
-
-            <div class="modal-section">
-                <h4>Causal Factors</h4>
-                <p id="modal-disease-cause"></p>
+            <div class="modal-search-wrapper">
+                <input type="text" id="state-search-input" placeholder="Search for your state...">
+            </div>
+            <div id="state-list" class="state-list-container">
+                <!-- State items will be dynamically injected here by JS -->
             </div>
         </div>
     </div>
-</div>
+    <!-- ▲▲▲ NEW STATE/UT SELECTION MODAL ▲▲▲ -->
+    
+    <div id="disease-detail-modal" class="modal-overlay hidden">
+        <div class="disease-modal-content">
+            <button id="disease-modal-close-button" class="close-button">×</button>
+            <img id="modal-disease-image" src="" alt="Disease Image">
+            <div class="modal-text-content">
+                <h2 id="modal-disease-name">Disease Name</h2>
+                <div class="modal-section">
+                    <h4>Symptoms</h4>
+                    <ul id="modal-disease-symptoms"></ul>
+                </div>
+                <div class="modal-section">
+                    <h4>Preventive Measures</h4>
+                    <ul id="modal-disease-prevention"></ul>
+                </div>
+                <div class="modal-section">
+                    <h4>Causal Factors</h4>
+                    <p id="modal-disease-cause"></p>
+                </div>
+            </div>
+        </div>
+    </div>
     <footer class="site-footer">
     <div class="footer-content-wrapper">
 

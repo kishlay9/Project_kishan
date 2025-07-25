@@ -1,9 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- CROP DATA & DISEASE LIBRARY ---
+    // --- CROP DATA FOR DISEASE LIBRARY MODAL ---
     // This is efficient and remains as is.
     const CROP_DATA = [ { name: "Apple", emoji: "🍎", id: 'apple', img: 'images/apple.png' }, { name: "Bean", emoji: "🫘", id: 'bean', img: 'images/red-beans.png' }, { name: "Black & Green Gram", emoji: "🌱", id: 'gram', img: 'images/bg_gram.png' }, { name: "Brinjal", emoji: "🍆", id: 'brinjal', img: 'images/brinjal.png' }, { name: "Chickpea & Gram", emoji: "🌱", id: 'chickpea', img: 'images/chickpea.png' }, { name: "Cotton", emoji: "☁️", id: 'cotton', img: 'images/cotton.png' }, { name: "Cucumber", emoji: "🥒", id: 'cucumber', img: 'images/cucumber.png' }, { name: "Maize", emoji: "🌽", id: 'maize', img: 'images/maize.png' }, { name: "Melon", emoji: "🍉", id: 'melon', img: 'images/watermelon.png' }, { name: "Okra", emoji: "👌", id: 'okra', img: 'images/okra.png' }, { name: "Onion", emoji: "🧅", id: 'onion', img: 'images/onion.png' }, { name: "Peanut", emoji: "🥜", id: 'peanut', img: 'images/peanuts.png' }, { name: "Potato", emoji: "🥔", id: 'potato', img: 'images/potato.png' }, { name: "Rice", emoji: "🍚", id: 'rice', img: 'images/rice.png' }, { name: "Sorghum", emoji: "🌾", id: 'sorghum', img: 'images/sorghum.png' }, { name: "Soybean", emoji: "🌱", id: 'soybean', img: 'images/soyabean.png' }, { name: "Sugarcane", emoji: "🎋", id: 'sugarcane', img: 'images/sugarcane.png' }, { name: "Tomato", emoji: "🍅", id: 'tomato', img: 'images/tomato.png' }, { name: "Wheat", emoji: "🌾", id: 'wheat', img: 'images/wheat.png' } ];
     
-    // --- COMPLETE DISEASE LIBRARY DATABASE (ALL 18 CROPS) ---
+    // --- USER REQUESTED OMISSION ---
+    // The const diseaseLibraryData object has been removed as per the user's request.
+    
+     // --- COMPLETE DISEASE LIBRARY DATABASE (ALL 18 CROPS) ---
     const diseaseLibraryData = {
         apple: {
             "Seedling Stage": [
@@ -126,7 +129,41 @@ document.addEventListener('DOMContentLoaded', () => {
             "Heading & Flowering Stage": [{ img: 'images/fusarium-head-blight.jpg', type: 'Fungus', name: 'Fusarium Head Blight (Scab)', symptoms: ['One or more spikelets on the head are prematurely bleached white.', 'A pinkish or orange fungal growth may be visible at the base of the spikelets.', 'Infected kernels are shriveled, lightweight, and chalky white or pink.', 'Produces mycotoxins (DON/vomitoxin).'], prevention: ['Use tolerant varieties.', 'Apply specific triazole fungicides at early flowering (anthesis).', 'Crop rotation and residue management can help.', 'Time irrigation to avoid wetness during flowering.'], cause: 'A fungus (Fusarium graminearum) that infects during flowering in warm, wet conditions.' }, { img: 'images/stem-rust.jpg', type: 'Fungus', name: 'Stem Rust (Black Rust)', symptoms: ['Large, brick-red, elongated pustules on stems, leaves, and heads.', 'The pustules rupture the plant epidermis, giving a ragged appearance.', 'Can cause stems to weaken and break.', 'A historically devastating disease.'], prevention: ['Plant resistant varieties (crucial).', 'Eradicate alternate hosts like barberry bushes.', 'Apply foliar fungicides.', 'Early maturing varieties may escape the worst of the epidemic.'], cause: 'A fungus (Puccinia graminis) that can cause severe lodging and yield loss.' }, { img: 'images/loose-smut.jpg', type: 'Fungus', name: 'Loose Smut', symptoms: ['The entire head, except for the central stalk (rachis), is replaced by a mass of black, powdery spores.', 'The spores are easily blown away by the wind, leaving a bare stalk.', 'Infection is not obvious until heading.', 'Infected plants are often taller than healthy ones.'], prevention: ['Use resistant varieties.', 'Use certified disease-free seed.', 'Treat seeds with a systemic fungicide.', 'Hot water seed treatment can also work but is difficult.'], cause: 'A fungus (Ustilago tritici) that infects the flower and grows systemically within the seed embryo.' }, { img: 'images/ergot.jpg', type: 'Fungus', name: 'Ergot', symptoms: ['A sticky, sugary honeydew is exuded from infected florets.', 'Hard, purplish-black, horn-like fungal bodies (sclerotia or ergot bodies) replace the grain.', 'The ergot bodies are toxic to humans and animals.', 'More common in open-pollinated crops like rye.'], prevention: ['Rotate crops.', 'Plow deep to bury ergot bodies.', 'Mow grassy weeds around the field before they flower.', 'Use clean seed free from ergot bodies.'], cause: 'A fungus (Claviceps purpurea) that infects the ovary of the flower.' }, { img: 'images/armyworms.jpg', type: 'Insect', name: 'Armyworms', symptoms: ['Chewed leaves and clipped heads.', 'Larvae feed on foliage and can cut the stem just below the head.', 'Damage can occur very quickly as larvae march "like an army".', 'Look for larvae on the ground or hiding in debris during the day.'], prevention: ['Monitor fields closely, especially in lush, thick stands.', 'Apply insecticides when larval counts reach economic thresholds.', 'Control grassy weeds, which are preferred hosts.', 'Natural enemies can help regulate populations.'], cause: 'Caterpillars of several moth species that can migrate into fields in large numbers.' }]
         }
     };
-    console.log("📚 [Library] Disease data object loaded.");
+    console.log("📚 [Library] Disease data object placeholder is ready.");
+
+
+    let uniqueStates = []; // Will be populated from STATE_COORDINATES
+
+    // --- STATE COORDINATES (for hidden lat/lon) ---
+    const STATE_COORDINATES = {
+        "Andhra Pradesh": { lat: 15.9129, lon: 79.7400 },
+        "Assam": { lat: 26.2006, lon: 92.9376 },
+        "Bihar": { lat: 25.0961, lon: 85.3131 },
+        "Chandigarh": { lat: 30.7333, lon: 76.7794 },
+        "Chattisgarh": { lat: 21.2787, lon: 81.8661 },
+        "Gujarat": { lat: 22.2587, lon: 71.1924 },
+        "Haryana": { lat: 29.0588, lon: 76.0856 },
+        "Himachal Pradesh": { lat: 31.1048, lon: 77.1734 },
+        "Jammu and Kashmir": { lat: 33.7782, lon: 76.5762 },
+        "Karnataka": { lat: 15.3173, lon: 75.7139 },
+        "Kerala": { lat: 10.8505, lon: 76.2711 },
+        "Madhya Pradesh": { lat: 22.9734, lon: 78.6569 },
+        "Maharashtra": { lat: 19.7515, lon: 75.7139 },
+        "Manipur": { lat: 24.6637, lon: 93.9063 },
+        "Meghalaya": { lat: 25.4670, lon: 91.3662 },
+        "Nagaland": { lat: 26.1584, lon: 94.5624 },
+        "NCT of Delhi": { lat: 28.7041, lon: 77.1025 },
+        "Odisha": { lat: 20.9517, lon: 85.0985 },
+        "Pondicherry": { lat: 11.9416, lon: 79.8083 },
+        "Punjab": { lat: 31.1471, lon: 75.3412 },
+        "Rajasthan": { lat: 27.0238, lon: 74.2179 },
+        "Tamil Nadu": { lat: 11.1271, lon: 78.6569 },
+        "Telangana": { lat: 18.1124, lon: 79.0193 },
+        "Tripura": { lat: 23.9408, lon: 91.9882 },
+        "Uttar Pradesh": { lat: 26.8467, lon: 80.9462 },
+        "Uttrakhand": { lat: 30.0668, lon: 79.0193 },
+        "West Bengal": { lat: 22.9868, lon: 87.8550 }
+    };
 
     // --- DOM ELEMENT REFERENCES ---
     const guardianForm = document.getElementById('guardian-form');
@@ -152,6 +189,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const weatherRainEl = document.getElementById('weather-rain');
     const weatherWindEl = document.getElementById('weather-wind');
     
+    // New DOM References for State/UT Modal
+    const stateInput = document.getElementById('g-state-input');
+    const stateModal = document.getElementById('state-modal');
+    const stateModalCloseButton = document.getElementById('state-modal-close-button');
+    const stateSearchInput = document.getElementById('state-search-input');
+    const stateListContainer = document.getElementById('state-list');
+
     // --- CORE LOGIC ---
 
     async function fetchWeatherOnLoad() {
@@ -168,11 +212,9 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const apiUrl = 'https://asia-south1-project-kisan-new.cloudfunctions.net/getWeatherAndAqi';
                 const requestUrl = `${apiUrl}?lat=${latitude}&lon=${longitude}`;
-                console.log(`[Weather] Fetching data from: ${requestUrl}`);
                 const response = await fetch(requestUrl);
                 if (!response.ok) throw new Error(`Weather API failed with status ${response.status}`);
                 const data = await response.json();
-                console.log("[Weather] Data received successfully:", data);
                 populateWeatherData(data);
             } catch (error) {
                 console.error("[Weather] Failed to fetch weather data:", error);
@@ -180,19 +222,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, (error) => {
             console.error("[Weather] Geolocation error:", error.message);
-            weatherLocationEl.textContent = 'Location access denied by browser';
+            weatherLocationEl.textContent = 'Location access denied';
             alert("Please allow location access in your browser settings to see local weather information.");
         });
     }
 
+        // --- REPLACEMENT for guardianForm 'submit' EVENT LISTENER ---
     guardianForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         console.log("🛡️ [Guardian] Activation form submitted.");
         const crop = document.getElementById('g-crop-select').value;
         const sowingDate = document.getElementById('g-sowing-date').value;
-        const locationCity = document.getElementById('g-location').value;
+        const locationValue = stateInput.value; // Get the raw value from the input
 
-        if (!crop || !sowingDate || !locationCity) {
+        if (!crop || !sowingDate || !locationValue) {
             alert('Please fill out all fields to activate the Guardian.');
             return;
         }
@@ -200,13 +243,21 @@ document.addEventListener('DOMContentLoaded', () => {
         guardianOutput.classList.add('hidden');
         statusIndicator.classList.remove('hidden');
         statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
+        
         const farmId = 'testFarm01';
         const userId = 'testUser123';
+        let finalLocation = locationValue;
 
         try {
+            // Check if user selected "Current Location"
+            if (locationValue === 'Current Location') {
+                // If so, fetch the actual city name asynchronously
+                finalLocation = await getCurrentLocationName();
+            }
+
             const apiUrl = 'https://asia-south1-project-kisan-new.cloudfunctions.net/activateGuardian';
-            const payload = { currentCrop: crop, sowingDate: sowingDate, locationCity: locationCity, farmId: farmId, userId: userId };
+            // The payload remains consistent, now with a resolved city name if needed
+            const payload = { currentCrop: crop, sowingDate: sowingDate, locationCity: finalLocation, farmId: farmId, userId: userId };
             console.log("[Guardian] Sending activation request with payload:", payload);
 
             const response = await fetch(apiUrl, {
@@ -230,14 +281,32 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("[Guardian] Activation failed:", error);
             statusIndicator.classList.add('hidden');
+            // Provide a more user-friendly error message for location issues
             alert(`Guardian activation failed. Please try again. \nError: ${error.message}`);
         }
     });
 
     // --- UI POPULATION FUNCTIONS ---
 
+    function populateInitialData() {
+        // --- CROP DROPDOWN LOGIC ---
+        // This data can be expanded or fetched from an API
+        const cropOptions = ["Ajwan", "Almond(Badam)", "Alsandikai", "Amaranthus", "Amla(Nelli Kai)", "Amphophalus", "Apple", "Arecanut(Betelnut/Supari)", "Arhar (Tur/Red Gram)(Whole)", "Arhar Dal(Tur Dal)", "Ashgourd", "Astera", "Bajra(Pearl Millet/Cumbu)", "Banana", "Banana - Green", "Barley (Jau)", "Beans", "Behada", "Beetroot", "Bengal Gram Dal (Chana Dal)", "Bengal Gram(Gram)(Whole)", "Betal Leaves", "Bhindi(Ladies Finger)", "Bitter gourd", "Black Gram (Urd Beans)(Whole)", "Black Gram Dal (Urd Dal)", "Black pepper", "Bottle gourd", "Brinjal", "Bunch Beans", "Cabbage", "Capsicum", "Cardamoms", "Carnation", "Carrot", "Cashewnuts", "Castor Seed", "Cauliflower", "Chapparad Avare", "Chili Red", "Chilly Capsicum", "Chikoos(Sapota)", "Chow Chow", "Chrysanthemum(Loose)", "Cinamon(Dalchini)", "Cluster beans", "Cock", "Coconut", "Coconut Oil", "Coconut Seed", "Colacasia", "Copra", "Coriander(Leaves)", "Corriander seed", "Cotton", "Cowpea (Lobia/Karamani)", "Cowpea(Veg)", "Cucumbar(Kheera)", "Cummin Seed(Jeera)", "Custard Apple (Sharifa)", "Drumstick", "Dry Chillies", "Dry Grapes", "Duster Beans", "Elephant Yam (Suran)", "Field Pea", "Fig(Anjura/Anjeer)", "Firewood", "Fish", "Foxtail Millet(Navane)", "French Beans (Frasbean)", "Garlic", "Ghee", "Ginger(Dry)", "Ginger(Green)", "Gladiolus Cut Flower", "Grapes", "Green Avare (W)", "Green Chilli", "Green Gram (Moong)(Whole)", "Green Gram Dal (Moong Dal)", "Green Peas", "Ground Nut Seed", "Groundnut", "Groundnut (Split)", "Groundnut pods (raw)", "Guar", "Guar Seed(Cluster Beans Seed)", "Guava", "Gulli", "Gur(Jaggery)", "Harrah", "Indian Beans (Seam)", "Isabgul (Psyllium)", "Jack Fruit", "Jamun(Narale Hannu)", "Jarbara", "Jasmine", "Javi", "Jowar(Sorghum)", "Jute", "Kabuli Chana(Chickpeas-White)", "Kakada", "Kankambra", "Karbuja(Musk Melon)", "Kartali (Kantola)", "Knool Khol", "Kodo Millet(Varagu)", "Kulthi(Horse Gram)", "Kutki", "Lak(Teora)", "Leafy Vegetable", "Lemon", "Lentil (Masur)(Whole)", "Lilly", "Lime", "Linseed", "Litchi", "Little gourd (Kundru)", "Long Melon(Kakri)", "Lotus", "Lotus Sticks", "Mahua", "Maize", "Mango", "Mango (Raw-Ripe)", "Marigold(Calcutta)", "Marigold(loose)", "Mashrooms", "Masur Dal", "Mataki", "Mahedi", "Methi (Leaves)", "Methi Seeds", "Mint(Pudina)", "Moath Dal", "Mousambi(Sweet Lime)", "Mustard", "Mustard Oil", "Niger Seed (Ramtil)", "Onion", "Onion Green", "Orange", "Orchid", "Other green and fresh vegetables", "Ox", "Paddy(Dhan)(Basmati)", "Paddy(Dhan)(Common)", "Papaya", "Papaya (Raw)", "Pear(Marasebu)", "Peas cod", "Peas(Dry)", "Peas Wet", "Pegeon Pea (Arhar Fali)", "Pineapple", "Plum", "Pointed gourd (Parval)", "Pomegranate", "poppy seeds", "Potato", "Pumpkin", "Raddish", "Ragi (Finger Millet)", "Raibel", "Rajgir", "Rayee", "Rice", "Ridgeguard(Tori)", "Rose(Local)", "Rose(Loose))", "Round gourd", "Sabu Dan", "Season Leaves", "Seemebadnekai", "Sesamum(Sesame,Gingelly,Til)", "Snakeguard", "Soanf", "Soyabean", "Spinach", "Sponge gourd", "Squash(Chappal Kadoo)", "Sugar", "Suva (Dill Seed)", "Suvarna Gadde", "Sweet Potato", "Sweet Pumpkin", "Tamarind Fruit", "Tapioca", "Taramira", "Tender Coconut", "Thondekai", "Tinda", "Tomato", "Tube Flower", "Tube Rose(Loose)", "Turmeric", "Turmeric (raw)", "Turnip", "Water Melon", "Wheat", "White Peas", "Wood", "Yam (Ratalu)"];
+        const cropSelect = document.getElementById('g-crop-select');
+        if (cropSelect) {
+            cropSelect.innerHTML = '<option value="" disabled selected>Select your crop...</option>';
+            cropOptions.sort().forEach(crop => {
+                cropSelect.innerHTML += `<option value="${crop.toLowerCase().replace(/ & /g, '_').replace(/ /g, '_')}">${crop}</option>`;
+            });
+        }
+
+        // --- STATE LIST LOGIC (CORRECTED) ---
+        // Get the state names directly from the keys of the STATE_COORDINATES object.
+        uniqueStates = Object.keys(STATE_COORDINATES).sort();
+        console.log(`[State List] Populated ${uniqueStates.length} states/UTs.`);
+    }
+
     function populateWeatherData(data) {
-        console.log("[DEBUG] Populating weather UI with received data.");
         weatherLocationEl.textContent = data.location?.city || 'N/A';
         weatherTempEl.textContent = `${Math.round(data.weather?.maxTemp) || '--'}°C`;
         weatherHumidityEl.textContent = `${data.weather?.humidity || '--'}%`;
@@ -246,15 +315,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayThreatAssessment(threats) {
-        console.log(`[DEBUG] Displaying ${threats ? threats.length : 0} threats.`);
         guardianOutput.innerHTML = ''; 
-
         const containerCard = document.createElement('div');
         containerCard.className = 'guardian-result-card';
         containerCard.innerHTML = '<h3>Threat Assessment</h3>'; 
 
         if (!threats || threats.length === 0) {
-            const noThreatsHTML = `
+            containerCard.insertAdjacentHTML('beforeend', `
                 <div class="threat-assessment">
                     <div class="threat-details">
                         <p><span>Identified Threat</span><strong>No Immediate High-Risk Threats</strong></p>
@@ -264,13 +331,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         <img src="images/ai-guardian.svg" alt="AI Icon">
                         <p>Guardian AI has analyzed your local conditions and found no high or medium-risk threats. Continue to monitor your crops.</p>
                     </div>
-                </div>`;
-            containerCard.insertAdjacentHTML('beforeend', noThreatsHTML);
+                </div>`);
         } else {
             threats.forEach(threat => {
                 const riskLevel = threat.riskLevel || 'Unknown';
                 const riskClass = `risk-${riskLevel.toLowerCase()}`;
-                const threatHTML = `
+                containerCard.insertAdjacentHTML('beforeend', `
                     <div class="threat-assessment" style="margin-top: 20px;">
                         <div class="threat-details">
                             <p><span>Identified Threat</span><strong>${threat.threatName || 'N/A'}</strong></p>
@@ -280,18 +346,70 @@ document.addEventListener('DOMContentLoaded', () => {
                             <img src="images/ai-guardian.svg" alt="AI Icon">
                             <p>${threat.reasoning || 'No details available.'}</p>
                         </div>
-                    </div>`;
-                containerCard.insertAdjacentHTML('beforeend', threatHTML);
+                    </div>`);
             });
         }
         guardianOutput.appendChild(containerCard);
-        console.log("[DEBUG] All threat cards have been added to the UI inside a single container.");
     }
 
     // --- MODAL & LIBRARY FUNCTIONS ---
 
     function openModal() { cropModal.classList.remove('hidden'); }
     function closeModal() { cropModal.classList.add('hidden'); }
+
+    function openStateModal() { 
+        renderStateModal(); // Render with no filter initially
+        stateModal.classList.remove('hidden'); 
+        stateSearchInput.focus();
+    }
+    function closeStateModal() { stateModal.classList.add('hidden'); }
+
+        // --- REPLACEMENT for renderStateModal FUNCTION ---
+    function renderStateModal(filter = '') {
+        stateListContainer.innerHTML = '';
+        const lowerCaseFilter = filter.toLowerCase();
+        
+        // Add 'Use Current Location' option if search is empty
+        if (!filter) {
+            const currentLocationItem = document.createElement('div');
+            currentLocationItem.className = 'state-item';
+            currentLocationItem.innerHTML = `📍 Use Current Location`; // Emoji for visual cue
+            currentLocationItem.addEventListener('click', () => {
+                stateInput.value = 'Current Location';
+                // Clear any stored lat/lon data attributes from previous state selections
+                delete stateInput.dataset.lat;
+                delete stateInput.dataset.lon;
+                closeStateModal();
+            });
+            stateListContainer.appendChild(currentLocationItem);
+        }
+
+        const filteredStates = uniqueStates.filter(state => 
+            state.toLowerCase().includes(lowerCaseFilter)
+        );
+
+        if (filteredStates.length === 0 && filter) { // Only show 'no results' if actively searching
+            stateListContainer.innerHTML += '<div class="state-item-no-results">No states found.</div>';
+            return;
+        }
+
+        filteredStates.forEach(state => {
+            const item = document.createElement('div');
+            item.className = 'state-item';
+            item.textContent = state;
+            item.addEventListener('click', () => {
+                stateInput.value = state;
+                const coords = STATE_COORDINATES[state];
+                if (coords) {
+                    stateInput.dataset.lat = coords.lat;
+                    stateInput.dataset.lon = coords.lon;
+                    console.log(`Selected ${state} - Lat: ${coords.lat}, Lon: ${coords.lon}`);
+                }
+                closeStateModal();
+            });
+            stateListContainer.appendChild(item);
+        });
+    }
 
     function populateCropModal(filter = '') {
         cropGrid.innerHTML = '';
@@ -301,8 +419,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('div');
             item.className = 'crop-item';
             item.dataset.cropId = crop.id;
-            item.dataset.cropName = crop.name;
-            item.dataset.cropEmoji = crop.emoji;
             item.innerHTML = `<div class="crop-item-icon"><img src="${crop.img}" alt="${crop.name}"></div><span class="crop-item-name">${crop.name}</span>`;
             item.addEventListener('click', () => {
                 selectedCropNameEl.textContent = `${crop.emoji} ${crop.name}`;
@@ -314,20 +430,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function populateDiseaseLibrary(crop) {
-        console.log(`📚 [Library] Populating for crop: '${crop}'`);
         const existingCards = diseaseLibraryContainer.querySelectorAll('.stage-card');
         existingCards.forEach(card => card.remove());
-
         const dataForCrop = diseaseLibraryData[crop];
         if (!dataForCrop || Object.keys(dataForCrop).length === 0) {
-            console.error(`[Library] No disease data found for crop ID: '${crop}'. Library will be empty.`);
             const noDataCard = document.createElement('div');
             noDataCard.className = 'stage-card';
-            noDataCard.innerHTML = `<p style="padding: 20px;">Sorry, detailed disease information for this crop is not yet available in the library.</p>`;
+            noDataCard.innerHTML = `<p style="padding: 20px;">Disease information for this crop is not yet available. Please add it to the 'diseaseLibraryData' object.</p>`;
             diseaseLibraryContainer.appendChild(noDataCard);
             return;
         }
-
+        
         for (const stageName in dataForCrop) {
             const stageCard = document.createElement('div');
             stageCard.className = 'stage-card';
@@ -345,10 +458,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h4>${disease.name}</h4>
                     </div>`;
                 
-                // Attach the event listener directly to the element
                 cardElement.addEventListener('click', (e) => {
                     e.preventDefault();
-                    console.log("[DEBUG] Disease card clicked. Data:", disease);
                     openDiseaseModal(disease);
                 });
                 carouselContainer.appendChild(cardElement);
@@ -358,50 +469,22 @@ document.addEventListener('DOMContentLoaded', () => {
             stageCard.appendChild(carouselContainer);
             diseaseLibraryContainer.appendChild(stageCard);
         }
-        console.log(`[Library] Finished populating library for '${crop}'.`);
     }
 
     function openDiseaseModal(diseaseData) {
-        console.log("[DEBUG] openDiseaseModal called with:", diseaseData);
-        if (!diseaseData) {
-            console.error("[Modal Error] openDiseaseModal was called with no data.");
-            return;
-        }
-
+        if (!diseaseData) return;
         modalDiseaseImage.src = diseaseData.img || 'images/placeholder.png';
         modalDiseaseImage.alt = diseaseData.name || 'Disease Image';
         modalDiseaseName.textContent = diseaseData.name || 'Unknown Disease';
-        modalDiseaseCause.textContent = diseaseData.cause || 'The exact cause is not specified in the library.';
+        modalDiseaseCause.textContent = diseaseData.cause || 'Cause not specified.';
         
-        modalDiseaseSymptoms.innerHTML = '';
-        if (diseaseData.symptoms && Array.isArray(diseaseData.symptoms)) {
-            diseaseData.symptoms.forEach(symptom => {
-                const li = document.createElement('li');
-                li.textContent = symptom;
-                modalDiseaseSymptoms.appendChild(li);
-            });
-        } else {
-            modalDiseaseSymptoms.innerHTML = '<li>Symptom information not available.</li>';
-        }
-
-        modalDiseasePrevention.innerHTML = '';
-        if (diseaseData.prevention && Array.isArray(diseaseData.prevention)) {
-            diseaseData.prevention.forEach(tip => {
-                const li = document.createElement('li');
-                li.textContent = tip;
-                modalDiseasePrevention.appendChild(li);
-            });
-        } else {
-            modalDiseasePrevention.innerHTML = '<li>Prevention information not available.</li>';
-        }
+        modalDiseaseSymptoms.innerHTML = (diseaseData.symptoms || []).map(s => `<li>${s}</li>`).join('');
+        modalDiseasePrevention.innerHTML = (diseaseData.prevention || []).map(p => `<li>${p}</li>`).join('');
 
         diseaseDetailModal.classList.remove('hidden');
-        console.log("[DEBUG] Disease detail modal is now visible.");
     }
 
-    function closeDiseaseModal() {
-        diseaseDetailModal.classList.add('hidden');
-    }
+    function closeDiseaseModal() { diseaseDetailModal.classList.add('hidden'); }
 
     // --- EVENT LISTENERS ---
     modalTrigger.addEventListener('click', openModal);
@@ -411,8 +494,56 @@ document.addEventListener('DOMContentLoaded', () => {
     diseaseModalCloseButton.addEventListener('click', closeDiseaseModal);
     diseaseDetailModal.addEventListener('click', (e) => { if (e.target === diseaseDetailModal) closeDiseaseModal(); });
 
+    // State/UT Modal Listeners
+    stateInput.addEventListener('click', openStateModal);
+    stateModalCloseButton.addEventListener('click', closeStateModal);
+    stateModal.addEventListener('click', (e) => { if (e.target === stateModal) closeStateModal(); });
+    stateSearchInput.addEventListener('input', (e) => { renderStateModal(e.target.value); });
+
     // --- RUN ON STARTUP ---
     fetchWeatherOnLoad();
     populateCropModal();
-    populateDiseaseLibrary('apple'); // Default to showing apple library on load
+    populateDiseaseLibrary('apple');
+    populateInitialData(); 
 });
+
+    // --- NEW HELPER FUNCTION TO GET CURRENT LOCATION NAME ---
+    async function getCurrentLocationName() {
+        console.log("📍 [Location] Attempting to get user coordinates...");
+        // Promise wrapper for geolocation to handle async nature
+        const getCoords = () => new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                return reject(new Error("Geolocation is not supported by this browser."));
+            }
+            // Request position with a 10-second timeout
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+        });
+
+        try {
+            const position = await getCoords();
+            const { latitude, longitude } = position.coords;
+            console.log(`[Location] Coordinates found: Lat ${latitude}, Lon ${longitude}`);
+            
+            console.log("[Location] Fetching city name from coordinates...");
+            const apiUrl = 'https://asia-south1-project-kisan-new.cloudfunctions.net/getWeatherAndAqi';
+            const requestUrl = `${apiUrl}?lat=${latitude}&lon=${longitude}`;
+            const response = await fetch(requestUrl);
+
+            if (!response.ok) {
+                throw new Error(`Could not get location name (status ${response.status})`);
+            }
+            const data = await response.json();
+            const cityName = data.location?.city;
+
+            if (!cityName) {
+                throw new Error("Could not resolve coordinates to a city name.");
+            }
+            console.log(`[Location] City identified as: ${cityName}`);
+            return cityName;
+
+        } catch (error) {
+            console.error("[Location] Error getting location name:", error.message);
+            // Re-throw the error so the form handler can catch it and alert the user.
+            throw error; 
+        }
+    }
