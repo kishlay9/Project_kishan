@@ -1781,3 +1781,109 @@ exports.activateGuardian = onRequest(
         });
     }
 );
+// =================================================================
+// FUNCTION: AI ASSISTANT ("Smart Navigator") - UPGRADED VERSION
+// =================================================================
+exports.askAiAssistant = onCall(
+    {
+        region: LOCATION,
+        memory: "1GiB",
+        timeoutSeconds: 60,
+        concurrency: 10
+    },
+    async (request) => {
+        const query = request.data.query;
+        const userId = request.auth?.uid;
+
+        if (!query) {
+            throw new HttpsError('invalid-argument', 'A query string is required.');
+        }
+        functions.logger.info(`[AI Assistant] Received query from user ${userId || 'anonymous'}: "${query}"`);
+
+        try {
+            // --- STEP 1: THE "ROUTING" AI CALL ---
+            // First, we ask a specialized AI to classify the user's intent.
+            const routerModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+            const routingPrompt = `
+                You are a classification AI. Your only job is to determine which category a user's question falls into.
+                The available categories are:
+                - "Market Prices": For questions about crop prices, when to sell, market trends, etc.
+                - "Crop Diagnosis": For questions describing a sick plant, like "yellow leaves", "spots on my crop", etc.
+                - "Pest Guardian": For questions about future risks, pests, diseases, or weather-related threats.
+                - "Profit Planner": For questions about planning a new crop, profitability, costs, or business strategy.
+                - "General Question": For any other farming-related question.
+
+                User's Question: "${query}"
+
+                Respond ONLY with a single, valid JSON object with one key: "tool". The value must be one of the exact category names above.
+            `;
+            
+            const routerResp = await routerModel.generateContent(routingPrompt);
+            const routerContent = routerResp.response.candidates[0].content.parts[0].text;
+            const classification = JSON.parse(routerContent.replace(/```json/g, '').replace(/```/g, '').trim());
+
+            functions.logger.info(`[AI Assistant] Intent classified as: ${classification.tool}`);
+
+            // --- STEP 2: THE LOGIC SWITCH ---
+            // Now, we decide what to do based on the classification.
+            if (classification.tool !== "General Question") {
+                // The question matches a special tool. Send a navigation command to the frontend.
+                const navigationMessages = {
+                    "Market Prices": "It looks like you're asking about market prices. I have a special tool for that. Would you like to go there?",
+                    "Crop Diagnosis": "It sounds like you need to diagnose a crop. My Crop Doctor tool can help with that. Shall I take you there?",
+                    "Pest Guardian": "For predicting future risks like pests, my Guardian AI is the best tool. Would you like to check your farm's status?",
+                    "Profit Planner": "That sounds like a strategic question. My Profit Planner can help you create a business plan. Would you like to start?"
+                };
+
+                const response = {
+                    type: "navigation",
+                    tool: classification.tool, // e.g., "Market Prices"
+                    message: navigationMessages[classification.tool] || `I have a special tool for that called ${classification.tool}. Would you like to go there?`
+                };
+                
+                // We don't save navigations to chat history, but we could if we wanted to.
+                functions.logger.info(`[AI Assistant] Responding with navigation command to tool: ${classification.tool}`);
+                return response;
+            }
+
+            // --- STEP 3: THE "ANSWERING" AI CALL (Only for General Questions) ---
+            functions.logger.info(`[AI Assistant] Answering as a general question.`);
+            const answerModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
+            const answerPrompt = `
+                You are "KisanAI", a friendly and highly knowledgeable AI assistant for Indian farmers. Your goal is to provide helpful, practical, and safe advice in simple language.
+                **Rules:**
+                1. Safety First: If advising on chemicals, ALWAYS include a strong safety warning.
+                2. Practicality: Suggest low-cost or organic solutions first.
+                3. Stay on Topic: Only answer about farming. Politely decline other topics.
+                4. Be Concise: Use simple language and lists.
+                ---
+                Now, please answer the following farmer's question:
+                **Question:** "${query}"
+            `;
+
+            const answerResp = await answerModel.generateContent(answerPrompt);
+            const answerText = answerResp.response.candidates[0].content.parts[0].text;
+
+            // Save the general conversation to Firestore
+            if (userId) {
+                await firestore.collection('users').doc(userId).collection('aiAssistantHistory').add({
+                    query: query,
+                    answer: answerText,
+                    timestamp: admin.firestore.FieldValue.serverTimestamp()
+                });
+            }
+            
+            const response = {
+                type: "answer",
+                content: answerText
+            };
+
+            functions.logger.info(`[AI Assistant] Successfully generated and saved general answer for user ${userId || 'anonymous'}.`);
+            return response;
+
+        } catch (error) {
+            functions.logger.error(`[AI Assistant] Critical error for user ${userId || 'anonymous'}:`, error);
+            throw new HttpsError('internal', 'An error occurred while getting an answer from the AI assistant.');
+        }
+    }
+);
