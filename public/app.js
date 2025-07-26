@@ -80,7 +80,7 @@ imageUploadInput.addEventListener('change', (event) => {
     if (!file) return;
 
     const lang = localStorage.getItem('project-kisan-lang') || 'en';
-    alert(`DEBUG: Preparing to upload for language: ${lang}. If you don't see this alert, the old code is still running.`);
+    alert(`DEBUG: Preparing to upload for language: ${lang}.`);
 
     hideResults();
     showStatus(`Uploading ${file.name}...`);
