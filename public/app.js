@@ -1,7 +1,3 @@
-// =================================================================
-// 1. FIREBASE CONFIGURATION & EMULATOR CONNECTION
-// =================================================================
-
 const firebaseConfig = {
   apiKey: "AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg",
   authDomain: "project-kisan-new.firebaseapp.com",
@@ -47,10 +43,20 @@ imageUploadInput.addEventListener('change', (event) => {
     showStatus(`Uploading ${file.name}...`);
     statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
     
+    // Get the selected language to pass to the backend function
+    const lang = localStorage.getItem('project-kisan-lang') || 'en';
+    
     const uniqueFileName = `image_${Date.now()}_${file.name}`;
     const storagePath = `uploads/${uniqueFileName}`;
     const storageRef = storage.ref(storagePath);
-    const uploadTask = storageRef.put(file);
+    
+    // Pass language in metadata
+    const metadata = {
+        customMetadata: {
+            'language': lang
+        }
+    };
+    const uploadTask = storageRef.put(file, metadata);
 
     // Attach a listener for progress updates
     uploadTask.on('state_changed', (snapshot) => {
@@ -136,21 +142,29 @@ function hideResults() {
 }
 
 // =================================================================
-// 6. FUNCTION TO DISPLAY THE FINAL RESULTS ON THE PAGE
+// 6. FUNCTION TO DISPLAY THE FINAL RESULTS ON THE PAGE (LANGUAGE AWARE)
 // =================================================================
 
 function displayDiagnosisResults(data) {
     hideStatus();
     resultsContainer.classList.remove('hidden');
 
-    document.getElementById('result-title-english').textContent = data.disease_name_english || 'Analysis Result';
-    document.getElementById('result-plant-type').textContent = `(${data.plant_type || data.object_category || 'Object'})`;
+    const lang = localStorage.getItem('project-kisan-lang') || 'en';
+
+    // Helper to get translated field or fallback to English
+    const getTranslated = (field) => {
+        if (lang === 'hi' && data[`${field}_hindi`]) return data[`${field}_hindi`];
+        if (lang === 'kn' && data[`${field}_kannada`]) return data[`${field}_kannada`];
+        return data[`${field}_english`] || 'No information available.';
+    };
+
+    document.getElementById('result-title-english').textContent = getTranslated('disease_name');
+    document.getElementById('result-plant-type').textContent = `(${getTranslated('plant_type') || data.object_category || 'Object'})`;
     
     const confidenceSpan = document.getElementById('result-confidence');
     const confidencePercent = (data.confidence_score * 100).toFixed(0);
     confidenceSpan.textContent = `${confidencePercent}% Confident`;
     
-    // Set confidence badge colors based on value
     if (confidencePercent >= 75) {
         confidenceSpan.style.backgroundColor = 'rgba(132, 204, 22, 0.2)';
         confidenceSpan.style.color = '#3f6212';
@@ -164,25 +178,50 @@ function displayDiagnosisResults(data) {
 
     document.getElementById('result-severity').textContent = data.severity || 'N/A';
     document.getElementById('result-risk').textContent = data.contagion_risk || 'N/A';
-    document.getElementById('result-description-english').textContent = data.description_english || 'No description available.';
-    document.getElementById('result-description-kannada').textContent = data.description_kannada || ''; // Assuming backend might provide this later
-    document.getElementById('result-organic-english').textContent = data.organic_remedy_english || 'No organic remedy suggested.';
-    document.getElementById('result-organic-kannada').textContent = data.organic_remedy_kannada || '';
-    document.getElementById('result-chemical-english').textContent = data.chemical_remedy_english || 'No chemical remedy suggested.';
-    document.getElementById('result-chemical-kannada').textContent = data.chemical_remedy_kannada || '';
+    document.getElementById('result-description-english').textContent = getTranslated('description');
+    document.getElementById('result-organic-english').textContent = getTranslated('organic_remedy');
+    document.getElementById('result-chemical-english').textContent = getTranslated('chemical_remedy');
+    
+    // Hide all language-specific text blocks first
+    document.querySelectorAll('.kannada-text, .hindi-text').forEach(el => el.classList.add('hidden'));
+
+    // Show the specific language block if not English
+    if (lang === 'kn') {
+        const knDesc = document.getElementById('result-description-kannada');
+        const knOrg = document.getElementById('result-organic-kannada');
+        const knChem = document.getElementById('result-chemical-kannada');
+        knDesc.textContent = data.description_kannada || '';
+        knOrg.textContent = data.organic_remedy_kannada || '';
+        knChem.textContent = data.chemical_remedy_kannada || '';
+        if (knDesc.textContent) knDesc.classList.remove('hidden');
+        if (knOrg.textContent) knOrg.classList.remove('hidden');
+        if (knChem.textContent) knChem.classList.remove('hidden');
+    } else if (lang === 'hi') {
+        // Similar logic for Hindi, assuming backend provides '..._hindi' fields
+        const hiDesc = document.getElementById('result-description-hindi');
+        const hiOrg = document.getElementById('result-organic-hindi');
+        const hiChem = document.getElementById('result-chemical-hindi');
+        hiDesc.textContent = data.description_hindi || '';
+        hiOrg.textContent = data.organic_remedy_hindi || '';
+        hiChem.textContent = data.chemical_remedy_hindi || '';
+        if (hiDesc.textContent) hiDesc.classList.remove('hidden');
+        if (hiOrg.textContent) hiOrg.classList.remove('hidden');
+        if (hiChem.textContent) hiChem.classList.remove('hidden');
+    }
 
     const preventionDiv = document.getElementById('result-prevention');
-    const tipsArray = data.prevention_tips_english || [];
+    const tipsArray = data[`prevention_tips_${lang}`] || data.prevention_tips_english || [];
     if (tipsArray.length > 0 && tipsArray.some(tip => tip.trim() !== '')) {
         preventionDiv.innerHTML = '<ul>' + tipsArray.map(tip => `<li>${tip.trim()}</li>`).join('') + '</ul>';
     } else {
         preventionDiv.innerHTML = `<p>No prevention tips available.</p>`;
     }
 
-    if (data.audio_remedy_url) {
+    const audioUrl = data[`audio_remedy_url_${lang}`] || data.audio_remedy_url;
+    if (audioUrl) {
         speakButton.classList.remove('hidden');
         const remedyAudio = document.getElementById('remedy-audio');
-        remedyAudio.src = data.audio_remedy_url;
+        remedyAudio.src = audioUrl;
         speakButton.onclick = () => {
             if (remedyAudio.paused) { remedyAudio.play(); } 
             else { remedyAudio.pause(); }
@@ -194,6 +233,7 @@ function displayDiagnosisResults(data) {
         speakButton.classList.add('hidden');
     }
 }
+
 
 // =================================================================
 // 7. PAGE LOAD ANIMATIONS & HELPERS (FROM NEW FRONTEND)

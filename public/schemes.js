@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- FUNCTIONS (Unchanged except for getAiResponse) ---
+    // --- FUNCTIONS ---
     async function handleFormSubmit(event) {
         event.preventDefault();
         const userQuery = chatInput.value.trim();
@@ -61,50 +61,36 @@ document.addEventListener('DOMContentLoaded', () => {
         await getAiResponse(userQuery, state.location);
     }
     
-    // ▼▼▼ DYNAMIC FUNCTION WITH FULL DEBUGGING CHECKS ▼▼▼
     async function getAiResponse(query, location) {
         showTypingIndicator();
 
+        // Get the current language from browser storage
+        const currentLang = localStorage.getItem('project-kisan-lang') || 'en';
+
         const apiUrl = 'https://asia-south1-project-kisan-new.cloudfunctions.net/getSchemeAnswer';
         
-        // Construct the URL with separate parameters as required by the backend
-        const requestUrl = `${apiUrl}?question=${encodeURIComponent(query)}&stateName=${encodeURIComponent(location)}`;
+        // Construct the URL with all three parameters
+        const requestUrl = `${apiUrl}?question=${encodeURIComponent(query)}&stateName=${encodeURIComponent(location)}&language=${encodeURIComponent(currentLang)}`;
 
-        // --- DEBUG CHECK 1: Log the exact URL we are about to fetch ---
         console.log("🚀 [DEBUG] Fetching URL:", requestUrl);
 
         try {
             const response = await fetch(requestUrl);
 
-            // --- DEBUG CHECK 2: Check if the HTTP response itself is OK (e.g., not 400 or 500) ---
             if (!response.ok) {
                 let errorDetails = 'Could not read error details from server response.';
                 try {
-                    // Try to get the error message the server sent back in the body
                     const errorBody = await response.text();
                     errorDetails = errorBody;
                 } catch (e) {
                      console.error("[DEBUG] Failed to parse error response body:", e);
                 }
-                // Throw a detailed error that we can catch below
                 throw new Error(`[HTTP Error] Status: ${response.status} ${response.statusText}. Server says: ${errorDetails}`);
             }
 
-            // --- DEBUG CHECK 3: Log the raw text response before parsing it ---
-            const responseText = await response.text();
-            console.log("✅ [DEBUG] Received raw text from server:", responseText);
-
-            // --- DEBUG CHECK 4: Try to parse the text as JSON ---
-            let data;
-            try {
-                data = JSON.parse(responseText);
-                console.log("✅ [DEBUG] Successfully parsed JSON:", data);
-            } catch (jsonError) {
-                // If parsing fails, throw a specific error
-                throw new Error(`[JSON Parse Error] The server response was not valid JSON. Error: ${jsonError.message}`);
-            }
-
-            // Process the valid data
+            const data = await response.json();
+            console.log("✅ [DEBUG] Successfully parsed JSON:", data);
+            
             let formattedMessage = '';
             if (data.schemes && data.schemes.length > 0) {
                  formattedMessage = `Based on your query, here are some schemes I found for <strong>${location}</strong>:<br><br>`;
@@ -126,14 +112,11 @@ document.addEventListener('DOMContentLoaded', () => {
             addAiMessage(formattedMessage);
 
         } catch (error) {
-            // --- DEBUG CHECK 5: Catch any error from the try block and log it ---
             console.error("❌ [CRITICAL ERROR] An error occurred in getAiResponse:", error);
             hideTypingIndicator();
-            // Display a helpful error message in the chat UI
             addAiMessage(`I'm sorry, something went wrong. Please check the developer console (F12) for technical details. <br><br><strong>Error:</strong> ${error.message}`);
         }
     }
-    // ▲▲▲ END OF DEBUGGING FUNCTION ▲▲▲
 
     // --- Other UI functions (Unchanged) ---
     function openDropdown() { dropdownPanel.classList.add('open'); }

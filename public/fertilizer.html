@@ -17,12 +17,29 @@
                 </a>
             </div>
             <nav class="header-nav">
-                <a href="index.html">Home</a>
-                <a href="market.html">Market Prices</a>
-                <a href="guardian.html">Guardian AI</a>
+                <a href="index.html" id="nav-home">Home</a>
+                <a href="market.html" id="nav-market">Market Prices</a>
+                <a href="guardian.html" id="nav-guardian">Guardian AI</a>
+                
+                <div class="language-selector">
+                    <button id="language-toggle-btn">
+                        <img src="images/languages.png" alt="Language">
+                        <span id="current-lang-text">English</span>
+                        <span class="caret">▼</span>
+                    </button>
+                    <div id="language-options" class="language-options hidden">
+                        <a href="#" class="language-option active" data-lang="en">English</a>
+                        <a href="#" class="language-option" data-lang="hi">हिन्दी (Hindi)</a>
+                        <a href="#" class="language-option" data-lang="kn">ಕನ್ನಡ (Kannada)</a>
+                    </div>
+                </div>
+
                 <a href="login.html" class="login-button">
                     <img src="images/user-icon.png" alt="Login Icon">
-                    <span>Login</span>
+                    <span id="nav-login">Login</span>
+                </a>
+                <a href="#" class="login-button" style="background-color: rgb(23, 135, 23); color: white; border: none;">
+                    <span id="nav-get-app">Get App</span>
                 </a>
             </nav>
         </div>
@@ -31,9 +48,9 @@
     <main class="container-wide">
         <section class="calculator-panel">
             <div class="calculator-header">
-                <h2>Fertilizer Calculator</h2>
+                <h2 id="fert-title">Fertilizer Calculator</h2>
                 <div class="form-group">
-                    <label>See relevant information on</label>
+                    <label id="fert-label-crop">See relevant information on</label>
                     <button id="crop-selector-btn" class="crop-select-button">
                         <span id="selected-crop-text">Select a Crop</span>
                         <span>▼</span>
@@ -44,26 +61,14 @@
             <!-- CARD 1: NUTRIENT INFO -->
             <div class="calculator-card">
                 <div class="card-title-bar">
-                    <h3><span>1</span> Nutrient quantities</h3>
+                    <h3><span>1</span><span id="fert-card1-title">Nutrient quantities</span></h3>
                     <a href="#" class="edit-link">Edit</a>
                 </div>
-                <p class="card-subtitle">Based on your field size and crop, we've selected a nutrient ratio for you.</p>
+                <p class="card-subtitle" id="fert-card1-subtitle">Based on your field size and crop, we've selected a nutrient ratio for you.</p>
                 <div class="npk-grid">
-                    <div class="npk-item">
-                        <p>N:</p>
-                        <h4 id="n-total">-- kg</h4>
-                        <span id="n-per-unit">-- kg/ac</span>
-                    </div>
-                    <div class="npk-item">
-                        <p>P:</p>
-                        <h4 id="p-total">-- kg</h4>
-                        <span id="p-per-unit">-- kg/ac</span>
-                    </div>
-                    <div class="npk-item">
-                        <p>K:</p>
-                        <h4 id="k-total">-- kg</h4>
-                        <span id="k-per-unit">-- kg/ac</span>
-                    </div>
+                    <div class="npk-item"><p>N:</p><h4 id="n-total">-- kg</h4><span id="n-per-unit">-- kg/ac</span></div>
+                    <div class="npk-item"><p>P:</p><h4 id="p-total">-- kg</h4><span id="p-per-unit">-- kg/ac</span></div>
+                    <div class="npk-item"><p>K:</p><h4 id="k-total">-- kg</h4><span id="k-per-unit">-- kg/ac</span></div>
                 </div>
             </div>
             
@@ -71,15 +76,13 @@
             <div class="calculator-card">
                  <!-- PLOT SIZE INPUT -->
                 <div id="plot-size-input-control">
-                    <div class="card-title-bar">
-                        <h3><span>2</span> Unit & Plot size</h3>
-                    </div>
+                    <div class="card-title-bar"><h3><span>2</span><span id="fert-card2-plot-title">Unit & Plot size</span></h3></div>
                     <div class="unit-selector">
                         <label><input type="radio" name="unit" value="acre" checked> Acre</label>
                         <label><input type="radio" name="unit" value="hectare"> Hectare</label>
                         <label><input type="radio" name="unit" value="gunta"> Gunta</label>
                     </div>
-                    <p class="card-subtitle">Sizes smaller than one unit are expressed as 0.</p>
+                    <p class="card-subtitle" id="fert-card2-plot-subtitle">Sizes smaller than one unit are expressed as 0.</p>
                     <div class="value-stepper">
                         <button id="plot-minus-btn" class="stepper-btn">-</button>
                         <input type="number" id="plot-size-input" value="1.0" step="0.1" min="0.1">
@@ -88,10 +91,8 @@
                 </div>
                  <!-- TREE INPUT (HIDDEN BY DEFAULT) -->
                 <div id="tree-input-control" class="hidden">
-                     <div class="card-title-bar">
-                        <h3><span>2</span> Number of trees</h3>
-                    </div>
-                    <p class="card-subtitle">Enter the total number of trees in your orchard.</p>
+                     <div class="card-title-bar"><h3><span>2</span><span id="fert-card2-tree-title">Number of trees</span></h3></div>
+                    <p class="card-subtitle" id="fert-card2-tree-subtitle">Enter the total number of trees in your orchard.</p>
                      <div class="value-stepper">
                         <button id="tree-minus-btn" class="stepper-btn">-</button>
                         <input type="number" id="tree-count-input" value="100" step="1" min="1">
@@ -100,7 +101,7 @@
                 </div>
             </div>
 
-            <button id="calculate-btn" class="cta-button full-width-btn">Calculate</button>
+            <button id="calculate-btn" class="cta-button full-width-btn" id="fert-button-calculate">Calculate</button>
 
         </section>
 
@@ -112,74 +113,43 @@
         
         <!-- Results Section -->
         <section id="results-section" class="hidden">
-            <h3>Choose your fertilizer combination</h3>
-            <p class="card-subtitle">Recommended amount for one season based on your inputs.</p>
+            <h3 id="fert-results-title">Choose your fertilizer combination</h3>
+            <p class="card-subtitle" id="fert-results-subtitle">Recommended amount for one season based on your inputs.</p>
             <div id="results-grid" class="results-grid">
                 <!-- JS will populate this area -->
             </div>
         </section>
     </main>
 
-    <!-- Crop Selection Modal (same as guardian.html but will be controlled by fertilizer.js) -->
+    <!-- Crop Selection Modal -->
     <div id="crop-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Select your crop</h2>
                 <button id="modal-close-button" class="close-button">×</button>
             </div>
-            <div class="modal-search-wrapper">
-                <input type="text" id="crop-search-input" placeholder="Search for your crop...">
-            </div>
-            <div id="crop-grid" class="crop-grid-container">
-                <!-- Crop items will be dynamically injected here by JS -->
-            </div>
+            <div class="modal-search-wrapper"><input type="text" id="crop-search-input" placeholder="Search for your crop..."></div>
+            <div id="crop-grid" class="crop-grid-container"><!-- Crop items will be dynamically injected here by JS --></div>
         </div>
     </div>
 
     <footer class="site-footer">
-    <div class="footer-content-wrapper">
-
-        <!-- 1. Brand -->
-        <div class="footer-brand">
-            <img src="images/LOGO.png" alt="Project Kisan Logo">
-            <h3>Project Kisan</h3>
-        </div>
-
-        <!-- 3. Team Information -->
-        <div class="footer-section" id="footer-team">
-            <h4>Our Team: Algo Agni</h4>
-            <div class="team-members-grid">
-                <div class="team-member-card">
-                    <h5>Lakshay Pal</h5>
-                    <p><a href="tel:+919315674123">9315674123</a></p>
-                    <p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Kishlay</h5>
-                    <p><a href="tel:+918368139841">8368139841</a></p>
-                    <p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Jatin Gupta</h5>
-                    <p><a href="tel:+919034602219">9034602219</a></p>
-                    <p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Krrish Barsiwal</h5>
-                    <p><a href="tel:+918094951456">8094951456</a></p>
-                    <p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p>
+        <div class="footer-content-wrapper">
+            <div class="footer-brand"><img src="images/LOGO.png" alt="Project Kisan Logo"><h3>Project Kisan</h3></div>
+            <div class="footer-section" id="footer-team">
+                <h4 id="footer-team-title">Our Team: Algo Agni</h4>
+                <div class="team-members-grid">
+                    <div class="team-member-card"><h5>Lakshay Pal</h5><p><a href="tel:+919315674123">9315674123</a></p><p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Kishlay</h5><p><a href="tel:+918368139841">8368139841</a></p><p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Jatin Gupta</h5><p><a href="tel:+919034602219">9034602219</a></p><p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Krrish Barsiwal</h5><p><a href="tel:+918094951456">8094951456</a></p><p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p></div>
                 </div>
             </div>
         </div>
-
-    </div>
-    
-    <!-- 4. Bottom Copyright Line -->
-    <div class="footer-bottom">
-        <p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
-    </div>
-</footer>
+        <div class="footer-bottom"><p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p></div>
+    </footer>
     
     <script src="fertilizer.js"></script>
+    <script src="language-manager.js"></script>
 </body>
 </html>

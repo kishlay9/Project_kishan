@@ -9,143 +9,106 @@
 <body class="market-page-body">
 
     <header>
+        <!-- Your header code with the language switcher remains the same -->
         <div class="header-container">
             <div class="logo-container">
-                <img src="images/LOGO.png" alt="Project Kisan Logo" class="logo">
-                <h1>Project Kisan</h1>
+                <a href="index.html" class="logo-link">
+                    <img src="images/LOGO.png" alt="Project Kisan Logo" class="logo">
+                    <h1>Project Kisan</h1>
+                </a>
             </div>
             <nav class="header-nav">
-                <a href="index.html">Home</a>
-                <a href="market.html">Market Prices</a>
-                <a href="guardian.html" class="active">Guardian AI</a>
+                <a href="index.html" id="nav-home">Home</a>
+                <a href="market.html" id="nav-market">Market Prices</a>
+                <a href="guardian.html" class="active" id="nav-guardian">Guardian AI</a>
+                
+                <div class="language-selector">
+                    <button id="language-toggle-btn">
+                        <img src="images/language-icon.svg" alt="Language">
+                        <span id="current-lang-text">English</span>
+                        <span class="caret">▼</span>
+                    </button>
+                    <div id="language-options" class="language-options hidden">
+                        <a href="#" class="language-option active" data-lang="en">English</a>
+                        <a href="#" class="language-option" data-lang="hi">हिन्दी (Hindi)</a>
+                        <a href="#" class="language-option" data-lang="kn">ಕನ್ನಡ (Kannada)</a>
+                    </div>
+                </div>
+
                 <a href="login.html" class="login-button">
                     <img src="images/user-icon.png" alt="Login Icon">
-                    <span>Login</span>
+                    <span id="nav-login">Login</span>
+                </a>
+                <a href="#" class="login-button" style="background-color: rgb(23, 135, 23); color: white; border: none;">
+                    <span id="nav-get-app">Get App</span>
                 </a>
             </nav>
         </div>
     </header>
 
     <main class="container-wide">
-        <!-- Section 1: Weather Outlook -->
+        <!-- Your weather and generator sections remain unchanged -->
         <section class="weather-dashboard">
             <div class="weather-header">
                 <img id="weather-icon" src="images/ai-guardian.svg" alt="Weather icon">
                 <div>
-                    <h2>Today's Weather Outlook</h2>
-                    <p>Based on your location: <span id="weather-location">N/A</span></p>
+                    <h2 id="guardian-weather-title">Today's Weather Outlook</h2>
+                    <p><span id="guardian-weather-location">Based on your location:</span> <span id="weather-location">N/A</span></p>
                 </div>
             </div>
             <div class="weather-grid">
-                <div class="weather-metric"><span>Temperature</span><p id="weather-temp">--</p></div>
-                <div class="weather-metric"><span>Humidity</span><p id="weather-humidity">--</p></div>
-                <div class="weather-metric"><span>Chance of Rain</span><p id="weather-rain">--</p></div>
-                <div class="weather-metric"><span>Wind Speed</span><p id="weather-wind">--</p></div>
+                <div class="weather-metric"><span id="guardian-temp">Temperature</span><p id="weather-temp">--</p></div>
+                <div class="weather-metric"><span id="guardian-humidity">Humidity</span><p id="weather-humidity">--</p></div>
+                <div class="weather-metric"><span id="guardian-rain">Chance of Rain</span><p id="weather-rain">--</p></div>
+                <div class="weather-metric"><span id="guardian-wind">Wind Speed</span><p id="weather-wind">--</p></div>
             </div>
         </section>
-
-        <!-- Section 2: Upgraded Schedule Generator -->
         <section id="schedule-generator">
             <div class="generator-panel-grid">
                 <div class="generator-info">
                     <img src="images/ai-guardian.svg" alt="Guardian AI Icon">
-                    <h3>Your Proactive Guardian Engine</h3>
-                    <p>Our Guardian AI uses your crop, sowing date, and local weather helping you prevent threats before they happen.</p>
+                    <h3 id="guardian-engine-title">Your Proactive Guardian Engine</h3>
+                    <p id="guardian-engine-subtitle">Our Guardian AI uses your crop, sowing date, and local weather helping you prevent threats before they happen.</p>
                 </div>
                 <form id="guardian-form" class="generator-form">
-                    <div class="form-group">
-                        <label for="g-crop-select">Select Your Crop</label>
-                        <select id="g-crop-select" name="crop">
-                            <!-- Options will be dynamically inserted here -->
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="g-sowing-date">Sowing Date</label>
-                        <input type="date" id="g-sowing-date" name="sowing_date">
-                    </div>
-                    <!-- ▼▼▼ LOCATION INPUT REPLACED WITH STATE/UT DROPDOWN TRIGGER ▼▼▼ -->
-                    <div class="form-group">
-                        <label for="g-state-input">Your Location (State/UT)</label>
-                        <input type="text" id="g-state-input" name="location_display" placeholder="Click to select a State/UT" readonly>
-                    </div>
-                    <!-- ▲▲▲ LOCATION INPUT REPLACED ▲▲▲ -->
-                    <button type="submit" class="cta-button">Activate Proactive Guardian</button>
+                    <div class="form-group"><label for="g-crop-select" id="guardian-label-crop">Select Your Crop</label><select id="g-crop-select" name="crop"></select></div>
+                    <div class="form-group"><label for="g-sowing-date" id="guardian-label-sowing">Sowing Date</label><input type="date" id="g-sowing-date" name="sowing_date"></div>
+                    <div class="form-group"><label for="g-state-input" id="guardian-label-location">Your Location (State/UT)</label><input type="text" id="g-state-input" name="location_display" placeholder="Click to select a State/UT" readonly></div>
+                    <button type="submit" class="cta-button" id="guardian-button-activate">Activate Proactive Guardian</button>
                 </form>
             </div>
         </section>
-
-        <!-- Section 3: Generated Schedule Output (Initially Hidden) -->
         <div id="guardian-status" class="hidden"><div class="spinner"></div><p>Guardian AI is analyzing data and building your schedule...</p></div>
-        
         <section id="guardian-output" class="hidden">
              <div class="guardian-result-card">
-                <h3>Threat Assessment </h3>
+                <h3 id="guardian-threat-title">Threat Assessment </h3>
                 <div class="threat-assessment">
                     <div class="threat-details">
-                        <p><span>Primary Threat</span><strong id="threat-name"></strong></p>
-                        <p><span>Risk Level</span><span id="threat-risk" class="risk-badge"></span></p>
+                        <p><span id="guardian-threat-primary">Primary Threat</span><strong id="threat-name"></strong></p>
+                        <p><span id="guardian-threat-risk">Risk Level</span><span id="threat-risk" class="risk-badge"></span></p>
                     </div>
-                    <div id="gemini-warning" class="gemini-warning">
-                        <img src="images/ai-guardian.svg" alt="AI Icon">
-                        <p id="threat-reasoning"></p>
-                    </div>
+                    <div id="gemini-warning" class="gemini-warning"><img src="images/ai-guardian.svg" alt="AI Icon"><p id="threat-reasoning"></p></div>
                 </div>
             </div>
         </section>
-
-        <!-- Section 4: Pests & Diseases Library with Modal Trigger -->
         <section id="disease-library-container">
             <div class="library-header">
-                <h2>Proactive Disease & Pest Library</h2>
+                <h2 id="guardian-library-title">Proactive Disease & Pest Library</h2>
                 <div class="form-group">
-                    <label>See information for:</label>
+                    <label id="guardian-library-crop-label">See information for:</label>
                     <button id="crop-modal-trigger" class="crop-select-button">
-                        <span id="selected-crop-name">🍎 Apple</span>
-                        <span>▼</span>
+                        <span id="selected-crop-name">🍎 Apple</span><span>▼</span>
                     </button>
                 </div>
             </div>
-            <!-- Dynamic stage cards will be injected here by JS -->
         </section>
     </main>
 
-    <!-- CROP SELECTION MODAL -->
-    <div id="crop-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Select your crop</h2>
-                <button id="modal-close-button" class="close-button">×</button>
-            </div>
-            <div class="modal-search-wrapper">
-                <input type="text" id="crop-search-input" placeholder="Search for your crop...">
-            </div>
-            <div class="modal-info-banner">
-                <i>ℹ️</i>
-                <span>This feature is only available for a limited selection of crops.</span>
-            </div>
-            <div id="crop-grid" class="crop-grid-container">
-                <!-- Crop items will be dynamically injected here by JS -->
-            </div>
-        </div>
-    </div>
-
-    <!-- ▼▼▼ NEW STATE/UT SELECTION MODAL ▼▼▼ -->
-    <div id="state-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Select your State/UT</h2>
-                <button id="state-modal-close-button" class="close-button">×</button>
-            </div>
-            <div class="modal-search-wrapper">
-                <input type="text" id="state-search-input" placeholder="Search for your state...">
-            </div>
-            <div id="state-list" class="state-list-container">
-                <!-- State items will be dynamically injected here by JS -->
-            </div>
-        </div>
-    </div>
-    <!-- ▲▲▲ NEW STATE/UT SELECTION MODAL ▲▲▲ -->
+    <!-- Modals remain unchanged, except for the disease detail modal -->
+    <div id="crop-modal" class="modal-overlay hidden"><div class="modal-content"><div class="modal-header"><h2>Select your crop</h2><button id="modal-close-button" class="close-button">×</button></div><div class="modal-search-wrapper"><input type="text" id="crop-search-input" placeholder="Search for your crop..."></div><div class="modal-info-banner"><i>ℹ️</i><span>This feature is only available for a limited selection of crops.</span></div><div id="crop-grid" class="crop-grid-container"></div></div></div>
+    <div id="state-modal" class="modal-overlay hidden"><div class="modal-content"><div class="modal-header"><h2>Select your State/UT</h2><button id="state-modal-close-button" class="close-button">×</button></div><div class="modal-search-wrapper"><input type="text" id="state-search-input" placeholder="Search for your state..."></div><div id="state-list" class="state-list-container"></div></div></div>
     
+    <!-- ▼▼▼ MODIFIED: Added IDs to the h4 tags inside the modal ▼▼▼ -->
     <div id="disease-detail-modal" class="modal-overlay hidden">
         <div class="disease-modal-content">
             <button id="disease-modal-close-button" class="close-button">×</button>
@@ -153,66 +116,40 @@
             <div class="modal-text-content">
                 <h2 id="modal-disease-name">Disease Name</h2>
                 <div class="modal-section">
-                    <h4>Symptoms</h4>
+                    <h4 id="modal-section-symptoms-title">Symptoms</h4>
                     <ul id="modal-disease-symptoms"></ul>
                 </div>
                 <div class="modal-section">
-                    <h4>Preventive Measures</h4>
+                    <h4 id="modal-section-prevention-title">Preventive Measures</h4>
                     <ul id="modal-disease-prevention"></ul>
                 </div>
                 <div class="modal-section">
-                    <h4>Causal Factors</h4>
+                    <h4 id="modal-section-cause-title">Causal Factors</h4>
                     <p id="modal-disease-cause"></p>
                 </div>
             </div>
         </div>
     </div>
+    <!-- ▲▲▲ END OF MODIFICATION ▲▲▲ -->
+    
     <footer class="site-footer">
-    <div class="footer-content-wrapper">
-
-        <!-- 1. Brand -->
-        <div class="footer-brand">
-            <img src="images/LOGO.png" alt="Project Kisan Logo">
-            <h3>Project Kisan</h3>
-        </div>
-
-        
-
-        <!-- 3. Team Information -->
-        <div class="footer-section" id="footer-team">
-            <h4>Our Team: Algo Agni</h4>
-            <div class="team-members-grid">
-                <div class="team-member-card">
-                    <h5>Lakshay Pal</h5>
-                    <p><a href="tel:+919315674123">9315674123</a></p>
-                    <p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Kishlay</h5>
-                    <p><a href="tel:+918368139841">8368139841</a></p>
-                    <p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Jatin Gupta</h5>
-                    <p><a href="tel:+919034602219">9034602219</a></p>
-                    <p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Krrish Barsiwal</h5>
-                    <p><a href="tel:+918094951456">8094951456</a></p>
-                    <p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p>
+        <!-- Your footer remains the same -->
+        <div class="footer-content-wrapper">
+            <div class="footer-brand"><img src="images/LOGO.png" alt="Project Kisan Logo"><h3>Project Kisan</h3></div>
+            <div class="footer-section" id="footer-team">
+                <h4 id="footer-team-title">Our Team: Algo Agni</h4>
+                <div class="team-members-grid">
+                    <div class="team-member-card"><h5>Lakshay Pal</h5><p><a href="tel:+919315674123">9315674123</a></p><p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Kishlay</h5><p><a href="tel:+918368139841">8368139841</a></p><p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Jatin Gupta</h5><p><a href="tel:+919034602219">9034602219</a></p><p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Krrish Barsiwal</h5><p><a href="tel:+918094951456">8094951456</a></p><p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p></div>
                 </div>
             </div>
         </div>
-
-    </div>
-    
-    <!-- 4. Bottom Copyright Line -->
-    <div class="footer-bottom">
-        <p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
-    </div>
-</footer>
+        <div class="footer-bottom"><p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p></div>
+    </footer>
     
     <script src="guardian.js"></script>
+    <script src="language-manager.js"></script>
 </body>
 </html>

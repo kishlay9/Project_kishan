@@ -10,7 +10,7 @@
     --border-color: #e5e7eb;
     --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --light-green-bg: #f7fee7; 
+    --light-green-bg: #f7fee7;
 }
 
 html {
@@ -45,13 +45,15 @@ header {
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    padding: 25px 0;
+    padding: 15px 0;
+    /* Adjusted padding */
     border-bottom: 1px solid var(--border-color);
     position: sticky;
     top: 0;
     z-index: 100;
     transition: all 0.3s ease-in-out;
 }
+
 .header-container {
     display: flex;
     justify-content: space-between;
@@ -74,19 +76,30 @@ header {
 }
 
 h1 {
-    font-size: 2rem;
+    font-size: 1.5rem;
+    /* Adjusted font size */
     font-weight: 700;
     margin: 0;
     color: var(--text-color);
+}
+
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    /* Added gap for spacing */
 }
 
 .header-nav a {
     text-decoration: none;
     color: var(--subtle-text);
     font-weight: 600;
-    margin-left: 30px;
     transition: color 0.2s ease;
     vertical-align: middle;
+}
+
+.header-nav a:not(.login-button) {
+    padding: 5px 0;
 }
 
 .header-nav a:hover {
@@ -99,6 +112,77 @@ header.scrolled {
     padding-top: 10px;
     padding-bottom: 10px;
 }
+
+
+/* --- LANGUAGE SELECTOR --- */
+.language-selector {
+    position: relative;
+}
+
+#language-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    color: var(--subtle-text);
+    transition: all 0.2s ease;
+}
+
+#language-toggle-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+#language-toggle-btn img {
+    width: 20px;
+    height: 20px;
+}
+
+#language-toggle-btn .caret {
+    font-size: 0.8rem;
+}
+
+.language-options {
+    position: absolute;
+    top: calc(100% + 5px);
+    right: 0;
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    z-index: 110;
+    min-width: 150px;
+    overflow: hidden;
+    padding: 5px;
+}
+
+.language-option {
+    display: block;
+    padding: 10px 15px;
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    margin-left: 0 !important;
+    /* Override nav link margin */
+}
+
+.language-option:hover {
+    background-color: var(--background-color);
+}
+
+.language-option.active {
+    background-color: var(--light-green-bg);
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
 
 /* --- HERO SECTION --- */
 .hero-section {
@@ -293,6 +377,8 @@ main {
     border: 2px solid var(--primary-color);
     color: var(--primary-color);
     transition: all 0.3s ease;
+    text-decoration: none;
+    /* Ensure links look like buttons */
 }
 
 .upload-button-outline:hover {
@@ -306,7 +392,6 @@ main {
     width: 24px;
     height: 24px;
     transition: filter 0.3s ease;
-    filter: brightness(0) invert(1);
 }
 
 .upload-button-outline:hover img {
@@ -462,17 +547,18 @@ main {
 .feature-card {
     background: var(--card-background);
     padding: 20px;
-    border-radius: 20px; /* More rounded corners like the image */
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border-radius: 20px;
+    /* More rounded corners like the image */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--border-color);
     text-align: center;
-    
+
     /* Center content vertically */
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    
+
     /* Set the initial (smaller) height */
     min-height: 180px;
 
@@ -486,7 +572,8 @@ main {
 }
 
 .feature-card img {
-    height: 50px; /* Control icon size */
+    height: 50px;
+    /* Control icon size */
     width: auto;
     margin-bottom: 15px;
     /* Smooth transition for the color filter */
@@ -499,7 +586,8 @@ main {
 
 .feature-card h3 {
     margin: 0;
-    font-size: 1.1rem; /* Slightly smaller font */
+    font-size: 1.1rem;
+    /* Slightly smaller font */
     color: var(--text-color);
     font-weight: 700;
     /* Smooth transition for the text color */
@@ -523,7 +611,7 @@ main {
 /* --- FEATURE SPOTLIGHT SECTION --- */
 .feature-spotlight-section {
     padding: 80px 0;
-    background-color: var(--card-background); 
+    background-color: var(--card-background);
 }
 
 .feature-spotlight-grid {
@@ -849,6 +937,13 @@ main {
 }
 
 /* --- RESPONSIVE DESIGN --- */
+@media (max-width: 992px) {
+    .header-nav a:not(.login-button):not(.language-selector) {
+        display: none;
+        /* Hide text links on smaller screens */
+    }
+}
+
 @media (max-width: 900px) {
     .testimonial-grid {
         grid-template-columns: 1fr;
@@ -871,7 +966,8 @@ main {
 
 @media (max-width: 768px) {
     .header-nav {
-        display: none;
+        gap: 10px;
+        /* Reduce gap on smaller screens */
     }
 
     .hero-content h2 {
@@ -959,7 +1055,8 @@ main {
     font-family: 'Inter', sans-serif;
     background-color: var(--background-color);
     cursor: pointer;
-    box-sizing: border-box; /* Important for consistent sizing */
+    box-sizing: border-box;
+    /* Important for consistent sizing */
 }
 
 /* Ensure button aligns nicely */
@@ -1056,7 +1153,8 @@ main {
 .feature-card-link {
     text-decoration: none;
     color: inherit;
-    display: block; /* Important for layout */
+    display: block;
+    /* Important for layout */
     /* Smooth transition for the size change */
     transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
@@ -1066,14 +1164,15 @@ main {
     box-sizing: border-box;
     /* Ensures padding is included in width */
 }
+
 /* ▼▼▼ NEW ACTIVE CARD STYLE (FOR CLICK) ▼▼▼ */
 .feature-card-link.active-card .feature-card {
-     background-color: var(--primary-color);
+    background-color: var(--primary-color);
     border-color: var(--primary-color);
-    
+
     /* Set the expanded height */
     min-height: 220px;
-    
+
     /* Add a subtle lift and shadow effect */
     transform: translateY(-10px);
     box-shadow: 0 10px 25px rgba(101, 163, 13, 0.3);
@@ -1686,7 +1785,8 @@ main {
 /* --- GUARDIAN AI: UPGRADED SCHEDULE GENERATOR --- */
 .generator-panel-grid {
     display: grid;
-    grid-template-columns: 1fr 1.5fr; /* Assign more space to the form */
+    grid-template-columns: 1fr 1.5fr;
+    /* Assign more space to the form */
     background: var(--card-background);
     border-radius: 16px;
     box-shadow: var(--shadow);
@@ -1740,9 +1840,11 @@ main {
     padding: 25px;
     border-radius: 16px;
     box-shadow: var(--shadow);
-    margin-bottom: 30px; /* Space between each stage card */
+    margin-bottom: 30px;
+    /* Space between each stage card */
     border: 1px solid var(--border-color);
 }
+
 /* --- GUARDIAN AI: CROP SELECT MODAL STYLES --- */
 
 /* The button that triggers the modal */
@@ -1759,10 +1861,12 @@ main {
     cursor: pointer;
     transition: all 0.2s ease;
 }
+
 .crop-select-button:hover {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(101, 163, 13, 0.1);
 }
+
 .crop-select-button i {
     font-size: 1.2rem;
 }
@@ -1778,11 +1882,15 @@ main {
     z-index: 1000;
     display: flex;
     justify-content: center;
-    align-items: flex-end; /* Aligns modal to the bottom */
+    align-items: flex-start;
+    /* Changed to start */
+    padding-top: 10vh;
+    /* Add padding from top */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
+
 .modal-overlay:not(.hidden) {
     opacity: 1;
     visibility: visible;
@@ -1794,12 +1902,15 @@ main {
     width: 100%;
     max-width: 500px;
     max-height: 85vh;
-    border-radius: 16px 16px 0 0;
+    border-radius: 16px;
+    /* Rounded corners on all sides */
     display: flex;
     flex-direction: column;
-    transform: translateY(100%);
+    transform: translateY(-20px);
+    /* Start slightly up */
     transition: transform 0.3s ease-out;
 }
+
 .modal-overlay:not(.hidden) .modal-content {
     transform: translateY(0);
 }
@@ -1811,14 +1922,28 @@ main {
     align-items: center;
     border-bottom: 1px solid var(--border-color);
 }
-.modal-header h2 { margin: 0; font-size: 1.25rem; }
-.close-button { background: none; border: none; font-size: 2rem; cursor: pointer; color: var(--subtle-text); line-height: 1; padding: 0; }
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: var(--subtle-text);
+    line-height: 1;
+    padding: 0;
+}
 
 /* Modal Search and Info */
 .modal-search-wrapper {
     margin: 15px 20px;
     position: relative;
 }
+
 .modal-search-wrapper i {
     position: absolute;
     left: 15px;
@@ -1827,25 +1952,34 @@ main {
     color: var(--subtle-text);
     font-size: 1.2rem;
 }
-#crop-search-input {
+
+#crop-search-input,
+#state-search-input {
     width: 100%;
-    padding: 12px 15px 12px 45px;
+    padding: 12px 15px 12px 20px;
+    /* Adjusted padding */
     border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 1rem;
     box-sizing: border-box;
 }
+
 .modal-info-banner {
     display: flex;
     align-items: center;
     gap: 10px;
-    background-color: #eef2ff; /* Light blue */
-    color: #4338ca; /* Dark blue */
+    background-color: #eef2ff;
+    /* Light blue */
+    color: #4338ca;
+    /* Dark blue */
     padding: 12px 20px;
     margin: 0 20px 15px 20px;
     border-radius: 8px;
 }
-.modal-info-banner i { font-size: 1.2rem; }
+
+.modal-info-banner i {
+    font-size: 1.2rem;
+}
 
 /* Modal Crop Grid */
 .crop-grid-container {
@@ -1855,6 +1989,7 @@ main {
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
 }
+
 .crop-item {
     text-align: center;
     cursor: pointer;
@@ -1862,9 +1997,11 @@ main {
     border-radius: 8px;
     transition: background-color 0.2s ease;
 }
+
 .crop-item:hover {
     background-color: var(--background-color);
 }
+
 .crop-item-icon {
     width: 60px;
     height: 60px;
@@ -1876,11 +2013,13 @@ main {
     align-items: center;
     margin: 0 auto 8px auto;
 }
+
 .crop-item-icon img {
     width: 70%;
     height: 70%;
     object-fit: contain;
 }
+
 .crop-item-name {
     font-size: 0.9rem;
     color: var(--text-color);
@@ -1893,19 +2032,27 @@ main {
     cursor: pointer;
 }
 
+#disease-detail-modal {
+    align-items: center;
+    /* Center vertically */
+    padding: 20px;
+}
+
 #disease-detail-modal .modal-overlay {
-    z-index: 2000; /* Ensure it's on top of the crop modal */
+    z-index: 2000;
+    /* Ensure it's on top of the crop modal */
 }
 
 .disease-modal-content {
     background: #fff;
     width: 90%;
-    max-width: 800px; /* Limits width on large screens */
+    max-width: 800px;
+    /* Limits width on large screens */
     height: 85vh;
     border-radius: 16px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     transform: scale(0.95);
     opacity: 0;
     transition: transform 0.3s ease, opacity 0.3s ease;
@@ -1997,7 +2144,6 @@ main {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    margin-left: 20px;
     transition: all 0.2s ease;
 }
 
@@ -2042,7 +2188,8 @@ main {
     justify-content: center;
     align-items: center;
     padding: 40px 20px;
-    border-top: none; /* Override default main style */
+    border-top: none;
+    /* Override default main style */
 }
 
 .login-container {
@@ -2071,11 +2218,13 @@ main {
     margin: 0;
 }
 
-#login-form .form-group {
+#login-form .form-group,
+#signup-form .form-group {
     margin-bottom: 20px;
 }
 
-#login-form .cta-button {
+#login-form .cta-button,
+#signup-form .cta-button {
     width: 100%;
     padding: 15px;
     font-size: 1.1rem;
@@ -2088,6 +2237,7 @@ main {
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
+
 /* ▲▲▲ END OF NEW STYLE ▲▲▲ */
 
 
@@ -2128,11 +2278,15 @@ main {
     .login-container {
         padding: 25px;
     }
+
     /* ▼▼▼ NEW MEDIA QUERY FOR SIGNUP FORM ▼▼▼ */
     .form-row {
-        grid-template-columns: 1fr; /* Stack name fields on mobile */
-        gap: 0; /* Remove gap when stacked */
+        grid-template-columns: 1fr;
+        /* Stack name fields on mobile */
+        gap: 0;
+        /* Remove gap when stacked */
     }
+
     /* ▲▲▲ END OF NEW MEDIA QUERY ▲▲▲ */
 }
 
@@ -2214,7 +2368,8 @@ main {
     margin: 0 0 8px 0;
     font-size: 1.1rem;
     color: var(--text-color);
-    position: relative; /* To keep it above the pseudo-element */
+    position: relative;
+    /* To keep it above the pseudo-element */
 }
 
 .week-card p {
@@ -2222,7 +2377,8 @@ main {
     color: var(--subtle-text);
     line-height: 1.6;
     font-size: 0.95rem;
-    position: relative; /* To keep it above the pseudo-element */
+    position: relative;
+    /* To keep it above the pseudo-element */
 }
 
 /* Daily Tasks Grid */
@@ -2262,6 +2418,7 @@ main {
     .plan-card {
         padding: 20px;
     }
+
     .plan-card h3 {
         font-size: 1.5rem;
     }
@@ -2270,7 +2427,8 @@ main {
 /* --- [UPDATE] 6-CARD FEATURES GRID --- */
 .features-grid-6 {
     display: grid;
-    grid-template-columns: repeat(6, 1fr); /* 6 columns on desktop */
+    grid-template-columns: repeat(6, 1fr);
+    /* 6 columns on desktop */
     gap: 25px;
     margin-top: 50px;
     align-items: center;
@@ -2292,6 +2450,7 @@ main {
     .features-grid-6 {
         gap: 15px;
     }
+
     .feature-card h3 {
         font-size: 1rem;
     }
@@ -2314,10 +2473,12 @@ main {
     flex-wrap: wrap;
     gap: 20px;
 }
+
 .calculator-header h2 {
     margin: 0;
     font-size: 2rem;
 }
+
 .calculator-header .form-group {
     margin: 0;
 }
@@ -2342,6 +2503,7 @@ main {
     align-items: center;
     margin-bottom: 8px;
 }
+
 .card-title-bar h3 {
     margin: 0;
     font-size: 1.25rem;
@@ -2349,6 +2511,7 @@ main {
     align-items: center;
     gap: 12px;
 }
+
 .card-title-bar h3 span {
     background-color: var(--primary-color);
     color: white;
@@ -2360,11 +2523,13 @@ main {
     justify-content: center;
     align-items: center;
 }
+
 .edit-link {
     font-weight: 600;
     color: var(--primary-color);
     text-decoration: none;
 }
+
 .card-subtitle {
     font-size: 0.9rem;
     color: var(--subtle-text);
@@ -2376,21 +2541,25 @@ main {
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
 }
+
 .npk-item {
     background-color: var(--background-color);
     padding: 15px;
     border-radius: 12px;
 }
+
 .npk-item p {
     margin: 0;
     font-size: 1.1rem;
     font-weight: 600;
 }
+
 .npk-item h4 {
     margin: 4px 0;
     font-size: 1.5rem;
     color: var(--primary-color);
 }
+
 .npk-item span {
     font-size: 0.85rem;
     color: var(--subtle-text);
@@ -2402,12 +2571,14 @@ main {
     margin-bottom: 20px;
     flex-wrap: wrap;
 }
+
 .unit-selector label {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     cursor: pointer;
 }
+
 .unit-selector input[type="radio"] {
     accent-color: var(--primary-color);
     width: 16px;
@@ -2420,6 +2591,7 @@ main {
     justify-content: center;
     gap: 10px;
 }
+
 .value-stepper input {
     width: 150px;
     height: 60px;
@@ -2429,13 +2601,15 @@ main {
     border: 1px solid var(--border-color);
     border-radius: 12px;
     background-color: var(--background-color);
-    
+
 }
+
 .value-stepper input::-webkit-outer-spin-button,
 .value-stepper input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+    -webkit-appearance: none;
+    margin: 0;
 }
+
 .stepper-btn {
     width: 50px;
     height: 50px;
@@ -2448,6 +2622,7 @@ main {
     cursor: pointer;
     transition: background-color 0.2s;
 }
+
 .stepper-btn:hover {
     background-color: var(--background-color);
 }
@@ -2472,6 +2647,7 @@ main {
     margin: 20px auto 0 auto;
     text-align: center;
 }
+
 #results-section h3 {
     font-size: 2rem;
     margin-bottom: 5px;
@@ -2483,37 +2659,45 @@ main {
     gap: 25px;
     text-align: left;
 }
+
 .fertilizer-combo-card {
     background-color: var(--card-background);
     padding: 25px;
     border-radius: 16px;
     border: 1px solid var(--border-color);
 }
+
 .fertilizer-combo-card h5 {
     font-size: 1.2rem;
     margin: 0 0 20px 0;
 }
+
 .combo-details-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
     margin-bottom: 25px;
 }
+
 .combo-item {
     text-align: center;
 }
+
 .combo-name {
     font-size: 0.9rem;
     color: var(--subtle-text);
     font-weight: 600;
 }
+
 .combo-kg {
     margin: 4px 0;
     font-size: 1.75rem;
 }
+
 .combo-bags {
     font-size: 0.9rem;
 }
+
 .fertilizer-combo-card .cta-button.outline {
     width: 100%;
     border: 2px solid var(--primary-color);
@@ -2521,10 +2705,12 @@ main {
     color: var(--primary-color);
     padding: 10px;
 }
+
 .fertilizer-combo-card .cta-button.outline:hover {
     background-color: var(--primary-color);
     color: white;
 }
+
 @media (max-width: 1024px) {
     .features-grid-5 {
         /* On tablets, show 3 cards per row */
@@ -2544,17 +2730,17 @@ main {
         /* On mobile, show 2 cards per row with smaller text */
         gap: 15px;
     }
+
     .feature-card h3 {
         font-size: 1rem;
     }
 }
 
-/* ... (keep all existing styles) ... */
-
 
 /* ▼▼▼ RENAME THIS CLASS IN YOUR CSS ▼▼▼ */
 /* Generated Schedule Card */
-#guardian-output { /* Use new ID */
+#guardian-output {
+    /* Use new ID */
     animation: fadeInResult 0.5s ease-in-out;
 }
 
@@ -2578,18 +2764,23 @@ main {
 
 /* ▼▼▼ UPDATE THIS STYLE FOR BETTER LAYOUT ▼▼▼ */
 .threat-assessment {
-    display: flex; /* Changed from grid */
-    flex-direction: column; /* Stack items vertically */
-    gap: 25px; /* Space between details and reasoning */
+    display: flex;
+    /* Changed from grid */
+    flex-direction: column;
+    /* Stack items vertically */
+    gap: 25px;
+    /* Space between details and reasoning */
     background-color: var(--background-color);
     padding: 20px;
     border-radius: 12px;
 }
 
 .threat-details {
-    display: flex; /* Arrange Threat and Risk side-by-side */
+    display: flex;
+    /* Arrange Threat and Risk side-by-side */
     gap: 30px;
-    flex-wrap: wrap; /* Allow them to stack on small screens */
+    flex-wrap: wrap;
+    /* Allow them to stack on small screens */
 }
 
 .threat-details p {
@@ -2617,9 +2808,18 @@ main {
     font-weight: 600;
     font-size: 1rem !important;
 }
-.risk-high { background-color: #ef4444; }
-.risk-medium { background-color: #f97316; }
-.risk-low { background-color: var(--primary-color); }
+
+.risk-high {
+    background-color: #ef4444;
+}
+
+.risk-medium {
+    background-color: #f97316;
+}
+
+.risk-low {
+    background-color: var(--primary-color);
+}
 
 .gemini-warning {
     display: flex;
@@ -2630,300 +2830,30 @@ main {
     border-radius: 8px;
     border-left: 4px solid var(--accent-color);
 }
+
 .gemini-warning img {
     width: 24px;
     height: 24px;
     filter: invert(55%) sepia(98%) saturate(358%) hue-rotate(37deg) brightness(91%) contrast(88%);
 }
+
 .gemini-warning p {
     margin: 0;
     line-height: 1.6;
     color: #374151;
-    font-size: 1.05rem; /* Slightly larger for better readability */
+    font-size: 1.05rem;
+    /* Slightly larger for better readability */
 }
 
-/* --- [NEW] GOVT. SCHEMES CHAT PAGE STYLES --- */
-
-.schemes-page-body {
-    /* Prevents the whole page from scrolling, only the chat log will scroll */
-    overflow: hidden;
-}
-
-.chat-container {
-    height: calc(100vh - 85px); /* Full viewport height minus header height */
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    max-width: none;
-    border-top: none;
-    display: flex;
-    flex-direction: column;
-    background-color: var(--card-background);
-}
-
-.chat-log {
-    flex-grow: 1; /* Takes up all available space */
-    overflow-y: auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-/* Initial Centered View */
-.initial-view {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    height: 100%;
-    color: var(--subtle-text);
-}
-.initial-view-icon {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 20px;
-}
-.initial-view h2 {
-    color: var(--text-color);
-    font-size: 2rem;
-    margin: 0 0 10px 0;
-}
-.location-input-group {
-    margin-top: 30px;
-    width: 100%;
-    max-width: 400px;
-}
-.location-input-group label {
-    font-weight: 600;
-    margin-bottom: 10px;
-    display: block;
-}
-#location-input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 1rem;
-    box-sizing: border-box;
-}
-
-/* Input Bar Area (Wrapper for form and disclaimer) */
-.chat-input-area {
-    padding: 15px 20px;
-    background-color: var(--card-background);
-    /* This will be the sticky footer once a chat is active */
-}
-.chat-active .chat-input-area {
-    border-top: 1px solid var(--border-color);
-    box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
-}
-
-/* The form itself */
-.chat-input-bar {
-    max-width: 800px;
-    margin: 0 auto;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    background-color: var(--background-color);
-    padding: 8px;
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-}
-#chat-input {
-    flex-grow: 1;
-    border: none;
-    background: transparent;
-    padding: 10px;
-    font-size: 1rem;
-    outline: none;
-}
-.chat-action-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.chat-action-btn:hover {
-    background-color: #e5e7eb;
-}
-.chat-action-btn img {
-    width: 24px;
-    height: 24px;
-}
-.disclaimer {
-    font-size: 0.75rem;
-    text-align: center;
-    color: var(--subtle-text);
-    margin: 10px 0 0 0;
-}
-
-/* Chat Message Bubbles */
-.chat-message {
-    display: flex;
-    gap: 15px;
-    max-width: 80%;
-}
-.chat-message.user {
-    align-self: flex-end;
-    flex-direction: row-reverse;
-}
-.chat-message.ai {
-    align-self: flex-start;
-}
-.ai-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-.message-bubble {
-    padding: 15px 20px;
-    border-radius: 18px;
-    line-height: 1.6;
-}
-.chat-message.user .message-bubble {
-    background-color: var(--primary-color);
-    color: white;
-    border-top-right-radius: 4px;
-}
-.chat-message.ai .message-bubble {
-    background-color: var(--background-color);
-    color: var(--text-color);
-    border-top-left-radius: 4px;
-}
-
-/* Typing Indicator Animation */
-.typing-indicator .message-bubble {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-}
-.typing-indicator .dot {
-    width: 8px;
-    height: 8px;
-    background-color: var(--subtle-text);
-    border-radius: 50%;
-    animation: bounce 1.3s infinite;
-}
-.typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
-}
-
-/* Responsive adjustments for chat page */
-@media (max-width: 600px) {
-    .chat-message {
-        max-width: 90%;
-    }
-    .initial-view h2 {
-        font-size: 1.5rem;
-    }
-}
-/* --- [NEW] STYLES FOR CUSTOM SEARCHABLE DROPDOWN --- */
-
-.location-dropdown-group {
-    margin-top: 30px;
-    width: 100%;
-    max-width: 400px;
-}
-.location-dropdown-group label {
-    font-weight: 600;
-    margin-bottom: 10px;
-    display: block;
-}
-
-.location-dropdown {
-    position: relative;
-}
-
-.location-dropdown-btn {
-    width: 100%;
-    background-color: #fff;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 12px 15px;
-    font-size: 1rem;
-    text-align: left;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: var(--subtle-text);
-}
-.location-dropdown-btn.selected span {
-    color: var(--text-color); /* Darker text when a state is selected */
-}
-.location-dropdown-btn .caret {
-    transition: transform 0.2s ease;
-}
-
-.location-dropdown-panel {
-    position: absolute;
-    top: calc(100% + 5px);
-    left: 0;
-    width: 100%;
-    background-color: #fff;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: var(--shadow-lg);
-    z-index: 101;
-    overflow: hidden;
-    
-    /* Hide by default */
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
-}
-.location-dropdown-panel.open {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-#location-search-input {
-    width: 100%;
-    padding: 12px 15px;
-    border: none;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 1rem;
-    outline: none;
-    box-sizing: border-box;
-}
-
-.location-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    /* This will show ~5 items before scrolling */
-    max-height: 220px;
-    overflow-y: auto;
-}
-.location-list li {
-    padding: 12px 15px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-.location-list li:hover {
-    background-color: var(--background-color);
-}
 
 /* --- [UPDATED] STYLES FOR CHAT PAGE & CUSTOM DROPDOWN --- */
 
 /* Shift the initial view content up */
 .initial-view {
-    justify-content: flex-start; /* Aligns content to the top */
-    padding-top: 5vh; /* Adds some space from the top */
+    justify-content: flex-start;
+    /* Aligns content to the top */
+    padding-top: 5vh;
+    /* Adds some space from the top */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2931,11 +2861,14 @@ main {
     height: 100%;
     color: var(--subtle-text);
 }
+
 .initial-view-icon {
     width: 60px;
     height: 60px;
-    margin-bottom: 15px; /* Reduced margin */
+    margin-bottom: 15px;
+    /* Reduced margin */
 }
+
 .initial-view h2 {
     color: var(--text-color);
     font-size: 2rem;
@@ -2944,44 +2877,55 @@ main {
 
 /* Merged Dropdown-Input Component */
 .location-dropdown-group {
-    margin-top: 20px; /* Reduced margin */
+    margin-top: 20px;
+    /* Reduced margin */
     width: 100%;
-    max-width: 450px; /* Wider for better look */
+    max-width: 450px;
+    /* Wider for better look */
 }
+
 .location-dropdown-group label {
     font-weight: 600;
     margin-bottom: 10px;
     display: block;
 }
+
 .location-dropdown {
     position: relative;
 }
+
 .location-input-wrapper {
     position: relative;
 }
+
 #location-search-input {
     width: 100%;
     background-color: #fff;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 12px 40px 12px 15px; /* Right padding for caret */
+    padding: 12px 40px 12px 15px;
+    /* Right padding for caret */
     font-size: 1rem;
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
+
 #location-search-input:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(101, 163, 13, 0.2);
 }
+
 .location-input-wrapper .caret {
     position: absolute;
     right: 15px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--subtle-text);
-    pointer-events: none; /* Allows clicks to pass through to the input */
+    pointer-events: none;
+    /* Allows clicks to pass through to the input */
 }
+
 .location-dropdown-panel {
     position: absolute;
     top: calc(100% + 5px);
@@ -2998,30 +2942,37 @@ main {
     transform: translateY(-10px);
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
 }
+
 .location-dropdown-panel.open {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
 }
+
 .location-list {
     list-style: none;
     padding: 0;
     margin: 0;
-    max-height: 225px; /* Roughly 5 items with this padding */
+    max-height: 225px;
+    /* Roughly 5 items with this padding */
     overflow-y: auto;
 }
+
 .location-list li {
     padding: 12px 15px;
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
+
 .location-list li:hover {
     background-color: var(--background-color);
 }
+
 .location-list li.no-results {
     color: var(--subtle-text);
     cursor: default;
 }
+
 .location-list li.no-results:hover {
     background-color: transparent;
 }
@@ -3031,7 +2982,7 @@ main {
     background-color: var(--dark-bg);
     color: rgba(255, 255, 255, 0.7);
     /* Increased padding for more content */
-    padding: 60px 20px 20px 20px; 
+    padding: 60px 20px 20px 20px;
 }
 
 /* New grid container for the main footer content */
@@ -3039,7 +2990,8 @@ main {
     max-width: 1200px;
     margin: 0 auto 40px auto;
     display: grid;
-    grid-template-columns: 1fr 2fr; /* Two columns: brand on left, details on right */
+    grid-template-columns: 1fr 2fr;
+    /* Two columns: brand on left, details on right */
     gap: 40px;
     text-align: left;
 }
@@ -3047,15 +2999,18 @@ main {
 .footer-brand {
     text-align: left;
 }
+
 .footer-brand img {
     width: 50px;
     margin-bottom: 10px;
 }
+
 .footer-brand h3 {
     margin: 0;
     font-size: 1.5rem;
     color: white;
 }
+
 .footer-tagline {
     font-size: 1.1rem;
     opacity: 0.8;
@@ -3069,9 +3024,11 @@ main {
     margin: 0 0 20px 0;
     opacity: 0.9;
 }
+
 .footer-section p {
     margin: 0 0 20px 0;
 }
+
 .footer-section ul {
     list-style: none;
     padding: 0;
@@ -3080,6 +3037,7 @@ main {
     flex-direction: column;
     gap: 15px;
 }
+
 .footer-section li strong {
     color: white;
     opacity: 0.95;
@@ -3109,10 +3067,13 @@ main {
 /* Responsive adjustments for the new footer */
 @media (max-width: 768px) {
     .footer-main-content {
-        grid-template-columns: 1fr; /* Stack columns on mobile */
+        grid-template-columns: 1fr;
+        /* Stack columns on mobile */
         gap: 40px;
-        text-align: center; /* Center text on mobile */
+        text-align: center;
+        /* Center text on mobile */
     }
+
     .footer-brand {
         text-align: center;
     }
@@ -3123,7 +3084,8 @@ main {
     background-color: var(--dark-bg);
     color: rgba(255, 255, 255, 0.7);
     padding: 60px 20px 30px 20px;
-    text-align: center; /* Center all content by default */
+    text-align: center;
+    /* Center all content by default */
 }
 
 .footer-content-wrapper {
@@ -3132,19 +3094,24 @@ main {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 50px; /* Space between major sections */
+    gap: 50px;
+    /* Space between major sections */
 }
 
 /* ▼▼▼ THIS IS THE CORRECTED LINE ▼▼▼ */
 .footer-brand {
-    text-align: center; /* Ensures the brand block itself is centered */
+    text-align: center;
+    /* Ensures the brand block itself is centered */
 }
+
 /* ▲▲▲ END OF CORRECTION ▲▲▲ */
 
 .footer-brand img {
-    width: 60px; /* Slightly larger logo */
+    width: 60px;
+    /* Slightly larger logo */
     margin-bottom: 10px;
 }
+
 .footer-brand h3 {
     margin: 0;
     font-size: 1.8rem;
@@ -3155,17 +3122,22 @@ main {
 .footer-section {
     width: 100%;
 }
+
 .footer-section h4 {
     color: white;
     font-size: 1.5rem;
     margin: 0 0 20px 0;
 }
-#footer-philosophy p, #footer-philosophy ul {
+
+#footer-philosophy p,
+#footer-philosophy ul {
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
-    text-align: left; /* Keep bullet points aligned left for readability */
+    text-align: left;
+    /* Keep bullet points aligned left for readability */
 }
+
 #footer-philosophy ul {
     list-style: none;
     padding: 0;
@@ -3173,9 +3145,11 @@ main {
     flex-direction: column;
     gap: 15px;
 }
+
 #footer-philosophy li strong {
     color: white;
 }
+
 .tool-type-badge {
     background-color: rgba(255, 255, 255, 0.1);
     color: white;
@@ -3189,33 +3163,40 @@ main {
 /* Team Section Grid */
 .team-members-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 columns on desktop */
+    grid-template-columns: repeat(4, 1fr);
+    /* 4 columns on desktop */
     gap: 25px;
     margin-top: 30px;
 }
+
 .team-member-card {
     background-color: rgba(255, 255, 255, 0.05);
     padding: 20px;
     border-radius: 12px;
     transition: background-color 0.3s;
 }
+
 .team-member-card:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
+
 .team-member-card h5 {
     color: white;
     font-size: 1.1rem;
     margin: 0 0 10px 0;
 }
+
 .team-member-card p {
     margin: 5px 0;
     font-size: 0.9rem;
 }
+
 .team-member-card a {
     color: rgba(255, 255, 255, 0.7);
     text-decoration: none;
     transition: color 0.2s;
 }
+
 .team-member-card a:hover {
     color: white;
 }
@@ -3231,14 +3212,17 @@ main {
 /* Responsive adjustments for the new footer */
 @media (max-width: 1024px) {
     .team-members-grid {
-        grid-template-columns: repeat(2, 1fr); /* 2 columns on tablets */
+        grid-template-columns: repeat(2, 1fr);
+        /* 2 columns on tablets */
     }
 }
 
 @media (max-width: 600px) {
     .team-members-grid {
-        grid-template-columns: 1fr; /* 1 column on mobile */
+        grid-template-columns: 1fr;
+        /* 1 column on mobile */
     }
+
     .footer-section h4 {
         font-size: 1.3rem;
     }
@@ -3256,33 +3240,45 @@ main {
 
 /* ▼▼▼ THIS IS THE KEY CHANGE FOR HORIZONTAL LAYOUT ▼▼▼ */
 #planner-results-section {
-    max-width: 100%; /* Allow section to span full width for scrolling */
+    max-width: 100%;
+    /* Allow section to span full width for scrolling */
     margin: 20px auto 0 auto;
 }
 
 .planner-results-grid {
-    display: flex; /* 1. Use Flexbox */
-    overflow-x: auto; /* 2. Enable horizontal scrolling */
+    display: flex;
+    /* 1. Use Flexbox */
+    overflow-x: auto;
+    /* 2. Enable horizontal scrolling */
     gap: 30px;
-    padding: 10px 20px 20px 20px; /* Add padding for aesthetics */
-    scroll-snap-type: x mandatory; /* Smooth snapping effect */
-    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    padding: 10px 20px 20px 20px;
+    /* Add padding for aesthetics */
+    scroll-snap-type: x mandatory;
+    /* Smooth snapping effect */
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scrolling on iOS */
 }
 
 /* Hide scrollbar for a cleaner look but keep it functional */
 .planner-results-grid::-webkit-scrollbar {
     display: none;
 }
+
 .planner-results-grid {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
 }
+
 /* ▲▲▲ END OF KEY CHANGE ▲▲▲ */
 
 
 .plan-recommendation-card {
-    flex: 0 0 360px; /* 3. Set a fixed width for each card */
-    scroll-snap-align: start; /* Snap to the start of each card */
+    flex: 0 0 360px;
+    /* 3. Set a fixed width for each card */
+    scroll-snap-align: start;
+    /* Snap to the start of each card */
 
     /* Existing styles below */
     background-color: var(--card-background);
@@ -3295,6 +3291,7 @@ main {
     gap: 20px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+
 .plan-recommendation-card:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-lg);
@@ -3339,13 +3336,15 @@ main {
     color: var(--primary-color);
 }
 
-.plan-card-pros, .plan-card-cons {
+.plan-card-pros,
+.plan-card-cons {
     background-color: var(--background-color);
     padding: 20px;
     border-radius: 12px;
 }
 
-.plan-card-pros h4, .plan-card-cons h4 {
+.plan-card-pros h4,
+.plan-card-cons h4 {
     margin: 0 0 10px 0;
     font-size: 1.1rem;
     display: flex;
@@ -3353,22 +3352,33 @@ main {
     gap: 8px;
 }
 
-.plan-card-pros h4 { color: #166534; } /* Dark Green */
-.plan-card-cons h4 { color: #991b1b; } /* Dark Red */
+.plan-card-pros h4 {
+    color: #166534;
+}
 
-.plan-card-pros h4 img, .plan-card-cons h4 img {
+/* Dark Green */
+.plan-card-cons h4 {
+    color: #991b1b;
+}
+
+/* Dark Red */
+
+.plan-card-pros h4 img,
+.plan-card-cons h4 img {
     width: 20px;
     height: 20px;
 }
 
-.plan-card-pros ul, .plan-card-cons ul {
+.plan-card-pros ul,
+.plan-card-cons ul {
     margin: 0;
     padding-left: 20px;
     color: var(--subtle-text);
     font-size: 0.95rem;
 }
 
-.plan-card-pros ul li, .plan-card-cons ul li {
+.plan-card-pros ul li,
+.plan-card-cons ul li {
     margin-bottom: 5px;
 }
 
@@ -3388,7 +3398,8 @@ main {
     display: flex;
     align-items: center;
     gap: 10px;
-    flex-wrap: wrap; /* Allows wrapping on small screens */
+    flex-wrap: wrap;
+    /* Allows wrapping on small screens */
     justify-content: center;
 }
 
@@ -3415,44 +3426,57 @@ main {
 
 /* Color variations for the badge */
 .status-badge.status-sell {
-    background-color: var(--primary-color); /* Green */
+    background-color: var(--primary-color);
+    /* Green */
 }
 
 .status-badge.status-monitor {
-    background-color: #f97316; /* Orange */
+    background-color: #f97316;
+    /* Orange */
 }
 
 .status-badge.status-hold {
-    background-color: #ef4444; /* Red */
+    background-color: #ef4444;
+    /* Red */
 }
+
 .threat-details {
-  display: flex;                 /* Use flexbox for alignment */
-  justify-content: space-between;  /* Push the two items to opposite ends */
-  align-items: flex-start;       /* Align them to the top */
-  width: 100%;                   /* Ensure it takes the full width of the card */
-  margin-bottom: 1rem;           /* Add some space below before the reasoning box */
+    display: flex;
+    /* Use flexbox for alignment */
+    justify-content: space-between;
+    /* Push the two items to opposite ends */
+    align-items: flex-start;
+    /* Align them to the top */
+    width: 100%;
+    /* Ensure it takes the full width of the card */
+    margin-bottom: 1rem;
+    /* Add some space below before the reasoning box */
 }
 
 /* This styles the individual label/value pairs */
 .threat-details p {
-    margin: 0; /* Remove default paragraph margin */
+    margin: 0;
+    /* Remove default paragraph margin */
 }
 
 /* This ensures the "Risk Level" text itself is right-aligned */
 .threat-details p:last-child {
     text-align: right;
 }
+
 /* Add these styles to your existing style.css file */
 
 /* --- Custom Searchable Dropdown for Location --- */
 #g-location-input {
     cursor: pointer;
-    background-color: #fff; /* Ensure it looks like a standard input */
+    background-color: #fff;
+    /* Ensure it looks like a standard input */
 }
 
 /* --- Location Modal --- */
 .location-list-container {
-    max-height: 50vh; /* Adjust based on your preference */
+    max-height: 50vh;
+    /* Adjust based on your preference */
     overflow-y: auto;
     padding: 0 10px 10px 10px;
     border-top: 1px solid #e0e0e0;
@@ -3466,7 +3490,8 @@ main {
 }
 
 .location-item:hover {
-    background-color: #f5f8fa; /* A light blue hover effect to match theme */
+    background-color: #f5f8fa;
+    /* A light blue hover effect to match theme */
 }
 
 .location-item-market {
@@ -3491,12 +3516,14 @@ main {
 /* --- Custom Searchable Dropdown for State/UT --- */
 #g-state-input {
     cursor: pointer;
-    background-color: #fff; /* Ensure it looks like a standard input */
+    background-color: #fff;
+    /* Ensure it looks like a standard input */
 }
 
 /* --- State/UT Selection Modal --- */
 .state-list-container {
-    max-height: 50vh; /* Adjust based on your preference */
+    max-height: 50vh;
+    /* Adjust based on your preference */
     overflow-y: auto;
     padding: 0 10px 10px 10px;
     border-top: 1px solid #e0e0e0;
@@ -3513,7 +3540,8 @@ main {
 }
 
 .state-item:hover {
-    background-color: #f5f8fa; /* A light blue hover effect to match theme */
+    background-color: #f5f8fa;
+    /* A light blue hover effect to match theme */
 }
 
 .state-item-no-results {
@@ -3524,575 +3552,83 @@ main {
 
 /* --- General Form Group Styling (for consistency) --- */
 .generator-form .form-group input[readonly] {
-    background-color: #f8f9fa; /* Slightly different background for readonly */
+    background-color: #f8f9fa;
+    /* Slightly different background for readonly */
 }
 
-/* chat.css - Styles for the AI Assistant Chat Page */
+/* --- [CORRECTED & FINAL] AI SCHEME ASSISTANT PAGE STYLES --- */
 
-/* Main layout container for the chat page */
-.chat-main-container {
+/* --- [CORRECTED & FINAL] AI SCHEME ASSISTANT PAGE STYLES --- */
+
+/* Key fix for full-page layout */
+.schemes-page-body {
     display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 40px 20px;
-    background-color: #f4f7f6; /* A very light grey background */
-    min-height: calc(100vh - 160px); /* Adjust based on header/footer height */
+    flex-direction: column;
+    min-height: 100vh; /* MODIFIED: Use min-height instead of fixed height */
+    margin: 0; /* Ensure no default margin */
 }
 
-.chat-container {
+/* Key fix: This makes the main content area grow to fill all available space */
+.schemes-page-body main#chat-container {
+    flex-grow: 1; 
+    display: flex;
+    flex-direction: column;
     width: 100%;
-    max-width: 800px;
-    height: 75vh;
-    background-color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-/* Chat history area */
-.chat-history {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-/* General chat message styling */
-.chat-message {
-    display: flex;
-    align-items: flex-end;
-    gap: 12px;
-    max-width: 85%;
-}
-
-.message-content {
-    padding: 12px 16px;
-    border-radius: 18px;
-    line-height: 1.6;
-}
-
-.message-content p {
-    margin: 0;
-    color: #333;
-    white-space: pre-wrap; /* Renders \n newlines from the API */
-}
-
-/* AI message styling */
-.ai-message {
-    align-self: flex-start;
-}
-
-.ai-message .message-content {
-    background-color: #EDF2F7;
-    border-bottom-left-radius: 4px;
-}
-
-/* User message styling */
-.user-message {
-    align-self: flex-end;
-    flex-direction: row-reverse; /* Puts avatar on the right */
-}
-
-.user-message .message-content {
-    background-color: #2b6cb0; /* A nice blue, change if needed */
-    color: #ffffff;
-    border-bottom-right-radius: 4px;
-}
-
-.user-message .message-content p {
-    color: #ffffff;
-}
-
-/* Avatar styling */
-.avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background-color: #e2e8f0;
-    flex-shrink: 0;
-}
-
-/* Typing indicator for AI response */
-.typing-indicator .message-content {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-    padding: 16px;
-}
-
-.typing-indicator span {
-    width: 8px;
-    height: 8px;
-    background-color: #a0aec0;
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out both;
-}
-
-.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1.0); }
-}
-
-/* Chat input area */
-.chat-input-area {
-    display: flex;
-    padding: 16px;
-    border-top: 1px solid #e2e8f0;
-    background-color: #f8fafc;
-}
-
-#chat-input {
-    flex-grow: 1;
-    padding: 12px 16px;
-    border: 1px solid #cbd5e0;
-    border-radius: 24px;
-    font-family: 'Inter', sans-serif;
-    font-size: 16px;
-    resize: none; /* Prevents manual resize */
-    line-height: 1.5;
-    background-color: #fff;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-#chat-input:focus {
-    outline: none;
-    border-color: #2b6cb0;
-    box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.2);
-}
-
-#send-button {
-    flex-shrink: 0;
-    margin-left: 12px;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: none;
-    background-color: #257416; /* Same green as your "Get App" button */
-    color: white;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: background-color 0.2s;
-}
-
-#send-button:hover {
-    background-color: #38a169; /* Lighter green on hover */
-}
-
-#send-button img {
-    width: 24px;
-    height: 24px;
-}
-
-/* Special Navigation Button */
-.nav-button-container {
-    margin-top: 12px;
-}
-
-.nav-button {
-    display: inline-block;
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #ffffff;
-    background-color: #2b6cb0;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background-color 0.2s ease-in-out;
-}
-
-.nav-button:hover {
-    background-color: #2c5282;
-}
-
-
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
-    .chat-main-container {
-        padding: 10px;
-        min-height: calc(100vh - 120px); /* Adjust for smaller header/footer */
-    }
-
-    .chat-container {
-        height: 85vh;
-        border-radius: 0;
-        box-shadow: none;
-    }
-
-    .chat-history {
-        padding: 16px;
-    }
-
-    .chat-message {
-        max-width: 90%;
-    }
-}
-/* --- [NEW] AI ASSISTANT CHAT PAGE STYLES --- */
-
-/* Main layout container for the chat page */
-.chat-main-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 40px 20px;
-    height: calc(100vh - 85px); /* Full height minus header */
-    box-sizing: border-box;
-    border-top: none;
-    margin: 0;
     max-width: none;
-}
-
-.chat-container {
-    width: 100%;
-    max-width: 800px;
-    height: 100%;
-    background-color: #ffffff;
-    border-radius: 16px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-/* Chat history area */
-.chat-history {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-/* General chat message styling */
-.chat-message {
-    display: flex;
-    align-items: flex-end;
-    gap: 12px;
-    max-width: 85%;
-}
-
-.message-content {
-    padding: 12px 18px;
-    border-radius: 18px;
-    line-height: 1.6;
-}
-
-.message-content p {
+    padding: 0;
     margin: 0;
-    white-space: pre-wrap; /* Renders \n newlines from the API */
-}
-
-/* AI message styling */
-.ai-message {
-    align-self: flex-start;
-}
-
-.ai-message .message-content {
-    background-color: var(--background-color);
-    border-bottom-left-radius: 4px;
-    color: var(--text-color);
-}
-
-/* User message styling */
-.user-message {
-    align-self: flex-end;
-}
-
-.user-message .message-content {
-    background-color: var(--primary-color);
-    color: #ffffff;
-    border-bottom-right-radius: 4px;
-}
-
-/* Avatar styling */
-.avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid var(--border-color);
-    flex-shrink: 0;
-}
-
-/* Typing indicator for AI response */
-.typing-indicator .message-content {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-    padding: 16px;
-}
-
-.typing-indicator span {
-    width: 8px;
-    height: 8px;
-    background-color: var(--subtle-text);
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out both;
-}
-
-.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1.0); }
-}
-
-/* Chat input area */
-.chat-input-area {
-    padding: 16px;
-    border-top: 1px solid var(--border-color);
-    background-color: #f8fafc;
-}
-
-#chat-form {
-    display: flex;
-    align-items: flex-end;
-    gap: 10px;
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 12px;
-    background-color: #fff;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-#chat-input {
-    flex-grow: 1;
-    padding: 12px 16px;
-    border: 1px solid var(--border-color);
-    border-radius: 24px;
-    font-family: 'Inter', sans-serif;
-    font-size: 1rem;
-    resize: none;
-    line-height: 1.5;
-    background-color: #fff;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    max-height: 150px;
-    overflow-y: auto;
-}
-
-#chat-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(101, 163, 13, 0.2);
-}
-
-#send-button {
-    flex-shrink: 0;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: none;
-    background-color: var(--primary-color);
-    color: white;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: background-color 0.2s;
-}
-
-#send-button:hover {
-    background-color: var(--accent-color);
-}
-
-#send-button img {
-    width: 24px;
-    height: 24px;
-    filter: brightness(0) invert(1);
-}
-
-/* Special Navigation Button */
-.nav-button-container {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #d1d5db;
-}
-
-.nav-button {
-    display: inline-block;
-    padding: 10px 20px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #ffffff;
-    background-color: var(--accent-color);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background-color 0.2s ease-in-out;
-}
-
-.nav-button:hover {
-    background-color: var(--primary-color);
-}
-
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
-    .chat-main-container {
-        padding: 0;
-        height: calc(100vh - 70px); /* Adjust for smaller header */
-    }
-
-    .chat-container {
-        border-radius: 0;
-        box-shadow: none;
-        border: none;
-    }
-
-    .chat-history {
-        padding: 16px;
-    }
-
-    .chat-message {
-        max-width: 95%;
-    }
-}
-
-/* --- [REVISED] AI ASSISTANT CHAT PAGE STYLES --- */
-
-/* Main layout container for the chat page */
-.chat-main-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 40px 20px;
-    height: calc(100vh - 85px); /* Full height minus header */
-    box-sizing: border-box;
     border-top: none;
-    margin: 0;
-    max-width: none;
-    background-color: var(--background-color);
+    overflow: hidden; /* Prevent main from scrolling, only the log inside it will */
+    height: 700px;
 }
 
-.chat-container {
-    width: 100%;
-    max-width: 800px;
-    height: 100%;
-    background-color: #ffffff;
-    border-radius: 16px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-/* Chat history area */
-.chat-history {
-    flex-grow: 1;
-    overflow-y: auto;
+/* Key fix for the scrolling chat area */
+.chat-log {
+    flex-grow: 1; /* Allows this div to fill the space within the main container */
+    overflow-y: auto; /* This is what will scroll now */
     padding: 24px;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto; /* Center the chat log content */
+    box-sizing: border-box;
+}
+
+/* Initial Centered View (Now correctly centered within the flexible main area) */
+.initial-view {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-}
-
-/* General chat message styling */
-.chat-message {
-    display: flex;
-    align-items: flex-end;
-    gap: 12px;
-    max-width: 85%;
-}
-
-.message-content {
-    padding: 12px 18px;
-    border-radius: 18px;
-    line-height: 1.6;
-}
-
-.message-content p {
-    margin: 0;
-    white-space: pre-wrap;
-}
-
-/* AI message styling */
-.ai-message {
-    align-self: flex-start;
-}
-
-.ai-message .message-content {
-    background-color: var(--background-color);
-    border-bottom-left-radius: 4px;
-    color: var(--text-color);
-}
-
-/* User message styling - Green like the screenshot */
-.user-message {
-    align-self: flex-end;
-}
-
-.user-message .message-content {
-    background-color: var(--primary-color);
-    color: #ffffff;
-    border-bottom-right-radius: 4px;
-}
-
-/* Avatar styling */
-.avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid var(--border-color);
-    flex-shrink: 0;
-}
-
-/* Typing indicator for AI response */
-.typing-indicator .message-content {
-    display: flex;
-    gap: 5px;
     align-items: center;
-    padding: 16px;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    color: var(--subtle-text);
 }
+.initial-view-icon { width: 60px; height: 60px; margin-bottom: 20px; }
+.initial-view h2 { color: var(--text-color); font-size: 2rem; margin: 0 0 10px 0; }
 
-.typing-indicator span {
-    width: 8px;
-    height: 8px;
-    background-color: var(--subtle-text);
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out both;
-}
-
-.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1.0); }
-}
-
-/* --- Redesigned Chat Input Area (Full Width) --- */
+/* Input Bar Area (Stays at the bottom) */
 .chat-input-area {
-    padding: 1rem 1.5rem;
+    padding: 15px 20px;
+    background-color: var(--card-background);
     border-top: 1px solid var(--border-color);
-    background-color: #ffffff;
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
+    flex-shrink: 0; /* Prevent this area from shrinking */
 }
 
-#chat-form {
+/* The form itself */
+.chat-input-bar {
+    max-width: 900px;
+    margin: 0 auto;
     display: flex;
-    align-items: flex-end; /* Aligns button with bottom of textarea */
     gap: 10px;
-    padding: 10px;
-    border: 1px solid #ccc;
+    align-items: center;
+    background-color: var(--background-color);
+    padding: 8px;
     border-radius: 12px;
-    background-color: #fff;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    border: 1px solid var(--border-color);
 }
 
-#chat-form:focus-within {
+.chat-input-bar:focus-within {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(101, 163, 13, 0.2);
 }
@@ -4101,526 +3637,50 @@ main {
     flex-grow: 1;
     border: none;
     background: transparent;
-    padding: 4px 8px; /* Minimal padding */
-    font-size: 1rem;
-    font-family: 'Inter', sans-serif;
-    resize: none;
-    line-height: 1.5;
-    outline: none;
-    max-height: 150px;
-    overflow-y: auto;
-    color: var(--text-color);
-}
-
-#send-button {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    border: none;
-    background-color: var(--primary-color);
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: background-color 0.2s;
-}
-
-#send-button:hover {
-    background-color: var(--accent-color);
-}
-
-#send-button img {
-    width: 20px;
-    height: 20px;
-    filter: brightness(0) invert(1);
-}
-
-/* Special Navigation Button in Chat */
-.nav-button-container {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #d1d5db;
-}
-
-.nav-button {
-    display: inline-block;
-    padding: 10px 20px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #ffffff;
-    background-color: var(--accent-color);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background-color 0.2s ease-in-out;
-}
-
-.nav-button:hover {
-    background-color: var(--primary-color);
-}
-
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
-    .chat-main-container {
-        padding: 0;
-        height: calc(100vh - 70px);
-    }
-    .chat-container {
-        border-radius: 0;
-        box-shadow: none;
-        border: none;
-    }
-    .chat-history {
-        padding: 16px;
-    }
-    .chat-message {
-        max-width: 95%;
-    }
-    .chat-input-area {
-        padding: 0.75rem;
-    }
-}
-/* --- [REVISED] AI ASSISTANT CHAT PAGE STYLES --- */
-
-/* Main layout container for the chat page */
-.chat-main-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 40px 20px;
-    height: calc(100vh - 85px); /* Full height minus header */
-    box-sizing: border-box;
-    border-top: none;
-    margin: 0;
-    max-width: none;
-    background-color: var(--background-color);
-}
-
-.chat-container {
-    width: 100%;
-    max-width: 800px;
-    height: 100%;
-    background-color: #ffffff;
-    border-radius: 16px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-/* Chat history area */
-.chat-history {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-/* General chat message styling */
-.chat-message {
-    display: flex;
-    align-items: flex-end;
-    gap: 12px;
-    max-width: 85%;
-}
-
-.message-content {
-    padding: 12px 18px;
-    border-radius: 18px;
-    line-height: 1.6;
-}
-
-.message-content p {
-    margin: 0;
-    white-space: pre-wrap;
-}
-
-/* AI message styling */
-.ai-message {
-    align-self: flex-start;
-}
-
-.ai-message .message-content {
-    background-color: var(--background-color);
-    border-bottom-left-radius: 4px;
-    color: var(--text-color);
-}
-
-/* User message styling - Green like the screenshot */
-.user-message {
-    align-self: flex-end;
-}
-
-.user-message .message-content {
-    background-color: var(--primary-color);
-    color: #ffffff;
-    border-bottom-right-radius: 4px;
-}
-
-/* Avatar styling */
-.avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid var(--border-color);
-    flex-shrink: 0;
-}
-
-/* Typing indicator for AI response */
-.typing-indicator .message-content {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-    padding: 16px;
-}
-
-.typing-indicator span {
-    width: 8px;
-    height: 8px;
-    background-color: var(--subtle-text);
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out both;
-}
-
-.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1.0); }
-}
-
-/* --- Redesigned Chat Input Area (Full Width) --- */
-.chat-input-area {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border-color);
-    background-color: #ffffff;
-}
-
-#chat-form {
-    display: flex;
-    align-items: flex-end; /* Aligns button with bottom of textarea */
-    gap: 10px;
     padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 12px;
-    background-color: #fff;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-#chat-form:focus-within {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(101, 163, 13, 0.2);
-}
-
-#chat-input {
-    flex-grow: 1;
-    border: none;
-    background: transparent;
-    padding: 4px 8px; /* Minimal padding */
     font-size: 1rem;
-    font-family: 'Inter', sans-serif;
-    resize: none;
-    line-height: 1.5;
     outline: none;
-    max-height: 150px;
-    overflow-y: auto;
-    color: var(--text-color);
 }
-
-#send-button {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
+.chat-action-btn {
+    background: none;
     border: none;
-    background-color: var(--primary-color);
     cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: background-color 0.2s;
-}
-
-#send-button:hover {
-    background-color: var(--accent-color);
-}
-
-#send-button img {
-    width: 20px;
-    height: 20px;
-    filter: brightness(0) invert(1);
-}
-
-/* Special Navigation Button in Chat */
-.nav-button-container {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #d1d5db;
-}
-
-.nav-button {
-    display: inline-block;
-    padding: 10px 20px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #ffffff;
-    background-color: var(--accent-color);
-    border: none;
+    padding: 8px;
     border-radius: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background-color 0.2s ease-in-out;
-}
-
-.nav-button:hover {
-    background-color: var(--primary-color);
-}
-
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
-    .chat-main-container {
-        padding: 0;
-        height: calc(100vh - 70px);
-    }
-    .chat-container {
-        border-radius: 0;
-        box-shadow: none;
-        border: none;
-    }
-    .chat-history {
-        padding: 16px;
-    }
-    .chat-message {
-        max-width: 95%;
-    }
-    .chat-input-area {
-        padding: 0.75rem;
-    }
-}
-/* --- [FINAL & IMPROVED] AI ASSISTANT CHAT PAGE STYLES --- */
-
-/* Main layout container for the chat page */
-.chat-main-container {
     display: flex;
-    justify-content: center;
     align-items: center;
-    padding: 40px 20px;
-    height: calc(100vh - 85px); /* Full height minus header */
-    box-sizing: border-box;
-    border-top: none;
-    margin: 0;
-    max-width: none;
-    background-color: var(--background-color);
+    justify-content: center;
 }
+.chat-action-btn:hover { background-color: #e5e7eb; }
+.chat-action-btn img { width: 24px; height: 24px; }
+.disclaimer { font-size: 0.8rem; text-align: center; color: var(--subtle-text); margin: 10px 0 0 0; }
 
-.chat-container {
-    width: 100%;
-    max-width: 800px;
-    height: 100%;
-    background-color: #ffffff;
-    border-radius: 16px;
-    box-shadow: var(--shadow-lg);
+/* Chat Message Bubbles */
+.chat-message { display: flex; gap: 15px; max-width: 80%; }
+.chat-message.user { align-self: flex-end; flex-direction: row-reverse; }
+.chat-message.ai { align-self: flex-start; }
+.ai-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
+.message-bubble { padding: 15px 20px; border-radius: 18px; line-height: 1.6; }
+.chat-message.user .message-bubble { background-color: var(--primary-color); color: white; border-top-right-radius: 4px; }
+.chat-message.ai .message-bubble { background-color: var(--background-color); color: var(--text-color); border-top-left-radius: 4px; }
+
+/* Typing Indicator Animation */
+.typing-indicator .message-bubble { display: flex; gap: 5px; align-items: center; }
+.typing-indicator .dot { width: 8px; height: 8px; background-color: var(--subtle-text); border-radius: 50%; animation: bounce 1.3s infinite; }
+.typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+/* Scheme Card Styling (Professional Look) */
+.scheme-card {
+    background: #fff;
     border: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-/* Chat history area */
-.chat-history {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-/* General chat message styling */
-.chat-message {
-    display: flex;
-    align-items: flex-end;
-    gap: 12px;
-    max-width: 85%;
-}
-
-.message-content {
-    padding: 12px 18px;
-    border-radius: 18px;
-    line-height: 1.6;
-}
-
-.message-content p {
-    margin: 0;
-    white-space: pre-wrap;
-}
-
-/* AI message styling */
-.ai-message {
-    align-self: flex-start;
-}
-
-.ai-message .message-content {
-    background-color: var(--background-color);
-    border-bottom-left-radius: 4px;
-    color: var(--text-color);
-}
-
-/* User message styling */
-.user-message {
-    align-self: flex-end;
-}
-
-.user-message .message-content {
-    background-color: var(--primary-color);
-    color: #ffffff;
-    border-bottom-right-radius: 4px;
-}
-
-/* Avatar styling */
-.avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid var(--border-color);
-    flex-shrink: 0;
-}
-
-/* Typing indicator for AI response */
-.typing-indicator .message-content {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-    padding: 16px;
-}
-
-.typing-indicator span {
-    width: 8px;
-    height: 8px;
-    background-color: var(--subtle-text);
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out both;
-}
-
-.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1.0); }
-}
-
-/* --- Redesigned Chat Input Area (Full Width) --- */
-.chat-input-area {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border-color);
-    background-color: #ffffff;
-}
-
-#chat-form {
-    display: flex;
-    align-items: flex-end;
-    gap: 10px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 12px;
-    background-color: #fff;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-#chat-form:focus-within {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(101, 163, 13, 0.2);
-}
-
-#chat-input {
-    flex-grow: 1;
-    border: none;
-    background: transparent;
-    padding: 4px 8px;
-    font-size: 1rem;
-    font-family: 'Inter', sans-serif;
-    resize: none;
-    line-height: 1.5;
-    outline: none;
-    max-height: 150px;
-    overflow-y: auto;
-    color: var(--text-color);
-}
-
-#send-button {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
+    border-left: 4px solid var(--primary-color);
     border-radius: 8px;
-    border: none;
-    background-color: var(--primary-color);
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: background-color 0.2s;
+    padding: 20px;
+    margin-top: 15px;
+    box-shadow: var(--shadow);
 }
-
-#send-button:hover {
-    background-color: var(--accent-color);
-}
-
-#send-button img {
-    width: 20px;
-    height: 20px;
-    filter: brightness(0) invert(1);
-}
-
-/* Special Navigation Button in Chat */
-.nav-button-container {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #d1d5db;
-}
-
-.nav-button {
-    display: inline-block;
-    padding: 10px 20px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #ffffff;
-    background-color: var(--accent-color);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background-color 0.2s ease-in-out;
-}
-
-.nav-button:hover {
-    background-color: var(--primary-color);
-}
-
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
-    .chat-main-container {
-        padding: 0;
-        height: calc(100vh - 70px);
-    }
-    .chat-container {
-        border-radius: 0;
-        box-shadow: none;
-        border: none;
-    }
-    .chat-history {
-        padding: 16px;
-    }
-    .chat-message {
-        max-width: 95%;
-    }
-    .chat-input-area {
-        padding: 0.75rem;
-    }
-}
+.scheme-card h4 { margin: 0 0 10px 0; font-size: 1.2rem; color: var(--primary-color); }
+.scheme-card p { margin: 8px 0; font-size: 0.95rem; }
+.scheme-card p strong { color: var(--text-color); }

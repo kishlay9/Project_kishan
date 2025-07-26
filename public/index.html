@@ -16,22 +16,35 @@
     <header>
         <div class="header-container">
             <div class="logo-container">
-                <img src="images/LOGO.png" alt="Project Kisan Logo" class="logo">
-                <h1>Project Kisan</h1>
+                <a href="index.html" class="logo-link">
+                    <img src="images/LOGO.png" alt="Project Kisan Logo" class="logo">
+                    <h1>Project Kisan</h1>
+                </a>
             </div>
             <nav class="header-nav">
-                <a href="#hero">Home</a>
-                <a href="#diagnose-tool">AI Tool</a>
-                <a href="#features">Features</a>
-                <!-- UPDATED LOGIN BUTTON -->
+                <a href="#hero" id="nav-home">Home</a>
+                <a href="market.html" id="nav-market">Market Prices</a>
+                <a href="guardian.html" id="nav-guardian">Guardian AI</a>
+                
+                <div class="language-selector">
+                    <button id="language-toggle-btn">
+                        <img src="images/languages.png" alt="Language">
+                        <span id="current-lang-text">English</span>
+                        <span class="caret">▼</span>
+                    </button>
+                    <div id="language-options" class="language-options hidden">
+                        <a href="#" class="language-option active" data-lang="en">English</a>
+                        <a href="#" class="language-option" data-lang="hi">हिन्दी (Hindi)</a>
+                        <a href="#" class="language-option" data-lang="kn">ಕನ್ನಡ (Kannada)</a>
+                    </div>
+                </div>
+
                 <a href="login.html" class="login-button">
-                    <!-- Add your user icon PNG here (e.g., 24x24px) -->
                     <img src="images/user-icon.png" alt="Login Icon">
-                    <span>Login</span>
+                    <span id="nav-login">Login</span>
                 </a>
                 <a href="#" class="login-button" style="background-color: rgb(23, 135, 23); color: white; border: none;">
-                    <span>Get App</span>
-                    
+                    <span id="nav-get-app">Get App</span>
                 </a>
             </nav>
         </div>
@@ -44,34 +57,27 @@
             Your browser does not support the video tag.
         </video>
         <div class="hero-content fade-in">
-            <h2>AI-Powered Guidance For Your Farm</h2>
-            <p>From diagnosis to remedy, get instant, intelligent support to protect your crops and increase your yield.
-            </p>
+            <h2 id="hero-title">AI-Powered Guidance For Your Farm</h2>
+            <p id="hero-subtitle">From diagnosis to remedy, get instant, intelligent support to protect your crops and increase your yield.</p>
             <div class="hero-button-group">
-                <a href="#diagnose-tool" class="cta-button">Diagnose Your Crop</a>
-                <a href="#features" class="cta-button-outline">Learn More</a>
+                <a href="#diagnose-tool" class="cta-button" id="hero-cta-diagnose">Diagnose Your Crop</a>
+                <a href="#features" class="cta-button-outline" id="hero-cta-learn-more">Learn More</a>
             </div>
         </div>
     </section>
 
     <main id="diagnose-tool">
-        <!-- Main Action Section -->
-        <!-- (in index.html) -->
-
         <section class="action-panel">
-            <h2>Your AI Farming Assistant</h2>
-            <p>Upload a photo for diagnosis, or ask a question in your language.</p>
+            <h2 id="action-panel-title">Your AI Farming Assistant</h2>
+            <p id="action-panel-subtitle">Upload a photo for diagnosis, or ask a question in your language.</p>
             <div class="button-group">
-                <!-- UPDATED: This button is now a link to the assistant page -->
                 <a href="assistant.html" id="ask-question-button" class="upload-button-outline">
                     <img src="images/mic.png" alt="Microphone Icon">
-                    <span>Ask a Question</span>
+                    <span id="ask-question-btn-text">Ask a Question</span>
                 </a>
-
-                <!-- Existing Primary Button -->
                 <label for="image-upload-input" class="upload-button">
                     <img src="images/diagnose-crop.svg" alt="Diagnose Icon">
-                    <span>Diagnose Crop</span>
+                    <span id="diagnose-crop-btn-text">Diagnose Crop</span>
                 </label>
                 <input type="file" id="image-upload-input" accept="image/*" hidden>
             </div>
@@ -91,41 +97,14 @@
                 </div>
                 <span id="result-confidence"></span>
             </div>
-
             <div class="result-details-grid">
-                <div class="detail-card">
-                    <h4>Severity</h4>
-                    <p id="result-severity"></p>
-                </div>
-                <div class="detail-card">
-                    <h4>Contagion Risk</h4>
-                    <p id="result-risk"></p>
-                </div>
+                <div class="detail-card"><h4>Severity</h4><p id="result-severity"></p></div>
+                <div class="detail-card"><h4>Contagion Risk</h4><p id="result-risk"></p></div>
             </div>
-
-            <div class="result-section">
-                <h4>Description</h4>
-                <p id="result-description-english"></p>
-                <p id="result-description-kannada" class="kannada-text"></p>
-            </div>
-
-            <div class="result-section">
-                <h4>Organic Remedy</h4>
-                <p id="result-organic-english"></p>
-                <p id="result-organic-kannada" class="kannada-text"></p>
-            </div>
-
-            <div class="result-section">
-                <h4>Chemical Remedy</h4>
-                <p id="result-chemical-english"></p>
-                <p id="result-chemical-kannada" class="kannada-text"></p>
-            </div>
-
-            <div class="result-section">
-                <h4>Prevention Tips</h4>
-                <div id="result-prevention"></div>
-            </div>
-
+            <div class="result-section"><h4>Description</h4><p id="result-description-english"></p><p id="result-description-hindi" class="hindi-text hidden"></p><p id="result-description-kannada" class="kannada-text hidden"></p></div>
+            <div class="result-section"><h4>Organic Remedy</h4><p id="result-organic-english"></p><p id="result-organic-hindi" class="hindi-text hidden"></p><p id="result-organic-kannada" class="kannada-text hidden"></p></div>
+            <div class="result-section"><h4>Chemical Remedy</h4><p id="result-chemical-english"></p><p id="result-chemical-hindi" class="hindi-text hidden"></p><p id="result-chemical-kannada" class="kannada-text hidden"></p></div>
+            <div class="result-section"><h4>Prevention Tips</h4><div id="result-prevention"></div></div>
             <audio id="remedy-audio" class="hidden"></audio>
             <button id="speak-button" class="hidden">Listen to Summary</button>
         </section>
@@ -133,194 +112,68 @@
 
     <section id="features" class="more-features-section">
         <div class="container">
-            <h2 class="section-title fade-in">A Complete Toolkit for the Modern Farmer</h2>
-            <p class="section-subtitle fade-in">
+            <h2 class="section-title fade-in" id="features-title">A Complete Toolkit for the Modern Farmer</h2>
+            <p class="section-subtitle fade-in" id="features-subtitle">
                 Beyond diagnostics, Project Kisan offers a suite of tools to manage and grow your farming business.
             </p>
-            <!-- UPDATED FEATURES GRID WITH NEW ICONS -->
-              <!-- ▼▼▼ GRID CLASS AND CONTENT UPDATED TO 6 CARDS ▼▼▼ -->
             <div class="features-grid-6">
-                <a href="market.html" class="feature-card-link">
-                    <div class="feature-card fade-in">
-                        <img src="images/marketshop.svg" alt="Market Prices Icon">
-                        <h3>Market Prices</h3>
-                    </div>
-                </a>
-                <a href="fertilizer.html" class="feature-card-link">
-                    <div class="feature-card fade-in">
-                        <img src="images/remedy.png" alt="Fertilizer Calculator Icon">
-                        <h3>Fertilizer Calculator</h3>
-                    </div>
-                </a>
-                <a href="yield.html" class="feature-card-link">
-                    <div class="feature-card fade-in">
-                        <img src="images/pesticide-execution.png" alt="Yield Maximizer Icon">
-                        <h3>Yield Maximizer</h3>
-                    </div>
-                </a>
-                <a href="cropplanner.html" class="feature-card-link">
-                    <div class="feature-card fade-in">
-                        <img src="images/crop-planner.png" alt="Crop Planner Icon">
-                        <h3>Crop Planner</h3>
-                    </div>
-                </a>
-                <a href="schemes.html" class="feature-card-link">
-                    <div class="feature-card fade-in">
-                        <img src="images/scheme.svg" alt="Govt. Schemes Icon">
-                        <h3>Govt. Schemes</h3>
-                    </div>
-                </a>
-                <a href="guardian.html" class="feature-card-link">
-                    <div class="feature-card fade-in">
-                        <img src="images/ai-guardian.svg" alt="Guardian AI Icon">
-                        <h3>Guardian AI</h3>
-                    </div>
-                </a>
+                <a href="market.html" class="feature-card-link"><div class="feature-card fade-in"><img src="images/marketshop.svg" alt="Market Prices Icon"><h3 id="feature-market-prices">Market Prices</h3></div></a>
+                <a href="fertilizer.html" class="feature-card-link"><div class="feature-card fade-in"><img src="images/remedy.png" alt="Fertilizer Calculator Icon"><h3 id="feature-fertilizer-calculator">Fertilizer Calculator</h3></div></a>
+                <a href="yield.html" class="feature-card-link"><div class="feature-card fade-in"><img src="images/pesticide-execution.png" alt="Yield Maximizer Icon"><h3 id="feature-yield-maximizer">Yield Maximizer</h3></div></a>
+                <a href="cropplanner.html" class="feature-card-link"><div class="feature-card fade-in"><img src="images/crop-planner.png" alt="Crop Planner Icon"><h3 id="feature-crop-planner">Crop Planner</h3></div></a>
+                <a href="schemes.html" class="feature-card-link"><div class="feature-card fade-in"><img src="images/scheme.svg" alt="Govt. Schemes Icon"><h3 id="feature-govt-schemes">Govt. Schemes</h3></div></a>
+                <a href="guardian.html" class="feature-card-link"><div class="feature-card fade-in"><img src="images/ai-guardian.svg" alt="Guardian AI Icon"><h3 id="feature-guardian-ai">Guardian AI</h3></div></a>
             </div>
         </div>
     </section>
 
-
-    <!-- WHY CHOOSE PROJECT KISAN? SECTION -->
     <section class="feature-spotlight-section">
         <div class="container">
             <div class="feature-spotlight-grid">
                 <div class="feature-text-content">
-                    <h2 class="section-title-left fade-in">Empowering Farmers With <span
-                            class="underline">Technology</span></h2>
-                    <div class="feature-item fade-in">
-                        <div class="feature-icon">
-                            <img src="images/diagnose-crop.svg" alt="Accurate Diagnosis Icon">
-                        </div>
-                        <div class="feature-description">
-                            <h4>Accurate Diagnosis</h4>
-                            <p>Our AI is trained on millions of images to provide a precise identification of crop
-                                diseases and pests.</p>
-                        </div>
-                    </div>
-                    <div class="feature-item fade-in" style="animation-delay: 0.2s;">
-                        <div class="feature-icon">
-                            <img src="images/remedy.png" alt="Instant Remedies Icon">
-                        </div>
-                        <div class="feature-description">
-                            <h4>Instant Remedies</h4>
-                            <p>Receive immediate, actionable advice with both organic and chemical treatment options.
-                            </p>
-                        </div>
-                    </div>
-                    <div class="feature-item fade-in" style="animation-delay: 0.4s;">
-                        <div class="feature-icon">
-                            <img src="images/ai-guardian.svg" alt="Easy to Use Icon">
-                        </div>
-                        <div class="feature-description">
-                            <h4>Easy to Use</h4>
-                            <p>No complex setup. Just upload a photo from your phone to get the help you need, when you
-                                need it.</p>
-                        </div>
-                    </div>
+                    <h2 class="section-title-left fade-in" id="empowering-title">Empowering Farmers With <span class="underline">Technology</span></h2>
+                    <div class="feature-item fade-in"><div class="feature-icon"><img src="images/diagnose-crop.svg" alt="Accurate Diagnosis Icon"></div><div class="feature-description"><h4 id="empowering-diag-title">Accurate Diagnosis</h4><p id="empowering-diag-text">Our AI is trained on millions of images to provide a precise identification of crop diseases and pests.</p></div></div>
+                    <div class="feature-item fade-in" style="animation-delay: 0.2s;"><div class="feature-icon"><img src="images/remedy.png" alt="Instant Remedies Icon"></div><div class="feature-description"><h4 id="empowering-remedy-title">Instant Remedies</h4><p id="empowering-remedy-text">Receive immediate, actionable advice with both organic and chemical treatment options.</p></div></div>
+                    <div class="feature-item fade-in" style="animation-delay: 0.4s;"><div class="feature-icon"><img src="images/ai-guardian.svg" alt="Easy to Use Icon"></div><div class="feature-description"><h4 id="empowering-easy-title">Easy to Use</h4><p id="empowering-easy-text">No complex setup. Just upload a photo from your phone to get the help you need, when you need it.</p></div></div>
                 </div>
-                <div class="feature-image-content fade-in">
-                    <img src="images/farmer happy.jpg" alt="A happy farmer, empowered by technology.">
-                </div>
+                <div class="feature-image-content fade-in"><img src="images/farmer happy.jpg" alt="A happy farmer, empowered by technology."></div>
             </div>
         </div>
     </section>
 
-    <!-- OUR ANALYSIS PROCESS SECTION -->
     <section class="process-section">
         <div class="container">
-            <h2 class="section-title fade-in">We Take Complete Control of the Analysis</h2>
-            <p class="section-subtitle fade-in">
-                Project Kisan connects your crop photo directly to our powerful AI analysis engine. Each step is
-                captured and monitored by our tech to give you the most accurate results. Our integrated service
-                includes:
-            </p>
+            <h2 class="section-title fade-in" id="process-title">We Take Complete Control of the Analysis</h2>
+            <p class="section-subtitle fade-in" id="process-subtitle">Project Kisan connects your crop photo directly to our powerful AI analysis engine. Each step is captured and monitored by our tech to give you the most accurate results. Our integrated service includes:</p>
             <div class="process-timeline">
-                <div class="process-step fade-in">
-                    <div class="process-icon">
-                        <img src="images/diagnose-crop.svg" alt="Upload Icon">
-                    </div>
-                    <p>Upload</p>
-                </div>
+                <div class="process-step fade-in"><div class="process-icon"><img src="images/diagnose-crop.svg" alt="Upload Icon"></div><p id="process-step-1">Upload</p></div>
                 <div class="process-connector"></div>
-                <div class="process-step fade-in" style="animation-delay: 0.1s;">
-                    <div class="process-icon">
-                        <img src="images/ai-guardian.svg" alt="AI Analysis Icon">
-                    </div>
-                    <p>AI Analysis</p>
-                </div>
+                <div class="process-step fade-in" style="animation-delay: 0.1s;"><div class="process-icon"><img src="images/ai-guardian.svg" alt="AI Analysis Icon"></div><p id="process-step-2">AI Analysis</p></div>
                 <div class="process-connector"></div>
-                <div class="process-step fade-in" style="animation-delay: 0.2s;">
-                    <div class="process-icon">
-                        <img src="images/scheme.svg" alt="Identification Icon">
-                    </div>
-                    <p>Identification</p>
-                </div>
+                <div class="process-step fade-in" style="animation-delay: 0.2s;"><div class="process-icon"><img src="images/scheme.svg" alt="Identification Icon"></div><p id="process-step-3">Identification</p></div>
                 <div class="process-connector"></div>
-                <div class="process-step fade-in" style="animation-delay: 0.3s;">
-                    <div class="process-icon">
-                        <img src="images/pesticide-execution.png" alt="Remedy Icon">
-                    </div>
-                    <p>Remedy</p>
-                </div>
+                <div class="process-step fade-in" style="animation-delay: 0.3s;"><div class="process-icon"><img src="images/pesticide-execution.png" alt="Remedy Icon"></div><p id="process-step-4">Remedy</p></div>
                 <div class="process-connector"></div>
-                <div class="process-step fade-in" style="animation-delay: 0.4s;">
-                    <div class="process-icon">
-                        <img src="images/marketshop.svg" alt="Audio Icon">
-                    </div>
-                    <p>Audio Summary</p>
-                </div>
+                <div class="process-step fade-in" style="animation-delay: 0.4s;"><div class="process-icon"><img src="images/marketshop.svg" alt="Audio Icon"></div><p id="process-step-5">Audio Summary</p></div>
             </div>
         </div>
     </section>
 
-    <!-- Footer-->
-
-
     <footer class="site-footer">
-    <div class="footer-content-wrapper">
-
-        <!-- 1. Brand -->
-        <div class="footer-brand">
-            <img src="images/LOGO.png" alt="Project Kisan Logo">
-            <h3>Project Kisan</h3>
-        </div>
-
-        
-        <!-- 3. Team Information -->
-        <div class="footer-section" id="footer-team">
-            <h4>Our Team: Algo Agni</h4>
-            <div class="team-members-grid">
-                <div class="team-member-card">
-                    <h5>Lakshay Pal</h5>
-                    <p><a href="tel:+919315674123">9315674123</a></p>
-                    <p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Kishlay</h5>
-                    <p><a href="tel:+918368139841">8368139841</a></p>
-                    <p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Jatin Gupta</h5>
-                    <p><a href="tel:+919034602219">9034602219</a></p>
-                    <p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Krrish Barsiwal</h5>
-                    <p><a href="tel:+918094951456">8094951456</a></p>
-                    <p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p>
+        <div class="footer-content-wrapper">
+            <div class="footer-brand"><img src="images/LOGO.png" alt="Project Kisan Logo"><h3>Project Kisan</h3></div>
+            <div class="footer-section" id="footer-team">
+                <h4 id="footer-team-title">Our Team: Algo Agni</h4>
+                <div class="team-members-grid">
+                    <div class="team-member-card"><h5>Lakshay Pal</h5><p><a href="tel:+919315674123">9315674123</a></p><p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Kishlay</h5><p><a href="tel:+918368139841">8368139841</a></p><p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Jatin Gupta</h5><p><a href="tel:+919034602219">9034602219</a></p><p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Krrish Barsiwal</h5><p><a href="tel:+918094951456">8094951456</a></p><p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p></div>
                 </div>
             </div>
         </div>
-
-    </div>
-    
-    <!-- 4. Bottom Copyright Line -->
-    <div class="footer-bottom">
-        <p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
-    </div>
-</footer>
+        <div class="footer-bottom"><p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p></div>
+    </footer>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
@@ -330,7 +183,7 @@
     <!-- Your App's Logic -->
     <script src="app.js"></script>
     <script src="home.js"></script>
+    <script src="language-manager.js"></script>
 
 </body>
-
 </html>

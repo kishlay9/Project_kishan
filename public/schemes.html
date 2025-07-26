@@ -17,12 +17,29 @@
                 </a>
             </div>
             <nav class="header-nav">
-                <a href="index.html">Home</a>
-                <a href="market.html">Market Prices</a>
-                <a href="guardian.html">Guardian AI</a>
+                <a href="index.html" id="nav-home">Home</a>
+                <a href="market.html" id="nav-market">Market Prices</a>
+                <a href="guardian.html" id="nav-guardian">Guardian AI</a>
+                
+                <div class="language-selector">
+                    <button id="language-toggle-btn">
+                        <img src="images/languages.png" alt="Language">
+                        <span id="current-lang-text">English</span>
+                        <span class="caret">▼</span>
+                    </button>
+                    <div id="language-options" class="language-options hidden">
+                        <a href="#" class="language-option active" data-lang="en">English</a>
+                        <a href="#" class="language-option" data-lang="hi">हिन्दी (Hindi)</a>
+                        <a href="#" class="language-option" data-lang="kn">ಕನ್ನಡ (Kannada)</a>
+                    </div>
+                </div>
+
                 <a href="login.html" class="login-button">
                     <img src="images/user-icon.png" alt="Login Icon">
-                    <span>Login</span>
+                    <span id="nav-login">Login</span>
+                </a>
+                <a href="#" class="login-button" style="background-color: rgb(23, 135, 23); color: white; border: none;">
+                    <span id="nav-get-app">Get App</span>
                 </a>
             </nav>
         </div>
@@ -32,16 +49,14 @@
         <div id="chat-log" class="chat-log">
             <div id="initial-view" class="initial-view">
                 <img src="images/scheme.svg" alt="Schemes Icon" class="initial-view-icon">
-                <h2>AI Scheme Assistant</h2>
-                <p>Ask about government schemes for farmers in your area.</p>
+                <h2 id="schemes-title">AI Scheme Assistant</h2>
+                <p id="schemes-subtitle">Ask about government schemes for farmers in your area.</p>
                 
-                <!-- ▼▼▼ MERGED & REFINED SEARCHABLE DROPDOWN ▼▼▼ -->
                 <div class="location-dropdown-group">
-                    <label for="location-search-input">First, please select your state</label>
+                    <label for="location-search-input" id="schemes-label-location">First, please select your state</label>
                     <div id="location-dropdown" class="location-dropdown">
                         <div class="location-input-wrapper">
                             <input type="text" id="location-search-input" placeholder="Search & Select your State...">
-                            <span class="caret">▼</span>
                         </div>
                         <div id="location-dropdown-panel" class="location-dropdown-panel">
                             <ul id="location-list" class="location-list">
@@ -50,68 +65,36 @@
                         </div>
                     </div>
                 </div>
-                <!-- ▲▲▲ END OF REFINED DROPDOWN ▲▲▲ -->
             </div>
         </div>
 
         <div class="chat-input-area">
             <form id="chat-form" class="chat-input-bar">
-                <button type="button" id="voice-btn" class="chat-action-btn">
-                    <img src="images/mic.png" alt="Voice Input">
-                </button>
+                <button type="button" id="voice-btn" class="chat-action-btn"><img src="images/mic.png" alt="Voice Input"></button>
                 <input type="text" id="chat-input" placeholder="Ask about schemes for irrigation, seeds, loans..." autocomplete="off" required>
-                <button type="submit" id="send-btn" class="chat-action-btn">
-                    <img src="images/send.png" alt="Send Message">
-                </button>
+                <button type="submit" id="send-btn" class="chat-action-btn"><img src="images/send.png" alt="Send Message"></button>
             </form>
             <p class="disclaimer">AI responses may not always be accurate. Please verify with official sources.</p>
         </div>
     </main>
+
     <footer class="site-footer">
-    <div class="footer-content-wrapper">
-
-        <!-- 1. Brand -->
-        <div class="footer-brand">
-            <img src="images/LOGO.png" alt="Project Kisan Logo">
-            <h3>Project Kisan</h3>
-        </div>
-
-        
-        <!-- 3. Team Information -->
-        <div class="footer-section" id="footer-team">
-            <h4>Our Team: Algo Agni</h4>
-            <div class="team-members-grid">
-                <div class="team-member-card">
-                    <h5>Lakshay Pal</h5>
-                    <p><a href="tel:+919315674123">9315674123</a></p>
-                    <p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Kishlay</h5>
-                    <p><a href="tel:+918368139841">8368139841</a></p>
-                    <p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Jatin Gupta</h5>
-                    <p><a href="tel:+919034602219">9034602219</a></p>
-                    <p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p>
-                </div>
-                <div class="team-member-card">
-                    <h5>Krrish Barsiwal</h5>
-                    <p><a href="tel:+918094951456">8094951456</a></p>
-                    <p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p>
+        <div class="footer-content-wrapper">
+            <div class="footer-brand"><img src="images/LOGO.png" alt="Project Kisan Logo"><h3>Project Kisan</h3></div>
+            <div class="footer-section" id="footer-team">
+                <h4 id="footer-team-title">Our Team: Algo Agni</h4>
+                <div class="team-members-grid">
+                    <div class="team-member-card"><h5>Lakshay Pal</h5><p><a href="tel:+919315674123">9315674123</a></p><p><a href="mailto:llakshaydev@gmail.com">llakshaydev@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Kishlay</h5><p><a href="tel:+918368139841">8368139841</a></p><p><a href="mailto:kishlay.ranj@gmail.com">kishlay.ranj@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Jatin Gupta</h5><p><a href="tel:+919034602219">9034602219</a></p><p><a href="mailto:jatin.gupta4208@gmail.com">jatin.gupta4208@gmail.com</a></p></div>
+                    <div class="team-member-card"><h5>Krrish Barsiwal</h5><p><a href="tel:+918094951456">8094951456</a></p><p><a href="mailto:krrishbarsiwal777@gmail.com">krrishbarsiwal777@gmail.com</a></p></div>
                 </div>
             </div>
         </div>
-
-    </div>
-    
-    <!-- 4. Bottom Copyright Line -->
-    <div class="footer-bottom">
-        <p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p>
-    </div>
-</footer>
+        <div class="footer-bottom"><p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p></div>
+    </footer>
     
     <script src="schemes.js"></script>
+    <script src="language-manager.js"></script>
 </body>
 </html>
