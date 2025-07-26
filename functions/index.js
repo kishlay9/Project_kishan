@@ -114,7 +114,8 @@ exports.analyzePlantImage = onObjectFinalized(
         memory: "2GiB"
     },
     async (event) => {
-        const { name: filePath, bucket: bucketName, contentType } = event.data;
+        console.log("--- RUNNING LATEST DEPLOYED VERSION (v2 Multilingual) ---");
+        const { name: filePath, bucket: bucketName, contentType , metadata } = event.data;
 
         // This correctly reads the custom metadata you sent from the frontend.
         const language = event.data.metadata?.customMetadata?.language || 'en';

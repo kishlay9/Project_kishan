@@ -98,15 +98,21 @@
                 <span id="result-confidence"></span>
             </div>
             <div class="result-details-grid">
-                <div class="detail-card"><h4>Severity</h4><p id="result-severity"></p></div>
-                <div class="detail-card"><h4>Contagion Risk</h4><p id="result-risk"></p></div>
-            </div>
-            <div class="result-section"><h4>Description</h4><p id="result-description-english"></p><p id="result-description-hindi" class="hindi-text hidden"></p><p id="result-description-kannada" class="kannada-text hidden"></p></div>
-            <div class="result-section"><h4>Organic Remedy</h4><p id="result-organic-english"></p><p id="result-organic-hindi" class="hindi-text hidden"></p><p id="result-organic-kannada" class="kannada-text hidden"></p></div>
-            <div class="result-section"><h4>Chemical Remedy</h4><p id="result-chemical-english"></p><p id="result-chemical-hindi" class="hindi-text hidden"></p><p id="result-chemical-kannada" class="kannada-text hidden"></p></div>
-            <div class="result-section"><h4>Prevention Tips</h4><div id="result-prevention"></div></div>
+    <div class="detail-card">
+        <h4 data-i18n-key="severity">Severity</h4>
+        <p id="result-severity"></p>
+    </div>
+    <div class="detail-card">
+        <h4 data-i18n-key="contagionRisk">Contagion Risk</h4>
+        <p id="result-risk"></p>
+    </div>
+</div>
+            <div class="result-section"><h4 data-i18n-key="description">Description</h4><p id="result-description-english"></p><p id="result-description-hindi" class="hindi-text hidden"></p><p id="result-description-kannada" class="kannada-text hidden"></p></div>
+            <div class="result-section"><h4 data-i18n-key="organicRemedy">Organic Remedy</h4><p id="result-organic-english"></p><p id="result-organic-hindi" class="hindi-text hidden"></p><p id="result-organic-kannada" class="kannada-text hidden"></p></div>
+            <div class="result-section"><h4 data-i18n-key="chemicalRemedy">Chemical Remedy</h4><p id="result-chemical-english"></p><p id="result-chemical-hindi" class="hindi-text hidden"></p><p id="result-chemical-kannada" class="kannada-text hidden"></p></div>
+            <div class="result-section"><h4 data-i18n-key="preventionTips">Prevention Tips</h4><div id="result-prevention"></div></div>
             <audio id="remedy-audio" class="hidden"></audio>
-            <button id="speak-button" class="hidden">Listen to Summary</button>
+            <button id="speak-button" data-i18n-key="listenToSummary">Listen to Summary</button>
         </section>
     </main>
 
@@ -172,7 +178,7 @@
                 </div>
             </div>
         </div>
-        <div class="footer-bottom"><p>© 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p></div>
+        <div class="footer-bottom"><p>©️ 2025 Project Kisan. All Rights Reserved. A new dawn for Indian agriculture.</p></div>
     </footer>
 
     <!-- Firebase SDKs -->

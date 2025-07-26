@@ -7,6 +7,38 @@ const firebaseConfig = {
   appId: "1:176046173818:web:de8fb0e50752c8f62195c3",
   measurementId: "G-GDJE785E2N"
 };
+// translations.js
+
+// In app.js
+const translations = {
+  en: {
+    severity: "Severity",
+    contagionRisk: "Contagion Risk",
+    description: "DESCRIPTION",
+    organicRemedy: "ORGANIC REMEDY",
+    chemicalRemedy: "CHEMICAL REMEDY",
+    preventionTips: "PREVENTION TIPS",
+    listenToSummary: "Listen to Summary"
+  },
+  hi: {
+    severity: "गंभीरता",
+    contagionRisk: "संक्रमण का खतरा",
+    description: "विवरण",
+    organicRemedy: "जैविक उपचार",
+    chemicalRemedy: "रासायनिक उपचार",
+    preventionTips: "बचाव के उपाय",
+    listenToSummary: "सारांश सुनें"
+  },
+  kn: {
+    severity: "ತೀವ್ರತೆ",
+    contagionRisk: "ಸಾಂಕ್ರಾಮಿಕ ಅಪಾಯ",
+    description: "ವಿವರಣೆ",
+    organicRemedy: "ಸಾವಯವ ಪರಿಹಾರ",
+    chemicalRemedy: "ರಾಸಾಯನಿಕ ಪರಿಹಾರ",
+    preventionTips: "ತಡೆಗಟ್ಟುವ ಕ್ರಮಗಳು",
+    listenToSummary: "ಸಾರಾಂಶವನ್ನು ಕೇಳಿ"
+  }
+};
 
 firebase.initializeApp(firebaseConfig);
 const storage = firebase.storage();
@@ -35,53 +67,68 @@ const actionPanel = document.querySelector('.action-panel');
 // =================================================================
 // 3. CORE LOGIC: IMAGE UPLOAD (WITH ROBUST PROMISE-BASED FIX)
 // =================================================================
+// ==========================================================
+// ROBUST UPLOAD FUNCTION (REPLACE YOUR OLD ONE WITH THIS)
+// ==========================================================
 imageUploadInput.addEventListener('change', (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
+    const lang = localStorage.getItem('project-kisan-lang') || 'en';
+    alert(`DEBUG: Preparing to upload for language: ${lang}. If you don't see this alert, the old code is still running.`);
 
     hideResults();
     showStatus(`Uploading ${file.name}...`);
     statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
     
-    // Get the selected language to pass to the backend function
-    const lang = localStorage.getItem('project-kisan-lang') || 'en';
+    // --- Step 1: Prepare all data beforehand ---
     
     const uniqueFileName = `image_${Date.now()}_${file.name}`;
     const storagePath = `uploads/${uniqueFileName}`;
     const storageRef = storage.ref(storagePath);
     
-    // Pass language in metadata
+    // Create the full, correct metadata object
     const metadata = {
+        contentType: file.type,
         customMetadata: {
             'language': lang
         }
     };
+    
+   
+    // --- Step 2: Start the upload ---
     const uploadTask = storageRef.put(file, metadata);
 
-    // Attach a listener for progress updates
-    uploadTask.on('state_changed', (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        showStatus(`Uploading... ${Math.round(progress)}%`);
-    });
-
-    // Use .then() for success and .catch() for failure
-    uploadTask
-        .then(snapshot => {
-            console.log('SUCCESS: Upload is confirmed complete by the server.');
-            showStatus("Analyzing image with AI...");
-            listenForDiagnosisResult(uniqueFileName);
-        })
-        .catch(error => {
+    // --- Step 3: Set up listeners for the upload process ---
+    uploadTask.on(
+        'state_changed', 
+        (snapshot) => {
+            // Progress monitoring
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            showStatus(`Uploading... ${Math.round(progress)}%`);
+        }, 
+        (error) => {
+            // Error handling
             console.error("!!! UPLOAD FAILED:", error);
             let errorMessage = `Upload failed: ${error.code}.`;
+            // Add more specific error messages if needed
             if (error.code === 'storage/unauthorized') {
-                errorMessage += " Check your storage.rules.";
-            } else if (error.code === 'storage/unknown') {
-                errorMessage += " Network error. Is the emulator running?";
+                errorMessage += " Please check your Storage Security Rules.";
             }
             showStatus(errorMessage, true);
-        });
+        },
+        () => {
+            // Success handling (this function runs when the upload is complete)
+            console.log('SUCCESS: Upload is complete. Now starting to listen for results.');
+            showStatus("Analyzing image with AI...");
+            
+            // This is the function that listens to Firestore for the result
+            listenForDiagnosisResult(uniqueFileName);
+        }
+    );
 });
+
+
 
 
 // =================================================================
@@ -145,87 +192,74 @@ function hideResults() {
 // 6. FUNCTION TO DISPLAY THE FINAL RESULTS ON THE PAGE (LANGUAGE AWARE)
 // =================================================================
 
+
 function displayDiagnosisResults(data) {
     hideStatus();
     resultsContainer.classList.remove('hidden');
 
+    // Step 1: Get the user's chosen language from local storage.
     const lang = localStorage.getItem('project-kisan-lang') || 'en';
 
-    // Helper to get translated field or fallback to English
-    const getTranslated = (field) => {
-        if (lang === 'hi' && data[`${field}_hindi`]) return data[`${field}_hindi`];
-        if (lang === 'kn' && data[`${field}_kannada`]) return data[`${field}_kannada`];
-        return data[`${field}_english`] || 'No information available.';
+    // Step 2: Create a NEW, simpler helper function to get the right text.
+    // It first tries to get the selected language, then falls back to English, then to a default message.
+    const getTranslated = (fieldName) => {
+        if (data[fieldName]) { // Check if the main field (e.g., 'description') exists
+            return data[fieldName][lang] || data[fieldName].en || 'No information available.';
+        }
+        return 'No information available.';
     };
 
+    // --- Update the Main Title and Plant Type ---
+    // The main title will now show in the selected language.
     document.getElementById('result-title-english').textContent = getTranslated('disease_name');
     document.getElementById('result-plant-type').textContent = `(${getTranslated('plant_type') || data.object_category || 'Object'})`;
-    
+
+    // --- Confidence and Severity (This code was correct) ---
     const confidenceSpan = document.getElementById('result-confidence');
     const confidencePercent = (data.confidence_score * 100).toFixed(0);
     confidenceSpan.textContent = `${confidencePercent}% Confident`;
     
-    if (confidencePercent >= 75) {
-        confidenceSpan.style.backgroundColor = 'rgba(132, 204, 22, 0.2)';
-        confidenceSpan.style.color = '#3f6212';
-    } else if (confidencePercent >= 50) {
-        confidenceSpan.style.backgroundColor = 'rgba(234, 179, 8, 0.2)';
-        confidenceSpan.style.color = '#854d0e';
-    } else {
-        confidenceSpan.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-        confidenceSpan.style.color = '#991b1b';
-    }
+    // Your styling logic for the confidence badge... (This was correct)
+    if (confidencePercent >= 75) { /* ... */ } else if (confidencePercent >= 50) { /* ... */ } else { /* ... */ }
 
     document.getElementById('result-severity').textContent = data.severity || 'N/A';
     document.getElementById('result-risk').textContent = data.contagion_risk || 'N/A';
+    
+    // --- Update the Description and Remedy sections in the selected language ---
+    // We will now only show the text for the selected language, making the UI cleaner.
     document.getElementById('result-description-english').textContent = getTranslated('description');
     document.getElementById('result-organic-english').textContent = getTranslated('organic_remedy');
     document.getElementById('result-chemical-english').textContent = getTranslated('chemical_remedy');
-    
-    // Hide all language-specific text blocks first
+
+    // --- Hide the extra language blocks you might have in your HTML ---
+    // This simplifies the display to show only one language at a time.
     document.querySelectorAll('.kannada-text, .hindi-text').forEach(el => el.classList.add('hidden'));
 
-    // Show the specific language block if not English
-    if (lang === 'kn') {
-        const knDesc = document.getElementById('result-description-kannada');
-        const knOrg = document.getElementById('result-organic-kannada');
-        const knChem = document.getElementById('result-chemical-kannada');
-        knDesc.textContent = data.description_kannada || '';
-        knOrg.textContent = data.organic_remedy_kannada || '';
-        knChem.textContent = data.chemical_remedy_kannada || '';
-        if (knDesc.textContent) knDesc.classList.remove('hidden');
-        if (knOrg.textContent) knOrg.classList.remove('hidden');
-        if (knChem.textContent) knChem.classList.remove('hidden');
-    } else if (lang === 'hi') {
-        // Similar logic for Hindi, assuming backend provides '..._hindi' fields
-        const hiDesc = document.getElementById('result-description-hindi');
-        const hiOrg = document.getElementById('result-organic-hindi');
-        const hiChem = document.getElementById('result-chemical-hindi');
-        hiDesc.textContent = data.description_hindi || '';
-        hiOrg.textContent = data.organic_remedy_hindi || '';
-        hiChem.textContent = data.chemical_remedy_hindi || '';
-        if (hiDesc.textContent) hiDesc.classList.remove('hidden');
-        if (hiOrg.textContent) hiOrg.classList.remove('hidden');
-        if (hiChem.textContent) hiChem.classList.remove('hidden');
-    }
-
+    // --- Update Prevention Tips ---
     const preventionDiv = document.getElementById('result-prevention');
-    const tipsArray = data[`prevention_tips_${lang}`] || data.prevention_tips_english || [];
-    if (tipsArray.length > 0 && tipsArray.some(tip => tip.trim() !== '')) {
+    // Get the tips array for the selected language, or fall back to English's array.
+    const tipsArray = data.prevention_tips?.[lang] || data.prevention_tips?.en || [];
+    if (tipsArray.length > 0) {
         preventionDiv.innerHTML = '<ul>' + tipsArray.map(tip => `<li>${tip.trim()}</li>`).join('') + '</ul>';
     } else {
+        const fallbackText = translations[lang]?.preventionTips || translations['en'].preventionTips;
         preventionDiv.innerHTML = `<p>No prevention tips available.</p>`;
     }
 
-    const audioUrl = data[`audio_remedy_url_${lang}`] || data.audio_remedy_url;
+    // --- Update Audio Player ---
+    // Get the audio URL for the selected language, or fall back to the English URL.
+    const audioUrl = data.audio_remedy_url?.[lang] || data.audio_remedy_url?.en;
+    const speakButton = document.getElementById('speak-button'); // Make sure you have this ID on your button
+    const remedyAudio = document.getElementById('remedy-audio');
+
     if (audioUrl) {
         speakButton.classList.remove('hidden');
-        const remedyAudio = document.getElementById('remedy-audio');
         remedyAudio.src = audioUrl;
         speakButton.onclick = () => {
             if (remedyAudio.paused) { remedyAudio.play(); } 
             else { remedyAudio.pause(); }
         };
+        // Your onplay/onpause/onended logic was correct and can remain.
         remedyAudio.onplay = () => { speakButton.textContent = 'Playing... (Click to Pause)'; };
         remedyAudio.onpause = () => { speakButton.textContent = 'Listen to Summary'; };
         remedyAudio.onended = () => { speakButton.textContent = 'Listen to Summary'; };
@@ -234,12 +268,35 @@ function displayDiagnosisResults(data) {
     }
 }
 
+// In app.js
+
+function translateUI(lang) {
+  // Find all elements that need to be translated
+  const elementsToTranslate = document.querySelectorAll('[data-i18n-key]');
+  
+  elementsToTranslate.forEach(element => {
+    const key = element.getAttribute('data-i18n-key');
+    
+    // Get the translation from our object
+    const translation = translations[lang]?.[key] || translations['en'][key];
+    
+    // Update the element's text
+    if (translation) {
+      element.textContent = translation;
+    }
+  });
+}
 
 // =================================================================
 // 7. PAGE LOAD ANIMATIONS & HELPERS (FROM NEW FRONTEND)
 // =================================================================
 
+// ==========================================================
+// COMBINED DOMCONTENTLOADED EVENT LISTENER
+// ==========================================================
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Your preexisting code (remains unchanged) ---
+    
     // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
@@ -264,4 +321,30 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('scroll', () => {
         header.classList.toggle('scrolled', window.scrollY > 50);
     });
+
+    // --- START: NEW TRANSLATION LOGIC TO BE ADDED ---
+
+    // 1. Get the language dropdown element
+    const languageSelector = document.getElementById('language-selector'); // Use the ID of your <select> element
+
+    // 2. Set the initial UI language when the page loads
+    const currentLang = localStorage.getItem('project-kisan-lang') || 'en';
+    if (languageSelector) {
+        languageSelector.value = currentLang; // Sync dropdown with saved language
+    }
+    translateUI(currentLang); // Translate all static text on the page
+
+    // 3. Add the event listener for when the user changes the language
+    if (languageSelector) {
+        languageSelector.addEventListener('change', (event) => {
+            const selectedLang = event.target.value;
+            
+            // Save the new choice to be remembered across page loads
+            localStorage.setItem('project-kisan-lang', selectedLang);
+            
+            // Immediately translate the UI to the new language
+            translateUI(selectedLang);
+        });
+    }
+    // --- END: NEW TRANSLATION LOGIC TO BE ADDED ---
 });
