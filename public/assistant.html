@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant - Project Kisan</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="market-page-body">
+
+    <header>
+        <div class="header-container">
+            <div class="logo-container">
+                <a href="index.html" class="logo-link">
+                    <img src="images/LOGO.png" alt="Project Kisan Logo" class="logo">
+                    <h1>Project Kisan</h1>
+                </a>
+            </div>
+            <nav class="header-nav">
+                <a href="index.html">Home</a>
+                <a href="market.html">Market Prices</a>
+                <a href="guardian.html">Guardian AI</a>
+                <a href="login.html" class="login-button">
+                    <img src="images/user-icon.png" alt="Login Icon">
+                    <span>Login</span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="chat-main-container">
+        <div class="chat-container">
+            <div id="chat-history" class="chat-history">
+                <!-- Chat messages will be dynamically added here -->
+            </div>
+            <div class="chat-input-area">
+                <form id="chat-form">
+                    <textarea id="chat-input" placeholder="Ask about crop diseases, soil preparation, market prices..." rows="1" required></textarea>
+                    <button id="send-button" type="submit">
+                        <img src="images/send.png" alt="Send">
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="assistant.js"></script>
+</body>
+</html>
