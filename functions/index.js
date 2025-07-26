@@ -23,7 +23,7 @@ const contentType = require('content-type');
 // --- HIGHLIGHTED FIX: Added missing imports for your new functions ---
 const axios = require("axios");
 const { VertexAI } = require("@google-cloud/vertexai");
-const cors = require('cors')({origin: true});
+const cors = require('cors')({ origin: true });
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 // NEW, ROBUST IMPORT LINE
 
@@ -116,92 +116,93 @@ exports.analyzePlantImage = onObjectFinalized(
     async (event) => {
         const { name: filePath, bucket: bucketName, contentType } = event.data;
 
-        const language = metadata?.language || 'en';
+        // This correctly reads the custom metadata you sent from the frontend.
+        const language = event.data.metadata?.customMetadata?.language || 'en';
 
         functions.logger.info(`[Function Start] Received object event. FilePath: "${filePath}", ContentType: "${contentType}", Bucket: "${bucketName}"`);
 
-        if (!filePath || !filePath.startsWith("uploads/")) { 
+        if (!filePath || !filePath.startsWith("uploads/")) {
             functions.logger.warn(`[Function Skip] File "${filePath}" ignored: not in "uploads/" directory or no name.`);
             return;
         }
 
-        let apiEndpoint; 
-        
+        let apiEndpoint;
+
         // --- START: NEW HYBRID AUTHENTICATION BLOCK ---
-try {
-    let accessToken;
+        try {
+            let accessToken;
 
-    // Check if we are running in the emulator
-    if (process.env.FUNCTIONS_EMULATOR === 'true') {
-        functions.logger.info("[Auth] Emulator detected. Fetching token from local gcloud CLI...");
-        
-        // This command asks your local gcloud setup for an auth token
-        const { exec } = require('child_process');
-        accessToken = await new Promise((resolve, reject) => {
-            exec('gcloud auth print-access-token', (error, stdout, stderr) => {
-                if (error) {
-                    console.error(`gcloud auth error: ${stderr}`);
-                    reject(new Error('Failed to get gcloud auth token. Make sure you are logged in (`gcloud auth login`).'));
-                } else {
-                    resolve(stdout.trim());
+            // Check if we are running in the emulator
+            if (process.env.FUNCTIONS_EMULATOR === 'true') {
+                functions.logger.info("[Auth] Emulator detected. Fetching token from local gcloud CLI...");
+
+                // This command asks your local gcloud setup for an auth token
+                const { exec } = require('child_process');
+                accessToken = await new Promise((resolve, reject) => {
+                    exec('gcloud auth print-access-token', (error, stdout, stderr) => {
+                        if (error) {
+                            console.error(`gcloud auth error: ${stderr}`);
+                            reject(new Error('Failed to get gcloud auth token. Make sure you are logged in (`gcloud auth login`).'));
+                        } else {
+                            resolve(stdout.trim());
+                        }
+                    });
+                });
+                functions.logger.info("[Auth] Successfully fetched local gcloud token.");
+
+            } else {
+                // This is the original code that will run when deployed to the cloud
+                functions.logger.info("[Auth] Production environment detected. Fetching token from metadata server...");
+                const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
+
+                if (!tokenResponse.ok) {
+                    const errorText = await tokenResponse.text();
+                    functions.logger.error(`[Auth Error] Failed to fetch token from metadata server. Status: ${tokenResponse.status}, Response: ${errorText}`);
+                    throw new Error(`Failed to fetch access token: ${tokenResponse.statusText}`);
                 }
-            });
-        });
-        functions.logger.info("[Auth] Successfully fetched local gcloud token.");
 
-    } else {
-        // This is the original code that will run when deployed to the cloud
-        functions.logger.info("[Auth] Production environment detected. Fetching token from metadata server...");
-        const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
-        
-        if (!tokenResponse.ok) {
-            const errorText = await tokenResponse.text();
-            functions.logger.error(`[Auth Error] Failed to fetch token from metadata server. Status: ${tokenResponse.status}, Response: ${errorText}`);
-            throw new Error(`Failed to fetch access token: ${tokenResponse.statusText}`);
-        }
+                const tokenData = await tokenResponse.json();
+                accessToken = tokenData.access_token;
+                functions.logger.info(`[Auth] Metadata server token fetched. Expires in: ${tokenData.expires_in}s`);
+            }
 
-        const tokenData = await tokenResponse.json();
-        accessToken = tokenData.access_token;
-        functions.logger.info(`[Auth] Metadata server token fetched. Expires in: ${tokenData.expires_in}s`);
-    }
+            // Now, the rest of your function uses the `accessToken` variable, which is now correctly populated in both environments
 
-    // Now, the rest of your function uses the `accessToken` variable, which is now correctly populated in both environments
-    
-    apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
-    // ... the rest of your function continues here ...
+            apiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
+            // ... the rest of your function continues here ...
 
-// --- END: NEW HYBRID AUTHENTICATION BLOCK ---
+            // --- END: NEW HYBRID AUTHENTICATION BLOCK ---
 
             const diagnosisPrompt = getDiagnosisPrompt(language);
-            
-           
-                        // --- START OF THE ONLY CHANGE ---
+
+
+            // --- START OF THE ONLY CHANGE ---
 
             // 1. Read the uploaded image file from storage into a buffer.
             functions.logger.info(`[File Read] Reading gs://${bucketName}/${filePath} into memory...`);
             const file = storage.bucket(bucketName).file(filePath);
             const [imageBuffer] = await file.download();
-            
+
             // 2. Convert the image buffer to a Base64 string for the API request.
             const imageBase64 = imageBuffer.toString('base64');
             functions.logger.info(`[File Read] File successfully read. Size: ${imageBuffer.length} bytes.`);
-            
+
             // 3. Build the NEW request body with inline_data instead of file_data.
-            const requestBody = { 
-                contents: [{ 
+            const requestBody = {
+                contents: [{
                     role: "user",
                     parts: [
-                        { 
+                        {
                             inline_data: {
                                 mime_type: contentType,
                                 data: imageBase64
-                            } 
-                        }, 
+                            }
+                        },
                         { text: diagnosisPrompt } // Your prompt is used here, unchanged.
-                    ] 
-                }] 
+                    ]
+                }]
             };
-            
+
             functions.logger.info("[AI] Sending request to Gemini API with inline image data...");
 
             // --- END OF THE ONLY CHANGE ---
@@ -210,9 +211,9 @@ try {
             functions.logger.info("Full Diagnosis Response:", JSON.stringify(responseData, null, 2));
 
             const modelResponseText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!modelResponseText) { 
+            if (!modelResponseText) {
                 functions.logger.error("[Gemini Error] Did not receive a valid diagnosis from the AI. Full Response:", JSON.stringify(responseData, null, 2));
-                throw new Error("Did not receive a valid diagnosis from the AI."); 
+                throw new Error("Did not receive a valid diagnosis from the AI.");
             }
             const diagnosisData = JSON.parse(modelResponseText.replace(/^```json\s*|```\s*$/g, ""));
             functions.logger.info("Diagnosis received:", diagnosisData);
@@ -222,16 +223,31 @@ try {
                 textToSpeak = `Plant Type: ${diagnosisData.plant_type}. Description: ${diagnosisData.description_english}. For prevention: ${diagnosisData.prevention_tips_english?.join(', ') || 'No specific prevention tips available.'}.`;
             } else if (diagnosisData.object_category === "Non-Plant Object") {
                 textToSpeak = `This appears to be a non-plant object. Description: ${diagnosisData.description_english}. Please upload an image of a plant for diagnosis.`;
-            } else { 
+            } else {
                 textToSpeak = `The object in the image is ambiguous or unclear. Description: ${diagnosisData.description_english}. Please ensure the image clearly shows a plant.`;
             }
-                
-                const ttsRequest = { 
-                input: { text: textToSpeak }, 
-                voice: { languageCode: 'en-IN', name: 'en-IN-Wavenet-D' }, // HIGHLIGHTED CHANGE: Indian English Female Voice
-                audioConfig: { audioEncoding: 'MP3' } 
+
+            // --- START: NEW DYNAMIC VOICE SELECTION ---
+            let ttsVoiceConfig;
+
+            switch (language) {
+                case 'hi':
+                    ttsVoiceConfig = { languageCode: 'hi-IN', name: 'hi-IN-Wavenet-B' }; // Female Hindi Voice
+                    break;
+                case 'kn':
+                    ttsVoiceConfig = { languageCode: 'kn-IN', name: 'kn-IN-Wavenet-A' }; // Female Kannada Voice
+                    break;
+                default: // English
+                    ttsVoiceConfig = { languageCode: 'en-IN', name: 'en-IN-Wavenet-D' }; // Female Indian English Voice
+            }
+
+            const ttsRequest = {
+                input: { text: textToSpeak },
+                voice: ttsVoiceConfig, // <-- USE THE DYNAMIC CONFIG
+                audioConfig: { audioEncoding: 'MP3' }
             };
-            
+            // --- END: NEW DYNAMIC VOICE SELECTION ---
+
             functions.logger.info(`[TTS] Synthesizing speech for: "${textToSpeak.substring(0, Math.min(textToSpeak.length, 100))}..."`);
             const [ttsResponse] = await ttsClient.synthesizeSpeech(ttsRequest);
             functions.logger.info(`[TTS] Speech synthesis successful. Audio content length: ${ttsResponse.audioContent.length} bytes.`);
@@ -243,7 +259,7 @@ try {
                 return;
             }
 
-                        const baseFileNameForAudio = diagnosisId.replace(/\.[^/.]+$/, "");
+            const baseFileNameForAudio = diagnosisId.replace(/\.[^/.]+$/, "");
             // HIGHLIGHTED FIX 4: Use the 'language' variable to name the audio file.
             const audioFileName = `${baseFileNameForAudio}_${language}.mp3`;
             const audioFile = admin.storage().bucket(bucketName).file(`audio-output/${audioFileName}`);
@@ -271,8 +287,8 @@ try {
                 prevention_tips: { ...existingData.prevention_tips, [language]: diagnosisData.prevention_tips },
                 audio_remedy_url: { ...existingData.audio_remedy_url, [language]: audioUrl }
             };
-            
-            await docRef.set(finalData, { merge: true }); 
+
+            await docRef.set(finalData, { merge: true });
             functions.logger.info(`[Firestore] Successfully wrote/merged diagnosis to Firestore (ID: ${diagnosisId}).`);
 
         } catch (error) {
@@ -306,12 +322,12 @@ exports.proactiveMarketAnalyst = onSchedule(
 
         const today = new Date();
         const todayStrForAPI = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
-        
+
         let offset = 0;
-        const limit = 300; 
+        const limit = 300;
         let totalRecords = 0;
         let recordsProcessed = 0;
-        
+
         try {
             functions.logger.info(`[Market Analyst - Ingestion] Fetching initial page from OGD API for ${todayStrForAPI} with limit=${limit}...`);
             let queryParams = new URLSearchParams({
@@ -322,7 +338,7 @@ exports.proactiveMarketAnalyst = onSchedule(
                 'offset': offset.toString()
             });
             let ogdApiUrl = `${OGD_API_BASE_URL}?${queryParams.toString()}`;
-            
+
             let response = await fetch(ogdApiUrl);
             let responseData = await response.json();
 
@@ -331,7 +347,7 @@ exports.proactiveMarketAnalyst = onSchedule(
                 functions.logger.error(`[Market Analyst - Ingestion Error] Failed initial fetch from OGD API. Status: ${response.status}, Details: ${errorDetails}`);
                 throw new Error("Failed initial OGD API data fetch.");
             }
-            
+
             totalRecords = parseInt(responseData.total || '0', 10);
             functions.logger.info(`[Market Analyst - Ingestion] Total records for ${todayStrForAPI}: ${totalRecords}`);
 
@@ -343,7 +359,7 @@ exports.proactiveMarketAnalyst = onSchedule(
             while (recordsProcessed < totalRecords) {
                 const batch = firestore.batch();
                 let batchCount = 0;
-                
+
                 if (recordsProcessed > 0) {
                     queryParams = new URLSearchParams({
                         'api-key': OGD_API_KEY,
@@ -353,7 +369,7 @@ exports.proactiveMarketAnalyst = onSchedule(
                         'offset': offset.toString()
                     });
                     ogdApiUrl = `${OGD_API_BASE_URL}?${queryParams.toString()}`;
-                    
+
                     response = await fetch(ogdApiUrl);
                     responseData = await response.json();
 
@@ -376,23 +392,23 @@ exports.proactiveMarketAnalyst = onSchedule(
                     const district = record.district;
                     const variety = record.variety;
                     const grade = record.grade;
-                    const priceModal = parseFloat(record.modal_price || 0); 
+                    const priceModal = parseFloat(record.modal_price || 0);
                     const priceMin = parseFloat(record.min_price || 0);
                     const priceMax = parseFloat(record.max_price || 0);
-                    const arrivalDateApi = record.arrival_date; 
+                    const arrivalDateApi = record.arrival_date;
 
                     if (!commodity || !state || !market || !arrivalDateApi || isNaN(priceModal) || priceModal <= 0) {
                         functions.logger.warn(`[Market Analyst - Ingestion Warning] Skipping incomplete/invalid record: ${JSON.stringify(record)}`);
-                        continue; 
+                        continue;
                     }
 
-                    let firestoreDate = new Date().toISOString().slice(0, 10); 
+                    let firestoreDate = new Date().toISOString().slice(0, 10);
                     try {
-                        const parts = arrivalDateApi.split('/'); 
+                        const parts = arrivalDateApi.split('/');
                         if (parts.length === 3) {
-                            const parsedDate = new Date(`${parts[1]}/${parts[0]}/${parts[2]}`); 
+                            const parsedDate = new Date(`${parts[1]}/${parts[0]}/${parts[2]}`);
                             if (!isNaN(parsedDate.getTime())) {
-                                firestoreDate = parsedDate.toISOString().slice(0, 10); 
+                                firestoreDate = parsedDate.toISOString().slice(0, 10);
                             }
                         }
                     } catch (e) {
@@ -412,26 +428,26 @@ exports.proactiveMarketAnalyst = onSchedule(
                     const marketSlug = sanitizeForId(market);
                     // --- END HIGHLIGHTED CHANGE ---
 
-                    const firestoreDocId = `${cropSlug}_${marketSlug}_${stateSlug}`; 
-                    
+                    const firestoreDocId = `${cropSlug}_${marketSlug}_${stateSlug}`;
+
                     const marketData = {
-                        crop_name: commodity, 
+                        crop_name: commodity,
                         market_name: market,
-                        district_name: district, 
+                        district_name: district,
                         state_name: state,
-                        variety: variety, 
-                        grade: grade, 
-                        date: firestoreDate, 
+                        variety: variety,
+                        grade: grade,
+                        date: firestoreDate,
                         price_modal: priceModal,
                         price_min: priceMin,
                         price_max: priceMax,
-                        price_unit: "Rs./Quintal", 
-                        source_api: `data.gov.in (Resource ID: ${OGD_RESOURCE_ID})`, 
+                        price_unit: "Rs./Quintal",
+                        source_api: `data.gov.in (Resource ID: ${OGD_RESOURCE_ID})`,
                         ingested_at: admin.firestore.FieldValue.serverTimestamp(),
                     };
 
                     const docRef = firestore.collection("market_prices").doc(firestoreDocId);
-                    const historicalDocRef = docRef.collection("historical_prices").doc(firestoreDate); 
+                    const historicalDocRef = docRef.collection("historical_prices").doc(firestoreDate);
 
                     batch.set(historicalDocRef, marketData);
                     batchCount++;
@@ -442,7 +458,7 @@ exports.proactiveMarketAnalyst = onSchedule(
                     await batch.commit();
                     functions.logger.info(`[Market Analyst - Ingestion] Batch committed. Processed ${batchCount} records. Total processed: ${recordsProcessed} of ${totalRecords}.`);
                 }
-                
+
                 offset += limit;
             }
 
@@ -604,10 +620,10 @@ async function analyzeSingleFarmForRisks(farmData, farmId) {
         const lat = location.latitude;
         const lon = location.longitude;
         const weatherApiUrl = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${WEATHER_API_KEY}&location.latitude=${lat}&location.longitude=${lon}&days=7`;
-        
+
         functions.logger.info(`[Proactive Guardian] Fetching weather data for farm ${farmId} from Google Weather API.`);
         const weatherResponse = await axios.get(weatherApiUrl);
-        
+
         // --- HIGHLIGHTED CHANGE: Use the correct 'forecastDays' field name from the API documentation ---
         if (!weatherResponse.data || !Array.isArray(weatherResponse.data.forecastDays) || weatherResponse.data.forecastDays.length === 0) {
             functions.logger.warn(`[Proactive Guardian] Weather data for farm ${farmId} was invalid or empty.`, { response: weatherResponse.data });
@@ -625,17 +641,17 @@ async function analyzeSingleFarmForRisks(farmData, farmId) {
         Analyze the data for patterns conducive to specific threats (e.g., high humidity and moderate temps for fungal diseases, specific wind patterns for pest migration).
 
         Respond ONLY with a single, valid JSON object containing an array named "threats". Each object in the array should have these exact keys: "threat_name", "threat_type" (e.g., "Pest", "Fungal Disease", "Bacterial Disease"), "risk_level" ("Low", "Medium", or "High"), and "reasoning". If no significant risks are found, return an empty array.`;
-        
+
         functions.logger.info(`[Proactive Guardian] Sending prompt to Vertex AI for farm ${farmId}.`);
         const resp = await generativeModel.generateContent(prompt);
-        
-        if (!resp || !resp.response || !resp.response.candidates || !resp.response.candidates[0] || 
-            !resp.response.candidates[0].content || !resp.response.candidates[0].content.parts || 
+
+        if (!resp || !resp.response || !resp.response.candidates || !resp.response.candidates[0] ||
+            !resp.response.candidates[0].content || !resp.response.candidates[0].content.parts ||
             !resp.response.candidates[0].content.parts[0] || typeof resp.response.candidates[0].content.parts[0].text !== 'string') {
             throw new Error('Invalid Vertex AI response structure: Missing candidates, content, parts, or text.');
         }
         const content = resp.response.candidates[0].content.parts[0].text;
-        
+
         functions.logger.info(`[Proactive Guardian] Raw Gemini response for farm ${farmId}:`, { content });
 
         let jsonString = content;
@@ -643,7 +659,7 @@ async function analyzeSingleFarmForRisks(farmData, farmId) {
         if (jsonMatch && jsonMatch[1]) {
             jsonString = jsonMatch[1];
         }
-        
+
         const firstBrace = jsonString.indexOf('{');
         const lastBrace = jsonString.lastIndexOf('}');
         if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
@@ -683,11 +699,11 @@ async function analyzeSingleFarmForRisks(farmData, farmId) {
 exports.getMarketAnalysis = onRequest(
     {
         region: LOCATION,
-        timeoutSeconds: 60, 
-        memory: "1GiB" 
+        timeoutSeconds: 60,
+        memory: "1GiB"
     },
     async (request, response) => {
-        response.set('Access-Control-Allow-Origin', '*'); 
+        response.set('Access-Control-Allow-Origin', '*');
         if (request.method === 'OPTIONS') {
             response.set('Access-Control-Allow-Methods', 'GET, POST');
             response.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -697,9 +713,9 @@ exports.getMarketAnalysis = onRequest(
 
         let cropName = request.query.cropName || request.body.cropName;
         let stateName = request.query.stateName || request.body.stateName;
-        let marketName = request.query.marketName || request.body.marketName; 
+        let marketName = request.query.marketName || request.body.marketName;
 
-        try { 
+        try {
             let accessToken;
             try {
                 const tokenResponse = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
@@ -724,43 +740,43 @@ exports.getMarketAnalysis = onRequest(
             const cropSlug = String(cropName).toLowerCase().replace(/\s+/g, '-');
             const stateSlug = String(stateName).toLowerCase().replace(/\s+/g, '-');
             const marketSlug = String(marketName).toLowerCase().replace(/\s+/g, '-');
-            
+
             const firestoreDocId = `${cropSlug}_${marketSlug}_${stateSlug}`;
 
             const today = new Date();
             const todayStr = today.toISOString().slice(0, 10);
-            
+
             const ninetyDaysAgo = new Date(today);
-            ninetyDaysAgo.setDate(today.getDate() - 90); 
+            ninetyDaysAgo.setDate(today.getDate() - 90);
             const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().slice(0, 10);
 
             const lastYearStart = new Date(today);
             lastYearStart.setFullYear(today.getFullYear() - 1);
-            lastYearStart.setDate(today.getDate() - 90); 
+            lastYearStart.setDate(today.getDate() - 90);
             const lastYearStartStr = lastYearStart.toISOString().slice(0, 10);
 
             const lastYearEnd = new Date(today);
             lastYearEnd.setFullYear(today.getFullYear() - 1);
             const lastYearEndStr = lastYearEnd.toISOString().slice(0, 10);
 
-            let allRelevantData = []; 
-            let dataCompleteness = "Complete"; 
+            let allRelevantData = [];
+            let dataCompleteness = "Complete";
 
             const historicalPricesRef = firestore.collection("market_prices").doc(firestoreDocId).collection("historical_prices");
-            
+
             const currentPeriodSnapshot = await historicalPricesRef
-                .where('date', '>=', ninetyDaysAgoStr) 
+                .where('date', '>=', ninetyDaysAgoStr)
                 .orderBy('date', 'asc')
                 .get();
             allRelevantData = currentPeriodSnapshot.docs.map(doc => doc.data());
-            
+
             if (allRelevantData.length === 0 || new Date(allRelevantData[0].date).getFullYear() > today.getFullYear() - 1) {
-                 const lastYearSnapshot = await historicalPricesRef
+                const lastYearSnapshot = await historicalPricesRef
                     .where('date', '>=', lastYearStartStr)
                     .where('date', '<=', lastYearEndStr)
                     .orderBy('date', 'asc')
                     .get();
-                 allRelevantData = allRelevantData.concat(lastYearSnapshot.docs.map(doc => doc.data()));
+                allRelevantData = allRelevantData.concat(lastYearSnapshot.docs.map(doc => doc.data()));
             }
 
             functions.logger.info(`[Market Analysis - OnDemand] Fetched ${allRelevantData.length} relevant records for ${cropName} in ${marketName} (${stateName}) from Firestore.`);
@@ -769,21 +785,21 @@ exports.getMarketAnalysis = onRequest(
                 dataCompleteness = "Missing (No data found in Firestore for this crop/market/state combination)";
                 functions.logger.warn(`[Market Analysis - OnDemand] No data found in Firestore for ${cropName} at ${marketName} (${stateName}).`);
             } else if (allRelevantData.length < 60) {
-                 dataCompleteness = "Partial (Limited historical data)";
+                dataCompleteness = "Partial (Limited historical data)";
             }
 
             let currentYearRecentDataStr = "";
             let previousYearComparativeDataStr = "";
-            let chartDataArray = []; 
+            let chartDataArray = [];
 
-            const thirtyDaysAgo = new Date(today); 
-            thirtyDaysAgo.setDate(today.getDate() - 30); 
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
 
             const districtNameForPrompt = allRelevantData.length > 0 ? allRelevantData[0].district_name : 'N/A';
 
             allRelevantData.forEach(item => {
                 const itemDate = new Date(item.date);
-                
+
                 chartDataArray.push({
                     date: item.date,
                     price_modal: item.price_modal,
@@ -795,21 +811,21 @@ exports.getMarketAnalysis = onRequest(
                 if (itemDate.getFullYear() === today.getFullYear() && itemDate >= thirtyDaysAgo) {
                     currentYearRecentDataStr += `${item.date}: ${item.price_modal} INR\n`;
                 }
-                
+
                 const comparableDateLastYear = new Date(item.date);
-                comparableDateLastYear.setFullYear(today.getFullYear()); 
-                
+                comparableDateLastYear.setFullYear(today.getFullYear());
+
                 if (itemDate.getFullYear() === today.getFullYear() - 1 &&
-                    comparableDateLastYear >= thirtyDaysAgo && 
+                    comparableDateLastYear >= thirtyDaysAgo &&
                     comparableDateLastYear <= today) {
-                        previousYearComparativeDataStr += `${item.date}: ${item.price_modal} INR\n`;
+                    previousYearComparativeDataStr += `${item.date}: ${item.price_modal} INR\n`;
                 }
             });
 
             chartDataArray.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            const currentPriceForAI = chartDataArray.length > 0 ? 
-                                      chartDataArray[chartDataArray.length - 1].price_modal : 'N/A'; 
+            const currentPriceForAI = chartDataArray.length > 0 ?
+                chartDataArray[chartDataArray.length - 1].price_modal : 'N/A';
 
             const analysisPrompt = `You are a world-class AI market analyst for Indian farmers. Analyze the provided crop price data and offer actionable advice.
 
@@ -851,26 +867,26 @@ Respond ONLY with a single, valid JSON object with the exact structure and keys 
 }`;
             const geminiApiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
             const geminiRequestBody = { contents: [{ parts: [{ text: analysisPrompt }], role: "user" }] };
-            
+
             functions.logger.info("[AI] Sending analysis request to Gemini API...");
-            const geminiResponse = await fetch(geminiApiEndpoint, { 
-                method: "POST", 
-                headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, 
-                body: JSON.stringify(geminiRequestBody) 
+            const geminiResponse = await fetch(geminiApiEndpoint, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+                body: JSON.stringify(geminiRequestBody)
             });
             const geminiResponseData = await geminiResponse.json();
             functions.logger.info("Full Gemini Analysis Response:", JSON.stringify(geminiResponseData, null, 2));
 
             // --- HIGHLIGHTED FIX: Corrected syntax and added robust JSON parsing logic ---
             const modelResponseText = geminiResponseData?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!modelResponseText) { 
+            if (!modelResponseText) {
                 functions.logger.error("[Gemini Error] Did not receive valid analysis from AI.", { response: geminiResponseData });
                 response.status(500).json({ error: "Could not generate market analysis from AI." });
                 return;
             }
 
             let jsonString = modelResponseText;
-            
+
             // Step 1: Try to extract content from a markdown block like ```json ... ```
             const jsonMatch = modelResponseText.match(/```json\s*([\s\S]*?)\s*```/);
             if (jsonMatch && jsonMatch[1]) {
@@ -884,13 +900,13 @@ Respond ONLY with a single, valid JSON object with the exact structure and keys 
             // Step 2: For extra safety, find the first '{' and last '}' to trim any potential extra text
             const firstBrace = jsonString.indexOf('{');
             const lastBrace = jsonString.lastIndexOf('}');
-            
+
             if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
                 functions.logger.error("[JSON Parse Error] Could not find a valid JSON object within Gemini's response.", { rawResponse: modelResponseText });
                 response.status(500).json({ error: "AI response did not contain a valid JSON object." });
                 return;
             }
-            
+
             // Step 3: Get the final, clean JSON string and trim it
             const finalJsonString = jsonString.substring(firstBrace, lastBrace + 1).trim();
 
@@ -936,7 +952,7 @@ exports.generateMasterPlan = onCall(
         try {
             // 2. The AI's Job: Create the comprehensive plan
             const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
-            
+
             // CORRECTED PROMPT: Asks for both masterPlan and dailyTasks
             const prompt = `
                 You are a master agronomist for the Indian subcontinent. Your task is to create a complete cultivation content package.
@@ -959,7 +975,7 @@ exports.generateMasterPlan = onCall(
 
             const resp = await generativeModel.generateContent(prompt);
             const content = resp.response.candidates[0].content.parts[0].text;
-            
+
             // Robustly parse the JSON response from the AI
             let jsonString = content.replace(/```json/g, '').replace(/```/g, '').trim();
             const firstBrace = jsonString.indexOf('{');
@@ -984,7 +1000,7 @@ exports.generateMasterPlan = onCall(
             }, { merge: true });
 
             functions.logger.info(`[Master Plan] Successfully generated and saved plan for farm ${farmId}.`);
-            
+
             // 4. Return the farmId and the generic daily tasks to the client
             return {
                 success: true,
@@ -1019,9 +1035,9 @@ exports.geocodeAddress = onCall(
             functions.logger.error("FATAL: GOOGLE_MAPS_API_KEY secret not loaded.");
             throw new HttpsError('internal', 'Server configuration error for geocoding.');
         }
-        
+
         const geocodingApiUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_MAPS_API_KEY}`;
-        
+
         try {
             const response = await axios.get(geocodingApiUrl);
             const data = response.data;
@@ -1055,7 +1071,7 @@ exports.generateDailyTasks = onSchedule(
         memory: "1GiB",
         concurrency: 1,
         // --- HIGHLIGHTED CHANGE: Add the secret for the Weather API Key ---
-        secrets: ["WEATHER_API_KEY"] 
+        secrets: ["WEATHER_API_KEY"]
     },
     async (event) => {
         functions.logger.info("[Daily Tasks] Starting daily task generation for all active farms.");
@@ -1066,10 +1082,10 @@ exports.generateDailyTasks = onSchedule(
             return null;
         }
 
-        const taskPromises = farmsWithActivePlans.docs.map(doc => 
+        const taskPromises = farmsWithActivePlans.docs.map(doc =>
             processSingleFarmDailyTasks(doc.id, doc.data())
         );
-        
+
         await Promise.all(taskPromises);
         functions.logger.info(`[Daily Tasks] Finished task generation for ${farmsWithActivePlans.size} farms.`);
         return null;
@@ -1111,9 +1127,9 @@ async function processSingleFarmDailyTasks(farmId, farmData) {
         if (!weatherForecast || !Array.isArray(weatherForecast) || weatherForecast.length < 2) {
             throw new Error("Received invalid or insufficient (less than 2 days) weather forecast data.");
         }
-        
+
         // D. Consult the AI Expert
-        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" }); 
+        const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
         const prompt = `
             You are a hyper-practical AI Agronomist providing a daily to-do list for an Indian farmer. Be extremely direct, simple, and actionable.
             
@@ -1131,9 +1147,9 @@ async function processSingleFarmDailyTasks(farmId, farmData) {
         `;
 
         const resp = await generativeModel.generateContent(prompt);
-        
-        if (!resp || !resp.response || !resp.response.candidates || !resp.response.candidates[0] || 
-            !resp.response.candidates[0].content || !resp.response.candidates[0].content.parts || 
+
+        if (!resp || !resp.response || !resp.response.candidates || !resp.response.candidates[0] ||
+            !resp.response.candidates[0].content || !resp.response.candidates[0].content.parts ||
             !resp.response.candidates[0].content.parts[0] || typeof resp.response.candidates[0].content.parts[0].text !== 'string') {
             throw new Error('Invalid Vertex AI response structure.');
         }
@@ -1141,14 +1157,14 @@ async function processSingleFarmDailyTasks(farmId, farmData) {
 
         // --- HIGHLIGHTED FIX: Corrected and robust JSON parsing logic ---
         let jsonString = content;
-        
+
         // Step 1: Try to extract content from a markdown block like ```json ... ```
         const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
         if (jsonMatch && jsonMatch[1]) {
             // If found, use the captured group, which is the clean JSON content
             jsonString = jsonMatch[1];
         }
-        
+
         // Step 2: For extra safety, find the first '{' and last '}' to trim any potential extra text
         const firstBrace = jsonString.indexOf('{');
         const lastBrace = jsonString.lastIndexOf('}');
@@ -1188,11 +1204,11 @@ exports.getWeatherAndAqi = onRequest(
         // --- HIGHLIGHTED CHANGE: Add secrets for BOTH weather and air quality API keys ---
         // For simplicity, we'll assume one key has access to Weather, AQI, and Geocoding APIs.
         // You can create separate secrets if you use different keys.
-        secrets: ["GOOGLE_MAPS_API_KEY"] 
+        secrets: ["GOOGLE_MAPS_API_KEY"]
     },
     async (request, response) => {
         // --- CORS handling for frontend requests ---
-        response.set('Access-Control-Allow-Origin', '*'); 
+        response.set('Access-Control-Allow-Origin', '*');
         if (request.method === 'OPTIONS') {
             response.set('Access-Control-Allow-Methods', 'GET, POST');
             response.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -1256,7 +1272,7 @@ exports.getWeatherAndAqi = onRequest(
 
             const geminiResp = await generativeModel.generateContent(sprayingPrompt);
             const geminiContent = geminiResp.response.candidates[0].content.parts[0].text;
-            
+
             let sprayingConditions = { condition: "Unknown", reason: "AI analysis failed." }; // Default value
             try {
                 const firstBrace = geminiContent.indexOf('{');
@@ -1270,10 +1286,10 @@ exports.getWeatherAndAqi = onRequest(
             }
 
 
-                        // --- 4. Assemble the Final JSON Response for the Frontend ---
+            // --- 4. Assemble the Final JSON Response for the Frontend ---
             const finalResponse = {
                 location: {
-                    city: cityName, 
+                    city: cityName,
                     date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                 },
                 weather: {
@@ -1315,11 +1331,11 @@ function parseCityFromGeocodingResponse(geocodingData) {
 
     // Find the component that represents the city/town (locality) or district
     const firstResult = geocodingData.results[0];
-    const localityComponent = firstResult.address_components.find(comp => 
-        comp.types.includes("locality") || 
+    const localityComponent = firstResult.address_components.find(comp =>
+        comp.types.includes("locality") ||
         comp.types.includes("administrative_area_level_2") // Fallback for district
     );
-    
+
     return localityComponent ? localityComponent.long_name : "Unknown Location";
 }
 
@@ -1348,7 +1364,7 @@ exports.getSchemeAnswer = onRequest(
     },
     async (request, response) => {
         // --- CORS handling (no changes) ---
-        response.set('Access-Control-Allow-Origin', '*'); 
+        response.set('Access-Control-Allow-Origin', '*');
         if (request.method === 'OPTIONS') {
             response.set('Access-Control-Allow-Methods', 'POST');
             response.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -1384,7 +1400,7 @@ exports.getSchemeAnswer = onRequest(
                 busboy.on('error', (err) => reject(err));
                 busboy.on('finish', () => resolve());
             });
-            
+
             // **THE CORE FIX**: Feed the raw, pre-buffered body to Busboy
             if (request.rawBody) {
                 busboy.end(request.rawBody);
@@ -1400,7 +1416,7 @@ exports.getSchemeAnswer = onRequest(
                     response.status(400).json({ error: "Missing 'stateName' field or 'audio' file in form data." });
                     return;
                 }
-                
+
                 const question = await transcribeAudio(audioBuffer);
                 if (!question) {
                     functions.logger.error("[Scheme Q&A Error] Transcription returned empty text.");
@@ -1417,7 +1433,7 @@ exports.getSchemeAnswer = onRequest(
                     response.status(500).json({ error: "Failed to process uploaded file.", details: error.message });
                 }
             }
-        // --- PATH 2: Handle Text-Only Requests ---
+            // --- PATH 2: Handle Text-Only Requests ---
         } else {
             try {
                 const question = request.body.question;
@@ -1428,7 +1444,7 @@ exports.getSchemeAnswer = onRequest(
                     response.status(400).json({ error: "Missing 'question' or 'stateName' in request." });
                     return;
                 }
-                
+
                 const result = await getGeminiAnalysisForScheme(question, stateName);
                 response.status(200).json(result);
 
@@ -1446,7 +1462,7 @@ exports.getSchemeAnswer = onRequest(
 async function transcribeAudio(audioBuffer) {
     functions.logger.info("[Scheme Q&A] Transcribing audio with Speech-to-Text API...");
     const audio = { content: audioBuffer.toString('base64') };
-    
+
     const speechConfig = {
         encoding: 'WEBM_OPUS',
         sampleRateHertz: 16000,
@@ -1460,7 +1476,7 @@ async function transcribeAudio(audioBuffer) {
         const transcription = sttResponse.results
             .map(result => result.alternatives[0].transcript)
             .join('\n');
-        
+
         if (transcription) {
             functions.logger.info(`[Scheme Q&A] Transcription successful: "${transcription}"`);
         } else {
@@ -1523,33 +1539,33 @@ async function getGeminiAnalysisForScheme(question, stateName) {
     - If you find one or more relevant schemes, populate the "schemes" array and set "schemes_found" to true. The "message_if_no_schemes" should be an empty string.
     - If you find NO relevant schemes, the "schemes" array MUST be empty (\`[]\`), "schemes_found" MUST be false, and you must provide a helpful message in "message_if_no_schemes", like "I could not find a specific scheme for your query in ${stateName}. You can check the official state agricultural portal for more information."
     - Do not make up facts, scheme names, or URLs. If you are unsure, it's better to state that in the "how_to_apply" section.`;
-    
+
     const geminiApiEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/gemini-1.5-pro-002:generateContent`;
-    const geminiRequestBody = { 
-        contents: [{ 
-            parts: [{ text: analysisPrompt }], 
-            role: "user" 
-        }] 
+    const geminiRequestBody = {
+        contents: [{
+            parts: [{ text: analysisPrompt }],
+            role: "user"
+        }]
     };
-    
-    const geminiResponse = await fetch(geminiApiEndpoint, { 
-        method: "POST", 
-        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, 
-        body: JSON.stringify(geminiRequestBody) 
+
+    const geminiResponse = await fetch(geminiApiEndpoint, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(geminiRequestBody)
     });
     const geminiResponseData = await geminiResponse.json();
-    
+
     const modelResponseText = geminiResponseData?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!modelResponseText) {
         functions.logger.error("[Scheme Q&A Error] Gemini response was empty or invalid.", { response: geminiResponseData });
         throw new Error("Could not get a valid answer from the AI.");
     }
-    
+
     // Robust JSON Parsing
     let jsonString = modelResponseText;
     const jsonMatch = modelResponseText.match(/``````/);
     if (jsonMatch && jsonMatch[1]) jsonString = jsonMatch[1];
-    
+
     const firstBrace = jsonString.indexOf('{');
     const lastBrace = jsonString.lastIndexOf('}');
     if (firstBrace === -1 || lastBrace === -1) {
@@ -1623,7 +1639,7 @@ exports.generateOpportunity = onCall(
             // STEP 2: Generate Foundational Agronomic Data
             functions.logger.info(`[Opportunity Engine V2] Generating agronomic data with AI...`);
             const agronomicModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
-            
+
             // CORRECTED: Added backticks to the entire multi-line string
             const agronomicPrompt = `
                 You are an expert Indian agronomist. For the following list of crops, provide their general agronomic and financial data.
@@ -1646,7 +1662,7 @@ exports.generateOpportunity = onCall(
                 jsonString = jsonString.substring(firstBrace, lastBrace + 1);
                 CROP_KNOWLEDGE_BASE = JSON.parse(jsonString.trim());
                 if (!CROP_KNOWLEDGE_BASE || Object.keys(CROP_KNOWLEDGE_BASE).length === 0) {
-                   throw new Error("Parsed JSON from agronomic prompt is empty or invalid.");
+                    throw new Error("Parsed JSON from agronomic prompt is empty or invalid.");
                 }
             } catch (e) {
                 functions.logger.error("[Opportunity Engine V2] CRITICAL: Failed to parse agronomic data from AI.", { rawResponse: agronomicContent, error: e.message });
@@ -1710,7 +1726,7 @@ exports.generateOpportunity = onCall(
                 **Output Format:**
                 Respond ONLY with a single, valid JSON object with a single key, "crop_plans". The value should be an array of exactly three plan objects. Each plan object must have these keys: "crop_name" (string), "estimated_profit_inr" (integer), "estimated_cost_inr" (integer), "pros" (an array of strings), and "cons" (an array of strings).
             `;
-            
+
             const resp = await strategyModel.generateContent(prompt);
             const content = resp.response.candidates[0].content.parts[0].text;
             let analysis;
@@ -1755,7 +1771,7 @@ exports.activateGuardian = onRequest(
             try {
                 // For a standard HTTPS request, data comes from the request body
                 const { currentCrop, sowingDate, locationCity, farmId, userId } = request.body;
-                
+
                 // Validate the input from the request body
                 if (!currentCrop || !sowingDate || !locationCity || !farmId || !userId) {
                     response.status(400).json({ error: 'Missing required data. All fields are required.' });
@@ -1799,14 +1815,14 @@ exports.activateGuardian = onRequest(
                 };
                 await firestore.collection('userFarms').doc(farmId).set(farmData, { merge: true });
                 functions.logger.info(`[Activate Guardian] Successfully enrolled farm ${farmId}.`);
-                
+
                 // --- STEP C: RUN AN IMMEDIATE, INITIAL RISK ANALYSIS ---
                 functions.logger.info(`[Activate Guardian] Running initial risk analysis for farm ${farmId}.`);
-                
+
                 // 1. Fetch Weather Data using the new coordinates
                 const weatherApiUrl = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${WEATHER_API_KEY}&location.latitude=${locationCoords.lat}&location.longitude=${locationCoords.lng}&days=7`;
                 const weatherResponse = await axios.get(weatherApiUrl);
-    
+
                 if (!weatherResponse.data || !Array.isArray(weatherResponse.data.forecastDays) || weatherResponse.data.forecastDays.length === 0) {
                     response.status(503).json({ error: 'Could not retrieve valid weather data for the location.' });
                     return;
@@ -1819,7 +1835,7 @@ exports.activateGuardian = onRequest(
                     You are an expert agricultural entomologist for Indian farming conditions.
                     **Context:**
                     - Crop: ${currentCrop}
-                    - Weather Forecast (next 7 days): ${JSON.stringify(dailyWeather.map(d => ({maxTemp: d.maxTemperature?.degrees, minTemp: d.minTemperature?.degrees, humidity: d.daytimeForecast?.relativeHumidity, precipitation: d.daytimeForecast?.precipitation?.qpf?.quantity})))}
+                    - Weather Forecast (next 7 days): ${JSON.stringify(dailyWeather.map(d => ({ maxTemp: d.maxTemperature?.degrees, minTemp: d.minTemperature?.degrees, humidity: d.daytimeForecast?.relativeHumidity, precipitation: d.daytimeForecast?.precipitation?.qpf?.quantity })))}
                     **Task:**
                     Predict the risk of common pests and diseases for this crop based on the weather. Respond ONLY with a valid JSON array of objects. Each object must have these keys: "threatName" (descriptive name with examples), "threatType" (general category), "riskLevel" ('Low', 'Medium', or 'High'), and "reasoning".
                 `;
@@ -1832,8 +1848,8 @@ exports.activateGuardian = onRequest(
                     const lastBrace = jsonString.lastIndexOf(']');
                     jsonString = jsonString.substring(firstBrace, lastBrace + 1);
                     threats = JSON.parse(jsonString.trim());
-                } catch(e) {
-                    functions.logger.error(`[Activate Guardian] Failed to parse JSON from Gemini`, {rawResponse: content});
+                } catch (e) {
+                    functions.logger.error(`[Activate Guardian] Failed to parse JSON from Gemini`, { rawResponse: content });
                     response.status(500).json({ error: 'AI returned an invalid response.' });
                     return;
                 }
@@ -1856,9 +1872,9 @@ exports.activateGuardian = onRequest(
                         functions.logger.info(`[Activate Guardian] Saved high-risk alert: ${threat.threatName}`);
                     }
                 }
-                
+
                 functions.logger.info(`[Activate Guardian] Completed activation and initial analysis for farm ${farmId}. Found ${highRiskAlerts.length} risks.`);
-                
+
                 // --- STEP E: RETURN THE INITIAL THREATS TO THE APP ---
                 response.status(200).json({ success: true, initialThreats: highRiskAlerts });
 
@@ -1888,7 +1904,7 @@ exports.askAiAssistant = onRequest(
     },
     async (request, response) => {
         // --- CORS handling for web clients ---
-        response.set('Access-Control-Allow-Origin', '*'); 
+        response.set('Access-Control-Allow-Origin', '*');
         if (request.method === 'OPTIONS') {
             response.set('Access-Control-Allow-Methods', 'POST');
             response.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -1938,7 +1954,7 @@ exports.askAiAssistant = onRequest(
                 // Transcribe the audio to get the user's query
                 query = await transcribeAudio(audioBuffer);
 
-            // --- PATH 2: Handle Text-Only Requests ---
+                // --- PATH 2: Handle Text-Only Requests ---
             } else {
                 query = request.body.query || request.query.query;
             }
@@ -1966,7 +1982,7 @@ exports.askAiAssistant = onRequest(
 
                 Respond ONLY with a single, valid JSON object with one key: "tool". The value must be one of the exact category names above.
 `;
-            
+
             const routerRequest = { contents: [{ role: 'user', parts: [{ text: routingPrompt }] }] };
             const routerResp = await routerModel.generateContent(routerRequest);
             const routerContent = routerResp.response.candidates[0].content.parts[0].text;
@@ -1975,7 +1991,8 @@ exports.askAiAssistant = onRequest(
 
             // STEP 2: Logic Switch
             if (classification.tool !== "General Question") {
-                const navigationMessages = { "Market Prices": "It looks like you're asking about market prices. I have a special tool for that. Would you like to go there?",
+                const navigationMessages = {
+                    "Market Prices": "It looks like you're asking about market prices. I have a special tool for that. Would you like to go there?",
                     "Crop Diagnosis": "It sounds like you need to diagnose a crop. My Crop Doctor tool can help with that. Shall I take you there?",
                     "Pest Guardian": "For predicting future risks like pests, my Guardian AI is the best tool. Would you like to check your farm's status?",
                     "Profit Planner": "That sounds like a strategic question. My Profit Planner can help you create a business plan. Would you like to start?"
@@ -1999,11 +2016,11 @@ exports.askAiAssistant = onRequest(
                 ---
                 Now, please answer the following farmer's question:
                 **Question:** "${query}"`;
-            
+
             const answerRequest = { contents: [{ role: 'user', parts: [{ text: answerPrompt }] }] };
             const answerResp = await answerModel.generateContent(answerRequest);
             const answerText = answerResp.response.candidates[0].content.parts[0].text;
-            
+
             const answerResponse = {
                 type: "answer",
                 content: answerText
@@ -2054,16 +2071,16 @@ exports.createUserAccount = onCall({ region: LOCATION }, async (request) => {
             email: email, // Store email for easy access
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         };
-        
+
         // Use the user's new UID as the document ID in the 'users' collection
         await firestore.collection('users').doc(userRecord.uid).set(userProfile);
         functions.logger.info(`[Firestore] Successfully created profile for user: ${userRecord.uid}`);
 
         // --- 3. Return a success message and the new user's UID ---
-        return { 
-            success: true, 
+        return {
+            success: true,
             message: "User account created successfully.",
-            uid: userRecord.uid 
+            uid: userRecord.uid
         };
 
     } catch (error) {
