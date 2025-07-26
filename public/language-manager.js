@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // --- Guardian AI Page (guardian.html) ---
             'guardian-weather-title': "Today's Weather Outlook", 'guardian-weather-location': 'Based on your location:',
-            'guardian-temp': 'Temperature', 'guardian-humidity': 'Humidity', 'guardian-rain': 'Chance of Rain', 'guardian-wind': 'Wind Speed',
+            'guardian-temp': 'Temperature', 'guardian-humidity': 'Humidity', 'guardian-rain': 'Weather Condition', 'guardian-wind': 'Wind Speed',
             'guardian-engine-title': 'Your Proactive Guardian Engine', 'guardian-engine-subtitle': 'Our Guardian AI uses your crop, sowing date, and local weather helping you prevent threats before they happen.',
             'guardian-label-crop': 'Select Your Crop', 'guardian-label-sowing': 'Sowing Date', 'guardian-label-location': 'Your Location (State/UT)',
             'guardian-placeholder-location': 'Click to select a State/UT', 'guardian-button-activate': 'Activate Proactive Guardian',
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'fert-card2-tree-title': 'पेड़ों की संख्या', 'fert-card2-tree-subtitle': 'अपने बाग में पेड़ों की कुल संख्या दर्ज करें।',
             'fert-button-calculate': 'गणना करें', 'fert-results-title': 'अपना उर्वरक संयोजन चुनें', 'fert-results-subtitle': 'आपके इनपुट के आधार पर एक मौसम के लिए अनुशंसित राशि।',
             'guardian-weather-title': 'आज का मौसम पूर्वानुमान', 'guardian-weather-location': 'आपके स्थान के आधार पर:',
-            'guardian-temp': 'तापमान', 'guardian-humidity': 'आर्द्रता', 'guardian-rain': 'बारिश की संभावना', 'guardian-wind': 'हवा की गति',
+            'guardian-temp': 'तापमान', 'guardian-humidity': 'आर्द्रता', 'guardian-rain': 'मौसम स्थिति', 'guardian-wind': 'हवा की गति',
             'guardian-engine-title': 'आपका सक्रिय गार्जियन इंजन', 'guardian-engine-subtitle': 'हमारा गार्जियन एआई आपकी फसल, बुवाई की तारीख और स्थानीय मौसम का उपयोग करके खतरों को होने से पहले रोकने में आपकी मदद करता है।',
             'guardian-label-crop': 'अपनी फसल चुनें', 'guardian-label-sowing': 'बुवाई की तारीख', 'guardian-label-location': 'आपका स्थान (राज्य/केंद्र शासित प्रदेश)',
             'guardian-placeholder-location': 'एक राज्य/केंद्र शासित प्रदेश चुनने के लिए क्लिक करें', 'guardian-button-activate': 'सक्रिय गार्जियन को सक्रिय करें',
@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'fert-card2-tree-title': 'ಮರಗಳ ಸಂಖ್ಯೆ', 'fert-card2-tree-subtitle': 'ನಿಮ್ಮ ತೋಟದಲ್ಲಿರುವ ಒಟ್ಟು ಮರಗಳ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.',
             'fert-button-calculate': 'ಲೆಕ್ಕಾಚಾರ ಮಾಡಿ', 'fert-results-title': 'ನಿಮ್ಮ ಗೊಬ್ಬರ ಸಂಯೋಜನೆಯನ್ನು ಆರಿಸಿ', 'fert-results-subtitle': 'ನಿಮ್ಮ ಇನ್‌ಪುಟ್‌ಗಳ ಆಧಾರದ ಮೇಲೆ ಒಂದು ಋತುವಿಗೆ ಶಿಫಾರಸು ಮಾಡಲಾದ ಮೊತ್ತ.',
             'guardian-weather-title': 'ಇಂದಿನ ಹವಾಮಾನ ದೃಷ್ಟಿಕೋನ', 'guardian-weather-location': 'ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ಆಧರಿಸಿ:',
-            'guardian-temp': 'ತಾಪಮಾನ', 'guardian-humidity': 'ಆರ್ದ್ರತೆ', 'guardian-rain': 'ಮಳೆಯ ಸಾಧ್ಯತೆ', 'guardian-wind': 'ಗಾಳಿಯ ವೇಗ',
+            'guardian-temp': 'ತಾಪಮಾನ', 'guardian-humidity': 'ಆರ್ದ್ರತೆ', 'guardian-rain': 'ಹವಾಮಾನ ಪರಿಸ್ಥಿತಿಗಳು', 'guardian-wind': 'ಗಾಳಿಯ ವೇಗ',
             'guardian-engine-title': 'ನಿಮ್ಮ ಪೂರ್ವಭಾವಿ ಗಾರ್ಡಿಯನ್ ಇಂಜಿನ್', 'guardian-engine-subtitle': 'ನಮ್ಮ ಗಾರ್ಡಿಯನ್ ಎಐ ನಿಮ್ಮ ಬೆಳೆ, ಬಿತ್ತನೆ ದಿನಾಂಕ ಮತ್ತು ಸ್ಥಳೀಯ ಹವಾಮಾನವನ್ನು ಬಳಸಿಕೊಂಡು ಬೆದರಿಕೆಗಳು ಸಂಭವಿಸುವ ಮೊದಲು ಅವುಗಳನ್ನು ತಡೆಯಲು ನಿಮಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ.',
             'guardian-label-crop': 'ನಿಮ್ಮ ಬೆಳೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ', 'guardian-label-sowing': 'ಬಿತ್ತನೆ ದಿನಾಂಕ', 'guardian-label-location': 'ನಿಮ್ಮ ಸ್ಥಳ (ರಾಜ್ಯ/ಕೇಂದ್ರಾಡಳಿತ ಪ್ರದೇಶ)',
             'guardian-placeholder-location': 'ರಾಜ್ಯ/ಕೇಂದ್ರಾಡಳಿತ ಪ್ರದೇಶವನ್ನು ಆಯ್ಕೆ ಮಾಡಲು ಕ್ಲಿಕ್ ಮಾಡಿ', 'guardian-button-activate': 'ಪೂರ್ವಭಾವಿ ಗಾರ್ಡಿಯನ್ ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ',
