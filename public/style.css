@@ -2501,23 +2501,27 @@ main {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 8px; /* Space below the title bar */
 }
 
 .card-title-bar h3 {
     margin: 0;
-    font-size: 1.25rem;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    display: flex;       /* Aligns number and text horizontally */
+    align-items: center; /* Vertically centers them */
+    gap: 12px;           /* Adds space between number and text */
+    background-color: transparent !important; /* IMPORTANT: Override any previous incorrect styles */
+    padding: 0 !important; /* IMPORTANT: Override any previous incorrect styles */
+    color: var(--text-color) !important; /* Set default text color for the title */
+    font-size: 1.25rem; /* Set the font size for the title text */
+    font-weight: 700; /* Make the title text bold */
+    white-space: nowrap;
 }
 
 .card-title-bar h3 span {
-    background-color: var(--primary-color);
     color: white;
     font-size: 1rem;
     border-radius: 50%;
-    width: 28px;
+    width: 128px;
     height: 28px;
     display: inline-flex;
     justify-content: center;
@@ -2528,6 +2532,7 @@ main {
     font-weight: 600;
     color: var(--primary-color);
     text-decoration: none;
+    font-size: 1rem;
 }
 
 .card-subtitle {
@@ -3684,3 +3689,94 @@ main {
 .scheme-card h4 { margin: 0 0 10px 0; font-size: 1.2rem; color: var(--primary-color); }
 .scheme-card p { margin: 8px 0; font-size: 0.95rem; }
 .scheme-card p strong { color: var(--text-color); }
+
+
+/* Add these new rules at the end of your style.css file */
+
+/* --- [FIX] FERTILIZER CALCULATOR CARD TITLES --- */
+.card-title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.card-title-bar h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    display: flex;       /* Aligns items horizontally */
+    align-items: center; /* Vertically centers them */
+    gap: 12px;           /* Adds space between items */
+}
+
+/* Styles the number circle */
+.card-title-bar h3 > span:first-of-type {
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0; /* Prevents the circle from shrinking */
+}
+
+/* Styles the new crop icon */
+.card-title-bar h3 img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+}
+
+/* Styles the title text */
+.card-title-bar h3 > span:last-of-type {
+    color: var(--text-color); /* Ensure it's black */
+}
+
+
+/* Add these new rules at the end of your style.css file, replacing the previous fix */
+
+/* --- [REVISED FIX] FERTILIZER CALCULATOR CARD TITLES --- */
+.card-title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px; 
+}
+
+/* The entire h3 element becomes the green "pill" */
+.card-title-bar h3 {
+    margin: 0;
+    font-size: 1.2rem; 
+    font-weight: 600;
+    display: inline-flex; /* Key for self-sizing */
+    align-items: center;
+    gap: 12px;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 30px; /* Pill shape */
+}
+
+/* Styles for the number inside the pill */
+.card-title-bar h3 > span:first-of-type {
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: inline-flex; /* Use flex to easily center the number */
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0; /* Prevents the circle from shrinking if text is long */
+}
+
+/* Remove styles for the removed icon (just in case) */
+.card-title-bar h3 img {
+    display: none;
+}
