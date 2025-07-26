@@ -7,7 +7,7 @@ const { onRequest } = require("firebase-functions/v2/https");
 // --- HIGHLIGHTED FIX: Use the main functions object consistently ---
 const functions = require("firebase-functions");
 // At the top of your functions/index.js
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+
 // ... other imports ...
 // Common libraries
 const admin = require("firebase-admin");
@@ -57,6 +57,54 @@ const POTENTIAL_CROPS = [
 
 
 // =================================================================
+// HELPER FUNCTION: DYNAMIC PROMPT GENERATOR (Place this above your main function)
+// =================================================================
+// =================================================================
+// HELPER FUNCTION: DYNAMIC PROMPT GENERATOR (CORRECTED SIMPLE VERSION)
+// =================================================================
+function getDiagnosisPrompt(language) {
+    let languageName;
+    let languageInstructions;
+
+    switch (language) {
+        case 'hi':
+            languageName = 'Hindi';
+            languageInstructions = 'All responses must be in Hindi.';
+            break;
+        case 'kn':
+            languageName = 'Kannada';
+            languageInstructions = 'All responses must be in Kannada.';
+            break;
+        default: // English
+            languageName = 'English';
+            languageInstructions = 'All responses must be in English.';
+    }
+
+    // This returns your original prompt structure, just with the language part changed.
+    // NOTE: The JSON keys in the AI's response will now be different. We will handle this in the next step.
+    return `You are a world-class AI agronomist for Indian farmers. Your primary task is to determine if the image contains a plant or plant part. If it does, then proceed with plant identification and diagnosis.
+
+A CRITICAL part of your task is to correctly identify when a plant is HEALTHY. Do not guess a disease if the visual evidence is not clear.
+
+If the image clearly DOES NOT contain a plant (e.g., it's a household item, animal, human, or unrelated object), you MUST classify it as 'Non-Plant Object'.
+
+Respond ONLY with a single, valid JSON object using the exact structure and keys below. ${languageInstructions}
+
+{
+  "object_category": "Your classification: 'Plant' if it's clearly a plant or plant part, 'Non-Plant Object' if it's not a plant, 'Ambiguous/Unclear' if you cannot determine.",
+  "plant_type": "If object_category is 'Plant', provide your best guess for the plant's common name. If you cannot identify it, MUST be 'Unknown Plant'. If object_category is 'Non-Plant Object' or 'Ambiguous/Unclear', MUST be 'N/A'.",
+  "diagnosis_status": "If object_category is 'Plant', then 'Healthy' or 'Diseased'. If object_category is 'Non-Plant Object' or 'Ambiguous/Unclear', MUST be 'N/A'.",
+  "disease_name": "If diagnosis_status is 'Diseased' and object_category is 'Plant', provide the common name of the disease. Otherwise, MUST be 'N/A'.",
+  "confidence_score": "A numerical score from 0.0 to 1.0 for the overall assessment. If healthy, MUST be 1.0. If object_category is 'Non-Plant Object' or 'Ambiguous/Unclear', use a score that reflects your certainty of that classification (e.g., 1.0 for clear non-plant).",
+  "severity": "If object_category is 'Plant' and diagnosis_status is 'Diseased', rate as 'Low', 'Medium', or 'High'. If 'Healthy' or not 'Plant', MUST be 'None'.",
+  "contagion_risk": "If object_category is 'Plant' and diagnosis_status is 'Diseased', rate as 'Low', 'Medium', or 'High'. If 'Healthy' or not 'Plant', MUST be 'None'.",
+  "description": "If object_category is 'Plant', a brief, one-sentence description of its state. If healthy, provide a positive message. If not 'Plant', provide a brief description of what the object is. If 'Ambiguous/Unclear', state why. ${languageInstructions}",
+  "organic_remedy": "If object_category is 'Plant' and diagnosis_status is 'Diseased', a step-by-step organic remedy. If 'Healthy' or not 'Plant', MUST be 'N/A'. ${languageInstructions}",
+  "chemical_remedy": "If object_category is 'Plant' and diagnosis_status is 'Diseased', a step-by-step chemical remedy. If 'Healthy' or not 'Plant', MUST be 'N/A'. ${languageInstructions}",
+  "prevention_tips": ["If object_category is 'Plant', an array of strings with 2-3 bullet points on how to prevent this issue. If 'Healthy', suggest continued good care. If not 'Plant', MUST be an empty array []."]
+}`;
+}
+// =================================================================
 // FUNCTION 1: CROP DOCTOR (ANALYZE PLANT IMAGE) - v2 SYNTAX
 // =================================================================
 exports.analyzePlantImage = onObjectFinalized(
@@ -67,6 +115,8 @@ exports.analyzePlantImage = onObjectFinalized(
     },
     async (event) => {
         const { name: filePath, bucket: bucketName, contentType } = event.data;
+
+        const language = metadata?.language || 'en';
 
         functions.logger.info(`[Function Start] Received object event. FilePath: "${filePath}", ContentType: "${contentType}", Bucket: "${bucketName}"`);
 
@@ -122,27 +172,7 @@ try {
 
 // --- END: NEW HYBRID AUTHENTICATION BLOCK ---
 
-            const diagnosisPrompt = `You are a world-class AI agronomist for Indian farmers. Your primary task is to determine if the image contains a plant or plant part. If it does, then proceed with plant identification and diagnosis.
-
-A CRITICAL part of your task is to correctly identify when a plant is HEALTHY. Do not guess a disease if the visual evidence is not clear.
-
-If the image clearly DOES NOT contain a plant (e.g., it's a household item, animal, human, or unrelated object), you MUST classify it as 'Non-Plant Object'.
-
-Respond ONLY with a single, valid JSON object using the exact structure and keys below. All responses must be in English.
-
-{
-  "object_category": "Your classification: 'Plant' if it's clearly a plant or plant part, 'Non-Plant Object' if it's not a plant, 'Ambiguous/Unclear' if you cannot determine.",
-  "plant_type": "If object_category is 'Plant', provide your best guess for the plant's common English name. If you cannot identify it, MUST be 'Unknown Plant'. If object_category is 'Non-Plant Object' or 'Ambiguous/Unclear', MUST be 'N/A'.",
-  "diagnosis_status": "If object_category is 'Plant', then 'Healthy' or 'Diseased'. If object_category is 'Non-Plant Object' or 'Ambiguous/Unclear', MUST be 'N/A'.",
-  "disease_name_english": "If diagnosis_status is 'Diseased' and object_category is 'Plant', provide the common English name of the disease. Otherwise, MUST be 'N/A'.",
-  "confidence_score": "A numerical score from 0.0 to 1.0 for the overall assessment. If healthy, MUST be 1.0. If object_category is 'Non-Plant Object' or 'Ambiguous/Unclear', use a score that reflects your certainty of that classification (e.g., 1.0 for clear non-plant).",
-  "severity": "If object_category is 'Plant' and diagnosis_status is 'Diseased', rate as 'Low', 'Medium', or 'High'. If 'Healthy' or not 'Plant', MUST be 'None'.",
-  "contagion_risk": "If object_category is 'Plant' and diagnosis_status is 'Diseased', rate as 'Low', 'Medium', or 'High'. If 'Healthy' or not 'Plant', MUST be 'None'.",
-  "description_english": "If object_category is 'Plant', a brief, one-sentence description of its state. If healthy, provide a positive message. If not 'Plant', provide a brief description of what the object is. If 'Ambiguous/Unclear', state why. All in English.",
-  "organic_remedy_english": "If object_category is 'Plant' and diagnosis_status is 'Diseased', a step-by-step organic remedy in English. If 'Healthy' or not 'Plant', MUST be 'N/A'.",
-  "chemical_remedy_english": "If object_category is 'Plant' and diagnosis_status is 'Diseased', a step-by-step chemical remedy in English. If 'Healthy' or not 'Plant', MUST be 'N/A'.",
-  "prevention_tips_english": ["If object_category is 'Plant', an array of strings with 2-3 bullet points on how to prevent this issue. If 'Healthy', suggest continued good care. If not 'Plant', MUST be an empty array []."]
-}`;
+            const diagnosisPrompt = getDiagnosisPrompt(language);
             
            
                         // --- START OF THE ONLY CHANGE ---
@@ -195,8 +225,8 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
             } else { 
                 textToSpeak = `The object in the image is ambiguous or unclear. Description: ${diagnosisData.description_english}. Please ensure the image clearly shows a plant.`;
             }
-            
-                        const ttsRequest = { 
+                
+                const ttsRequest = { 
                 input: { text: textToSpeak }, 
                 voice: { languageCode: 'en-IN', name: 'en-IN-Wavenet-D' }, // HIGHLIGHTED CHANGE: Indian English Female Voice
                 audioConfig: { audioEncoding: 'MP3' } 
@@ -213,23 +243,42 @@ Respond ONLY with a single, valid JSON object using the exact structure and keys
                 return;
             }
 
-            const baseFileNameForAudio = diagnosisId.replace(/\.[^/.]+$/, "");
-            const audioFileName = `${baseFileNameForAudio}.mp3`;
-
-            functions.logger.info(`[AudioFile] Attempting to save audio to: audio-output/${audioFileName}`);
+                        const baseFileNameForAudio = diagnosisId.replace(/\.[^/.]+$/, "");
+            // HIGHLIGHTED FIX 4: Use the 'language' variable to name the audio file.
+            const audioFileName = `${baseFileNameForAudio}_${language}.mp3`;
             const audioFile = admin.storage().bucket(bucketName).file(`audio-output/${audioFileName}`);
             await audioFile.save(ttsResponse.audioContent);
             await audioFile.makePublic();
             const audioUrl = audioFile.publicUrl();
             functions.logger.info(`[AudioFile] Audio file created: ${audioUrl}`);
 
-            diagnosisData.audio_remedy_url = audioUrl;
+            const docRef = firestore.collection("diagnoses").doc(diagnosisId);
+            const doc = await docRef.get();
+            const existingData = doc.exists ? doc.data() : {};
+
+            const finalData = {
+                object_category: diagnosisData.object_category,
+                diagnosis_status: diagnosisData.diagnosis_status,
+                confidence_score: diagnosisData.confidence_score,
+                severity: diagnosisData.severity,
+                contagion_risk: diagnosisData.contagion_risk,
+                last_updated: admin.firestore.FieldValue.serverTimestamp(),
+                plant_type: { ...existingData.plant_type, [language]: diagnosisData.plant_type },
+                disease_name: { ...existingData.disease_name, [language]: diagnosisData.disease_name },
+                description: { ...existingData.description, [language]: diagnosisData.description },
+                organic_remedy: { ...existingData.organic_remedy, [language]: diagnosisData.organic_remedy },
+                chemical_remedy: { ...existingData.chemical_re_medy, [language]: diagnosisData.chemical_remedy },
+                prevention_tips: { ...existingData.prevention_tips, [language]: diagnosisData.prevention_tips },
+                audio_remedy_url: { ...existingData.audio_remedy_url, [language]: audioUrl }
+            };
             
-            await firestore.collection("diagnoses").doc(diagnosisId).set(diagnosisData); 
-            functions.logger.info(`[Firestore] Successfully wrote complete diagnosis with audio to Firestore (ID: ${diagnosisId}).`);
+            await docRef.set(finalData, { merge: true }); 
+            functions.logger.info(`[Firestore] Successfully wrote/merged diagnosis to Firestore (ID: ${diagnosisId}).`);
+
         } catch (error) {
             functions.logger.error(`!!! CRITICAL ERROR in analysis for file "${filePath}":`, error, { structuredData: true });
         }
+
     }
 );
 
@@ -1277,6 +1326,10 @@ function parseCityFromGeocodingResponse(geocodingData) {
 // =================================================================
 // FUNCTION 9: GOVERNMENT SCHEME NAVIGATOR (Handles Text and Voice Input - FINAL CORRECTED)
 // =================================================================
+// At the top of your index.js file, ensure you have these imports
+
+
+// Initialize multer to store files in memory
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
@@ -1284,104 +1337,140 @@ const upload = multer({
     },
 });
 
+// =================================================================
+// FUNCTION 9: GOVERNMENT SCHEME NAVIGATOR (Final Correct Version)
+// =================================================================
 exports.getSchemeAnswer = onRequest(
     {
         region: LOCATION,
         timeoutSeconds: 120,
         memory: "1GiB"
     },
-    (request, response) => {
-        // --- CORS handling for frontend requests ---
+    async (request, response) => {
+        // --- CORS handling (no changes) ---
         response.set('Access-Control-Allow-Origin', '*'); 
         if (request.method === 'OPTIONS') {
-            response.set('Access-Control-Allow-Methods', 'GET, POST');
+            response.set('Access-Control-Allow-Methods', 'POST');
             response.set('Access-Control-Allow-Headers', 'Content-Type');
             response.status(204).send('');
             return;
         }
 
-        // --- Use multer middleware directly and process the request ---
-        upload.single('audio')(request, response, async (err) => {
-            if (err) {
-                functions.logger.error('[Multer Error]', err);
-                response.status(400).json({ error: "File upload error: " + err.message });
-                return;
+        // --- PATH 1: Handle Audio Uploads (Multipart Forms) ---
+        if (request.method === 'POST' && request.get('content-type')?.startsWith('multipart/form-data')) {
+            const busboy = Busboy({ headers: request.headers });
+            let audioBuffer = null;
+            let stateName = null;
+
+            const busboyPromise = new Promise((resolve, reject) => {
+                busboy.on('file', (fieldname, file, info) => {
+                    if (fieldname === 'audio') {
+                        const chunks = [];
+                        file.on('data', (chunk) => chunks.push(chunk));
+                        file.on('end', () => {
+                            audioBuffer = Buffer.concat(chunks);
+                        });
+                    } else {
+                        file.resume();
+                    }
+                });
+
+                busboy.on('field', (fieldname, val) => {
+                    if (fieldname === 'stateName') {
+                        stateName = val;
+                    }
+                });
+
+                busboy.on('error', (err) => reject(err));
+                busboy.on('finish', () => resolve());
+            });
+            
+            // **THE CORE FIX**: Feed the raw, pre-buffered body to Busboy
+            if (request.rawBody) {
+                busboy.end(request.rawBody);
+            } else {
+                request.pipe(busboy); // Fallback for other environments
             }
 
-            let question, stateName;
-            
             try {
-                // Determine if it's an audio upload or plain text/JSON request
-                if (request.file) { // If multer successfully parsed an 'audio' file
-                    stateName = request.body.stateName; // Access text fields from request.body
-                    
-                    // --- Validation for audio requests ---
-                    if (!stateName || !request.file.buffer) {
-                        functions.logger.error("Missing 'stateName' field or 'audio' file after parsing multipart data.", { body: request.body, fileExists: !!request.file, bufferSize: request.file ? request.file.buffer.length : 0 });
-                        response.status(400).json({ error: "Missing 'stateName' field or 'audio' file in form data." });
-                        return;
-                    }
+                await busboyPromise; // Wait for parsing to complete
 
-                    // --- Transcribe Audio ---
-                    question = await transcribeAudio(request.file.buffer);
-                    if (!question) {
-                        functions.logger.error("[Scheme Q&A Error] Transcription returned empty text.");
-                        response.status(500).json({ error: "Could not understand the audio. Please try speaking clearly." });
-                        return;
-                    }
-
-                } else { // It's a plain text/JSON request (no file uploaded with 'audio' fieldname)
-                    question = request.query.question || request.body.question; // For GET or JSON POST
-                    stateName = request.query.stateName || request.body.stateName; // For GET or JSON POST
-                }
-
-                // --- Final Input Validation (applies to both text and audio paths) ---
-                if (!question || !stateName) {
-                    functions.logger.error(`[Scheme Q&A] Missing required input after final parsing. Question: "${question}", State: "${stateName}"`);
-                    response.status(400).json({ error: "Missing 'question' or 'stateName' in request. All are now required." });
+                if (!stateName || !audioBuffer) {
+                    functions.logger.error("Busboy finished but stateName or audioBuffer is missing.");
+                    response.status(400).json({ error: "Missing 'stateName' field or 'audio' file in form data." });
                     return;
                 }
                 
-                // --- Call Gemini Analysis ---
+                const question = await transcribeAudio(audioBuffer);
+                if (!question) {
+                    functions.logger.error("[Scheme Q&A Error] Transcription returned empty text.");
+                    response.status(500).json({ error: "Could not understand the audio. Please try speaking clearly." });
+                    return;
+                }
+
                 const result = await getGeminiAnalysisForScheme(question, stateName);
                 response.status(200).json(result);
 
             } catch (error) {
-                functions.logger.error(`[CRITICAL Scheme Q&A Error]`, { message: error.message, stack: error.stack, errorObject: JSON.stringify(error) });
+                functions.logger.error('[Busboy Processing Error]', error);
+                if (!response.headersSent) {
+                    response.status(500).json({ error: "Failed to process uploaded file.", details: error.message });
+                }
+            }
+        // --- PATH 2: Handle Text-Only Requests ---
+        } else {
+            try {
+                const question = request.body.question;
+                const stateName = request.body.stateName;
+
+                if (!question || !stateName) {
+                    functions.logger.error(`Missing input for text request. Q: ${question}, S: ${stateName}`);
+                    response.status(400).json({ error: "Missing 'question' or 'stateName' in request." });
+                    return;
+                }
+                
+                const result = await getGeminiAnalysisForScheme(question, stateName);
+                response.status(200).json(result);
+
+            } catch (error) {
+                functions.logger.error(`[CRITICAL Scheme Q&A Error - Text Path]`, error);
                 if (!response.headersSent) {
                     response.status(500).json({ error: "Failed to get an answer.", details: error.message });
                 }
             }
-        });
+        }
     }
 );
 
-// --- HELPER FUNCTION TO TRANSCRIBE AUDIO ---
+// --- HELPER FUNCTION TO TRANSCRIBE AUDIO (This code is correct and does not need changes) ---
 async function transcribeAudio(audioBuffer) {
     functions.logger.info("[Scheme Q&A] Transcribing audio with Speech-to-Text API...");
     const audio = { content: audioBuffer.toString('base64') };
     
-    // --- HIGHLIGHTED CHANGE: Speech-to-Text configuration for .m4a files ---
     const speechConfig = {
-        encoding: 'MP4A',         // Use MP4A encoding for .m4a files
-        sampleRateHertz: 44100,   // Common sample rate for .m4a. Adjust if your file is different (e.g., 16000, 48000).
-        languageCode: 'en-IN',    // Indian English
+        encoding: 'WEBM_OPUS',
+        sampleRateHertz: 16000,
+        languageCode: 'en-IN',
     };
-    // --- END HIGHLIGHTED CHANGE ---
 
     const sttRequest = { audio: audio, config: speechConfig };
 
-    const [sttResponse] = await speechClient.recognize(sttRequest);
-    const transcription = sttResponse.results
-        .map(result => result.alternatives[0].transcript)
-        .join('\n');
-    
-    if (transcription) {
-        functions.logger.info(`[Scheme Q&A] Transcription successful: "${transcription}"`);
-    } else {
-        functions.logger.error("[Scheme Q&A Error] Speech-to-Text returned empty transcription.");
+    try {
+        const [sttResponse] = await speechClient.recognize(sttRequest);
+        const transcription = sttResponse.results
+            .map(result => result.alternatives[0].transcript)
+            .join('\n');
+        
+        if (transcription) {
+            functions.logger.info(`[Scheme Q&A] Transcription successful: "${transcription}"`);
+        } else {
+            functions.logger.warn("[Scheme Q&A] Speech-to-Text returned empty transcription.");
+        }
+        return transcription;
+    } catch (speechError) {
+        functions.logger.error("[Speech-to-Text API Error]", speechError);
+        return null; // Return null on error so the main function can handle it.
     }
-    return transcription;
 }
 
 // --- HELPER FUNCTION FOR GEMINI ANALYSIS ---
@@ -1785,28 +1874,87 @@ exports.activateGuardian = onRequest(
 // =================================================================
 // FUNCTION: AI ASSISTANT ("Smart Navigator") - UPGRADED VERSION
 // =================================================================
-exports.askAiAssistant = onCall(
+// At the top of your file, make sure you have this import
+
+// =================================================================
+// FUNCTION: AI ASSISTANT ("Smart Navigator") - UPGRADED FOR SPEECH
+// =================================================================
+exports.askAiAssistant = onRequest(
     {
         region: LOCATION,
         memory: "1GiB",
         timeoutSeconds: 60,
         concurrency: 10
     },
-    async (request) => {
-        const query = request.data.query;
-        const userId = request.auth?.uid;
-
-        if (!query) {
-            throw new HttpsError('invalid-argument', 'A query string is required.');
+    async (request, response) => {
+        // --- CORS handling for web clients ---
+        response.set('Access-Control-Allow-Origin', '*'); 
+        if (request.method === 'OPTIONS') {
+            response.set('Access-Control-Allow-Methods', 'POST');
+            response.set('Access-Control-Allow-Headers', 'Content-Type');
+            response.status(204).send('');
+            return;
         }
-        functions.logger.info(`[AI Assistant] Received query from user ${userId || 'anonymous'}: "${query}"`);
 
         try {
-            // --- STEP 1: THE "ROUTING" AI CALL ---
-            // First, we ask a specialized AI to classify the user's intent.
+            let query; // This will hold the user's question from either text or audio
+
+            // --- PATH 1: Handle Audio Uploads (Multipart Forms) ---
+            if (request.method === 'POST' && request.get('content-type')?.startsWith('multipart/form-data')) {
+                const busboy = Busboy({ headers: request.headers });
+                let audioBuffer = null;
+
+                // This promise ensures we wait for the file to be fully parsed
+                const busboyPromise = new Promise((resolve, reject) => {
+                    busboy.on('file', (fieldname, file, info) => {
+                        if (fieldname === 'audio') {
+                            const chunks = [];
+                            file.on('data', (chunk) => chunks.push(chunk));
+                            file.on('end', () => {
+                                audioBuffer = Buffer.concat(chunks);
+                            });
+                        } else {
+                            file.resume();
+                        }
+                    });
+                    busboy.on('error', reject);
+                    busboy.on('finish', resolve);
+                });
+
+                // The core fix: feed the raw body to Busboy
+                if (request.rawBody) {
+                    busboy.end(request.rawBody);
+                } else {
+                    request.pipe(busboy);
+                }
+
+                await busboyPromise; // Wait for parsing to complete
+
+                if (!audioBuffer) {
+                    functions.logger.error("Busboy finished but audioBuffer is missing.");
+                    return response.status(400).json({ error: "Missing 'audio' file in form data." });
+                }
+
+                // Transcribe the audio to get the user's query
+                query = await transcribeAudio(audioBuffer);
+
+            // --- PATH 2: Handle Text-Only Requests ---
+            } else {
+                query = request.body.query || request.query.query;
+            }
+
+            // --- Final Validation for BOTH paths ---
+            if (!query) {
+                return response.status(400).json({ error: "A query (from text or audio) is required." });
+            }
+
+            functions.logger.info(`[AI Assistant] Processing query: "${query}"`);
+
+            // --- CORE LOGIC (This is your original, working AI logic) ---
+
+            // STEP 1: Routing AI Call
             const routerModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
-            const routingPrompt = `
-                You are a classification AI. Your only job is to determine which category a user's question falls into.
+            const routingPrompt = `You are a classification AI. Your only job is to determine which category a user's question falls into.
                 The available categories are:
                 - "Market Prices": For questions about crop prices, when to sell, market trends, etc.
                 - "Crop Diagnosis": For questions describing a sick plant, like "yellow leaves", "spots on my crop", etc.
@@ -1817,41 +1965,32 @@ exports.askAiAssistant = onCall(
                 User's Question: "${query}"
 
                 Respond ONLY with a single, valid JSON object with one key: "tool". The value must be one of the exact category names above.
-            `;
+`;
             
-            const routerResp = await routerModel.generateContent(routingPrompt);
+            const routerRequest = { contents: [{ role: 'user', parts: [{ text: routingPrompt }] }] };
+            const routerResp = await routerModel.generateContent(routerRequest);
             const routerContent = routerResp.response.candidates[0].content.parts[0].text;
             const classification = JSON.parse(routerContent.replace(/```json/g, '').replace(/```/g, '').trim());
-
             functions.logger.info(`[AI Assistant] Intent classified as: ${classification.tool}`);
 
-            // --- STEP 2: THE LOGIC SWITCH ---
-            // Now, we decide what to do based on the classification.
+            // STEP 2: Logic Switch
             if (classification.tool !== "General Question") {
-                // The question matches a special tool. Send a navigation command to the frontend.
-                const navigationMessages = {
-                    "Market Prices": "It looks like you're asking about market prices. I have a special tool for that. Would you like to go there?",
+                const navigationMessages = { "Market Prices": "It looks like you're asking about market prices. I have a special tool for that. Would you like to go there?",
                     "Crop Diagnosis": "It sounds like you need to diagnose a crop. My Crop Doctor tool can help with that. Shall I take you there?",
                     "Pest Guardian": "For predicting future risks like pests, my Guardian AI is the best tool. Would you like to check your farm's status?",
                     "Profit Planner": "That sounds like a strategic question. My Profit Planner can help you create a business plan. Would you like to start?"
                 };
-
-                const response = {
+                const navigationResponse = {
                     type: "navigation",
-                    tool: classification.tool, // e.g., "Market Prices"
-                    message: navigationMessages[classification.tool] || `I have a special tool for that called ${classification.tool}. Would you like to go there?`
+                    tool: classification.tool,
+                    message: navigationMessages[classification.tool] || `I have a special tool for ${classification.tool}. Go there?`
                 };
-                
-                // We don't save navigations to chat history, but we could if we wanted to.
-                functions.logger.info(`[AI Assistant] Responding with navigation command to tool: ${classification.tool}`);
-                return response;
+                return response.status(200).json(navigationResponse);
             }
 
-            // --- STEP 3: THE "ANSWERING" AI CALL (Only for General Questions) ---
-            functions.logger.info(`[AI Assistant] Answering as a general question.`);
+            // STEP 3: Answering AI Call
             const answerModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
-            const answerPrompt = `
-                You are "KisanAI", a friendly and highly knowledgeable AI assistant for Indian farmers. Your goal is to provide helpful, practical, and safe advice in simple language.
+            const answerPrompt = ` You are "KisanAI", a friendly and highly knowledgeable AI assistant for Indian farmers. Your goal is to provide helpful, practical, and safe advice in simple language.
                 **Rules:**
                 1. Safety First: If advising on chemicals, ALWAYS include a strong safety warning.
                 2. Practicality: Suggest low-cost or organic solutions first.
@@ -1859,32 +1998,26 @@ exports.askAiAssistant = onCall(
                 4. Be Concise: Use simple language and lists.
                 ---
                 Now, please answer the following farmer's question:
-                **Question:** "${query}"
-            `;
-
-            const answerResp = await answerModel.generateContent(answerPrompt);
-            const answerText = answerResp.response.candidates[0].content.parts[0].text;
-
-            // Save the general conversation to Firestore
-            if (userId) {
-                await firestore.collection('users').doc(userId).collection('aiAssistantHistory').add({
-                    query: query,
-                    answer: answerText,
-                    timestamp: admin.firestore.FieldValue.serverTimestamp()
-                });
-            }
+                **Question:** "${query}"`;
             
-            const response = {
+            const answerRequest = { contents: [{ role: 'user', parts: [{ text: answerPrompt }] }] };
+            const answerResp = await answerModel.generateContent(answerRequest);
+            const answerText = answerResp.response.candidates[0].content.parts[0].text;
+            
+            const answerResponse = {
                 type: "answer",
                 content: answerText
             };
 
-            functions.logger.info(`[AI Assistant] Successfully generated and saved general answer for user ${userId || 'anonymous'}.`);
-            return response;
+            // Note: Saving to user-specific history is removed as request.auth is not available in onRequest.
+            functions.logger.info(`[AI Assistant] Successfully generated general answer.`);
+            return response.status(200).json(answerResponse);
 
         } catch (error) {
-            functions.logger.error(`[AI Assistant] Critical error for user ${userId || 'anonymous'}:`, error);
-            throw new HttpsError('internal', 'An error occurred while getting an answer from the AI assistant.');
+            functions.logger.error(`[AI Assistant] Critical error:`, error);
+            if (!response.headersSent) {
+                return response.status(500).json({ error: 'An error occurred while getting an answer from the AI assistant.' });
+            }
         }
     }
 );
