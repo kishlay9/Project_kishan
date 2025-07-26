@@ -1,15 +1,13 @@
 package com.projectkisan.androidapp
-
+import androidx.compose.foundation.shape.RoundedCornerShape
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -32,7 +30,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.projectkisan.androidapp.ui.theme.*
 
-// Screen definitions (ensure these match your files)
 sealed class Screen(val route: String, val label: String, val icon: Int) {
     object Home : Screen("home", "Home", R.drawable.ic_home)
     object Schemes : Screen("schemes", "Schemes", R.drawable.ic_schemes)
@@ -62,8 +59,8 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-
     val diagnosisViewModel: DiagnosisViewModel = viewModel()
+    var showContactSheet by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -77,7 +74,8 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
                             popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
                             launchSingleTop = true
                         }
-                    }
+                    },
+                    onContactClick = { showContactSheet = true }
                 )
             }
         },
@@ -92,6 +90,11 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable("crop_planner") {
+                CropPlannerScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
             composable(Screen.Home.route) { HomeScreen(navController = navController) }
             composable(Screen.Schemes.route) { SchemesScreen() }
             composable(Screen.Plan.route) { PlanScreen(navController = navController) }
@@ -99,9 +102,7 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
             composable(Screen.Diagnose.route) {
                 DiagnoseScreen(
                     viewModel = diagnosisViewModel,
-                    onNavigateToResult = {
-                        navController.navigate("diagnosis_result")
-                    }
+                    onNavigateToResult = { navController.navigate("diagnosis_result") }
                 )
             }
             composable(Screen.Market.route) { MarketScreen() }
@@ -114,7 +115,8 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
                     DiagnosisResultScreen(
                         viewModel = diagnosisViewModel,
                         result = result,
-                        onNavigateBack = { navController.popBackStack() })
+                        onNavigateBack = { navController.popBackStack() }
+                    )
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("No result found. Please go back.")
@@ -123,32 +125,20 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
             }
         }
     }
+
+    if (showContactSheet) {
+        AboutAndContactSheet(onDismiss = { showContactSheet = false })
+    }
 }
 
 @Composable
 fun BottomBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val bottomNavScreens = listOf(Screen.Schemes, Screen.Plan, Screen.Ask, Screen.Diagnose, Screen.Market)
+    val selectedItemIndex = if (currentRoute == Screen.Home.route) -1 else bottomNavScreens.indexOfFirst { it.route == currentRoute }
 
-    val bottomNavScreens = listOf(
-        Screen.Schemes,
-        Screen.Plan,
-        Screen.Ask,
-        Screen.Diagnose,
-        Screen.Market
-    )
-
-    val selectedItemIndex = if (currentRoute == Screen.Home.route) {
-        -1
-    } else {
-        bottomNavScreens.indexOfFirst { it.route == currentRoute }
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
-    ) {
+    Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, shadowElevation = 8.dp) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -160,25 +150,16 @@ fun BottomBar(navController: NavController) {
         ) {
             bottomNavScreens.forEachIndexed { index, screen ->
                 val isSelected = selectedItemIndex == index
-                val animatedOffset by animateDpAsState(
-                    targetValue = if (isSelected) (-12).dp else 0.dp,
-                    label = "offsetAnimation"
-                )
+                val animatedOffset by animateDpAsState(targetValue = if (isSelected) (-12).dp else 0.dp, label = "offsetAnimation")
                 NavigationBarItem(
                     modifier = Modifier.offset(y = animatedOffset),
                     label = { Text(screen.label) },
                     icon = {
                         Box(
-                            modifier = if (isSelected) Modifier
-                                .background(Color.White, CircleShape)
-                                .padding(8.dp) else Modifier,
+                            modifier = if (isSelected) Modifier.background(Color.White, CircleShape).padding(8.dp) else Modifier,
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                painterResource(id = screen.icon),
-                                contentDescription = screen.label,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Icon(painterResource(id = screen.icon), contentDescription = screen.label, modifier = Modifier.size(24.dp))
                         }
                     },
                     selected = isSelected,
@@ -202,77 +183,98 @@ fun BottomBar(navController: NavController) {
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopBar(navController: NavController, isDarkMode: Boolean, onThemeToggle: () -> Unit, onHomeClick: () -> Unit) {
+fun TopBar(navController: NavController, isDarkMode: Boolean, onThemeToggle: () -> Unit, onHomeClick: () -> Unit, onContactClick: () -> Unit) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-
     var isRotating by remember { mutableStateOf(false) }
-
     val rotationAngle by animateFloatAsState(
         targetValue = if (isRotating) 360f else 0f,
         animationSpec = tween(durationMillis = 800),
         label = "themeIconRotation",
-        finishedListener = {
-            if (it == 360f) isRotating = false
-        }
+        finishedListener = { if (it == 360f) isRotating = false }
     )
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background,
-        shadowElevation = 2.dp
-    ) {
+    Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.background, shadowElevation = 2.dp) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Title Group
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(painter = painterResource(id = R.drawable.ic_logo), contentDescription = "Logo", modifier = Modifier.size(36.dp).clip(CircleShape))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Project Kisan", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
-            // Actions Group
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onHomeClick) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_top_home),
-                        contentDescription = "Home",
-                        modifier = Modifier.size(24.dp),
-                        tint = if (currentRoute == Screen.Home.route) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Icon(painter = painterResource(id = R.drawable.ic_top_home), contentDescription = "Home", modifier = Modifier.size(24.dp), tint = if (currentRoute == Screen.Home.route) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = { /* TODO */ }) { Icon(painterResource(id = R.drawable.ic_top_contact), contentDescription = "Contact", modifier = Modifier.size(24.dp)) }
-
-                IconButton(onClick = {
-                    onThemeToggle()
-                    isRotating = true
-                }) {
+                IconButton(onClick = onContactClick) {
+                    Icon(painterResource(id = R.drawable.ic_top_contact), contentDescription = "Contact", modifier = Modifier.size(24.dp))
+                }
+                IconButton(onClick = { onThemeToggle(); isRotating = true }) {
                     Icon(
                         painter = if (isDarkMode) painterResource(id = R.drawable.ic_top_sun) else painterResource(id = R.drawable.ic_moon),
                         contentDescription = "Toggle Theme",
-                        modifier = Modifier
-                            .size(24.dp)
-                            .rotate(rotationAngle)
+                        modifier = Modifier.size(24.dp).rotate(rotationAngle)
                     )
                 }
-
                 IconButton(onClick = { /* TODO */ }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_top_profile),
-                        contentDescription = "Profile",
-                        modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.primary, CircleShape).padding(4.dp),
-                        tint = Color.White
-                    )
+                    Icon(painter = painterResource(id = R.drawable.ic_top_profile), contentDescription = "Profile", modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.primary, CircleShape).padding(4.dp), tint = Color.White)
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AboutAndContactSheet(onDismiss: () -> Unit) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("About & Contact", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDismiss) { Icon(painterResource(id = R.drawable.ic_close), contentDescription = "Close") }
+            }
+            Divider(modifier = Modifier.padding(bottom = 16.dp))
+            Text("About Project Kisan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Project Kisan is a comprehensive digital assistant designed to empower farmers with data-driven tools. From AI-powered crop diagnosis and personalized cultivation plans to real-time market prices and relevant government schemes, our mission is to bring a new dawn to Indian agriculture.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(24.dp))
+            Text("Meet the Team: Algo Agni", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+            TeamMemberCard(name = "Lakshay Pal", phone = "9315674123", email = "llakshaydev@gmail.com")
+            Spacer(modifier = Modifier.height(12.dp))
+            TeamMemberCard(name = "Kishlay", phone = "8368139841", email = "kishlay.ranj@gmail.com")
+            Spacer(modifier = Modifier.height(12.dp))
+            TeamMemberCard(name = "Jatin Gupta", phone = "9034602219", email = "jatin.gupta4208@gmail.com")
+            Spacer(modifier = Modifier.height(12.dp))
+            TeamMemberCard(name = "Krrish Barsiwal", phone = "8094951456", email = "krrishbarsiwal777@gmail.com")
+        }
+    }
+}
+
+@Composable
+private fun TeamMemberCard(name: String, phone: String, email: String) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+            Text(phone, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+            Text(email, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

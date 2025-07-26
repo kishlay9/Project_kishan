@@ -55,6 +55,11 @@ dependencies {
     // Coil (Image Loading)
     implementation(libs.coil.compose)
 
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio) // The engine for making requests
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+
     // Firebase Dependencies
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.storage.ktx)

@@ -1,25 +1,73 @@
+// signup.js
+
+// --- 1. INITIALIZE FIREBASE (REQUIRED FOR 'onCall' FUNCTIONS) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg",
+  authDomain: "project-kisan-new.firebaseapp.com",
+  projectId: "project-kisan-new",
+  storageBucket: "project-kisan-new.firebasestorage.app",
+  messagingSenderId: "176046173818",
+  appId: "1:176046173818:web:de8fb0e50752c8f62195c3",
+  measurementId: "G-GDJE785E2N"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const functions = firebase.app().functions('asia-south1');
+
+// Create a callable reference to your cloud function.
+const createUserAccount = functions.httpsCallable('createUserAccount');
+
+// --- 2. SIGNUP FORM LOGIC ---
 document.addEventListener('DOMContentLoaded', () => {
     const signupForm = document.getElementById('signup-form');
+    if (!signupForm) return;
 
-    if (signupForm) {
-        signupForm.addEventListener('submit', (event) => {
-            event.preventDefault(); // Prevents the default form submission
+    signupForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
 
-            // Here you would typically add form validation logic.
-            // For example, check if password is strong enough, email is valid etc.
-            
-            // This is a placeholder for when you integrate a backend.
-            // You would collect the form data and send it to your server.
-            console.log('Signup form submitted');
-            console.log('First Name:', document.getElementById('first-name').value);
-            console.log('Email:', document.getElementById('email').value);
+        // Get form data
+        const firstName = document.getElementById('first-name').value;
+        const lastName = document.getElementById('last-name').value;
+        const mobileNumber = document.getElementById('mobile').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
 
-            alert('Account creation form submitted successfully! (This is a frontend demo)');
-            
-            // Optional: Redirect the user to the login page after they sign up.
-            // setTimeout(() => {
-            //    window.location.href = 'login.html';
-            // }, 1000);
-        });
-    }
+        const signupButton = signupForm.querySelector('button[type="submit"]');
+        const originalButtonText = signupButton.textContent;
+        signupButton.disabled = true;
+        signupButton.textContent = 'Creating Account...';
+
+        try {
+            // Call the cloud function with the form data
+            const result = await createUserAccount({
+                firstName,
+                lastName,
+                mobileNumber,
+                email,
+                password
+            });
+
+            console.log("✅ [DEBUG] Account creation successful:", result.data);
+
+            // Handle success
+            if (result.data.success) {
+                alert(result.data.message);
+                // Redirect to the profile page after successful signup
+                window.location.href = 'profile.html';
+            } else {
+                // This case is unlikely if the function throws errors correctly, but good for safety.
+                throw new Error(result.data.message || 'An unknown error occurred.');
+            }
+
+        } catch (error) {
+            console.error("❌ [CRITICAL ERROR] Account creation failed:", error);
+            // Display a user-friendly error message
+            alert(`Error creating account: ${error.message}`);
+        } finally {
+            // Re-enable the button
+            signupButton.disabled = false;
+            signupButton.textContent = originalButtonText;
+        }
+    });
 });

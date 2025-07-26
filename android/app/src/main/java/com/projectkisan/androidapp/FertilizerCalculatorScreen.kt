@@ -205,15 +205,16 @@ fun NutrientDisplayCard(crop: CropInfo, unit: String, factor: Double) {
             Text("Nutrient Quantities", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
             Text("Based on your selection, we've chosen a nutrient ratio for you.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(16.dp))
+            // --- THIS IS THE NEW, CORRECTED CODE ---
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                 if (crop.inputType == "plot" && crop.nutrientsPerAcre != null) {
-                    NutrientItem("N:", "${(crop.nutrientsPerAcre.n / factor).toInt()} kg/$unit")
-                    NutrientItem("P:", "${(crop.nutrientsPerAcre.p / factor).toInt()} kg/$unit")
-                    NutrientItem("K:", "${(crop.nutrientsPerAcre.k / factor).toInt()} kg/$unit")
+                    NutrientItem("N", "${(crop.nutrientsPerAcre.n / factor).toInt()} kg/$unit") // <-- Colon removed
+                    NutrientItem("P", "${(crop.nutrientsPerAcre.p / factor).toInt()} kg/$unit") // <-- Colon removed
+                    NutrientItem("K", "${(crop.nutrientsPerAcre.k / factor).toInt()} kg/$unit") // <-- Colon removed
                 } else if (crop.inputType == "trees" && crop.nutrientsPerTree != null) {
-                    NutrientItem("N:", "${crop.nutrientsPerTree.n} kg/tree")
-                    NutrientItem("P:", "${crop.nutrientsPerTree.p} kg/tree")
-                    NutrientItem("K:", "${crop.nutrientsPerTree.k} kg/tree")
+                    NutrientItem("N", "${crop.nutrientsPerTree.n} kg/tree") // <-- Colon removed
+                    NutrientItem("P", "${crop.nutrientsPerTree.p} kg/tree") // <-- Colon removed
+                    NutrientItem("K", "${crop.nutrientsPerTree.k} kg/tree") // <-- Colon removed
                 }
             }
         }
