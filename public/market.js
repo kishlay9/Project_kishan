@@ -794,7 +794,21 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('res-trend').textContent = data.price_trend_description || 'No trend data available.';
         document.getElementById('res-comparison').textContent = data.buy_sell_hold_recommendation || 'No yearly comparison data.';
         document.getElementById('res-outlook').textContent = data.price_outlook_short_term || 'Outlook not available.';
-        document.getElementById('res-advice').textContent = data.farmer_opinion_and_advice || 'No specific advice available.';
+
+        const adviceContainer = document.getElementById('res-advice');
+        const adviceText = data.farmer_opinion_and_advice;
+
+        if (adviceText && adviceText.trim() !== '') {
+            // Split the text by the asterisk, filter out empty strings, and map to list items
+            const advicePoints = adviceText.split('*')
+                .map(point => point.trim())
+                .filter(point => point.length > 0);
+            
+            // Create a <ul> element and populate it
+            adviceContainer.innerHTML = '<ul>' + advicePoints.map(point => `<li>${point}</li>`).join('') + '</ul>';
+        } else {
+            adviceContainer.innerHTML = '<p>No specific advice available.</p>';
+        }
 
         const factorsList = document.getElementById('res-factors');
         factorsList.innerHTML = '';
