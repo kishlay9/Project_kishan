@@ -68,6 +68,12 @@ fun HomeScreen(navController: NavController) {
                 }
             )
         }
+        item {
+            Spacer(modifier = Modifier.height(16.dp)) // Space between buttons
+            CropPlannerButton(
+                onClick = { navController.navigate("crop_planner") }
+            )
+        }
     }
 }
 
@@ -157,6 +163,44 @@ fun FertilizerCalculatorButton(onClick: () -> Unit) {
             Column {
                 Text("Fertilizer Calculator", color = Color.White, fontWeight = FontWeight.Bold)
                 Text("Plan your nutrient application", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(
+                painter = painterResource(id = R.drawable.ic_arrow_right),
+                contentDescription = "Navigate",
+                tint = Color.White
+            )
+        }
+    }
+}
+// Paste this at the bottom of HomeScreen.kt
+// --- This is the new code with the corrected icon size ---
+@Composable
+fun CropPlannerButton(onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(70.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary), // Green button
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_crop_planner),
+                contentDescription = null,
+                tint = Color.White,
+                // ▼▼▼ THIS IS THE FIX ▼▼▼
+                modifier = Modifier.size(24.dp) // Set the size to match the calculator icon
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text("Crop Planner", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Smart crop recommendations", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
             }
             Spacer(modifier = Modifier.weight(1f))
             Icon(

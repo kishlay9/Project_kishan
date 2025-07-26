@@ -9,6 +9,7 @@
 <body class="market-page-body">
 
     <header>
+        <!-- Your header code is unchanged -->
         <div class="header-container">
             <div class="logo-container">
                 <a href="index.html" class="logo-link">
@@ -29,6 +30,7 @@
     </header>
 
     <main class="chat-main-container">
+        <!-- Your main chat container is unchanged -->
         <div class="chat-container">
             <div id="chat-history" class="chat-history">
                 <!-- Chat messages will be dynamically added here -->
@@ -44,6 +46,13 @@
         </div>
     </main>
 
-    <script src="assistant.js"></script>
+    <!-- ▼▼▼ START: CRITICAL CHANGES HERE ▼▼▼ -->
+    <!-- 1. Add the Firebase SDKs. These are required to call 'onCall' functions. -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+    
+    <!-- 2. Change your script tag to use type="module" -->
+    <script type="module" src="assistant.js"></script>
+    <!-- ▲▲▲ END: CRITICAL CHANGES HERE ▲▲▲ -->
 </body>
 </html>
