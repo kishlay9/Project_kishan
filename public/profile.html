@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Profile - Project Kisan</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="market-page-body">
+
+    <header>
+        <!-- Your standard header -->
+        <div class="header-container">
+            <div class="logo-container">
+                <a href="index.html" class="logo-link">
+                    <img src="images/LOGO.png" alt="Project Kisan Logo" class="logo">
+                    <h1>Project Kisan</h1>
+                </a>
+            </div>
+            <nav class="header-nav">
+                <a href="index.html">Home</a>
+                <a href="market.html">Market Prices</a>
+                <a href="guardian.html">Guardian AI</a>
+                <a id="logout-button" href="#" class="login-button">
+                    <img src="images/user-icon.png" alt="Logout Icon">
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container-wide">
+        <section class="search-panel">
+            <div id="loading-profile">
+                <div class="spinner"></div>
+                <p>Loading your profile...</p>
+            </div>
+
+            <div id="profile-content" class="hidden">
+                <h2 id="welcome-message"></h2>
+                <p>Here is the information from your profile.</p>
+                <div class="profile-details">
+                    <p><strong>Email:</strong> <span id="profile-email"></span></p>
+                    <p><strong>Mobile:</strong> <span id="profile-mobile"></span></p>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="site-footer">...</footer>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+    
+    <script type="module" src="profile.js"></script>
+</body>
+</html>
