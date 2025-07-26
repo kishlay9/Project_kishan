@@ -1,3 +1,5 @@
+
+
 // assistant.js
 
 // --- 1. INITIALIZE FIREBASE (REQUIRED FOR 'onCall' FUNCTIONS) ---
@@ -12,7 +14,9 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const functions = firebase.app().functions('asia-south1');
+// CRITICAL: Specify the correct region for your functions
+const functions = firebase.app().functions('asia-south1'); 
+// Create a callable reference to your cloud function
 const askAiAssistant = functions.httpsCallable('askAiAssistant');
 
 
@@ -28,7 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
         "Crop Diagnosis": "index.html#diagnose-tool",
         "Pest Guardian": "guardian.html",
         "Yield Maximizer": "yield.html",
-        "Govt. Schemes": "schemes.html"
+        "Govt. Schemes": "schemes.html",
+        "Fertilizer Calculator": "fertilizer.html"
     };
 
     // --- EVENT LISTENERS (Unchanged) ---
@@ -60,17 +65,21 @@ document.addEventListener('DOMContentLoaded', () => {
             // Get the current language from browser storage
             const currentLang = localStorage.getItem('project-kisan-lang') || 'en';
 
-            // Pass the user's query and selected language to the Cloud Function
+            // === THIS IS THE CORRECTED PART ===
+            // Call the function using the Firebase SDK instead of fetch
             const result = await askAiAssistant({ 
                 query: userQuery,
-                language: currentLang
+                language: currentLang 
             });
             
-            const data = result.data;
+            // The actual response from your function is inside result.data
+            const data = result.data; 
             console.log("✅ [DEBUG] Received from AI Assistant:", data);
 
             hideTypingIndicator();
 
+            // Check the response structure from your backend
+            // Note: We check data.type directly now, not data.result.type
             if (data && data.type) {
                 if (data.type === 'navigation') {
                     addAiNavigationMessage(data);
@@ -80,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      throw new Error("API returned an unknown response type.");
                 }
             } else {
-                 throw new Error("Invalid response structure from API.");
+                 throw new Error("Invalid response structure from API. Expected a 'type' property.");
             }
 
         } catch (error) {
@@ -90,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- UI HELPER FUNCTIONS (Unchanged) ---
+    // --- UI HELPER FUNCTIONS (addAiNavigationMessage is slightly improved) ---
     const addUserMessage = (text) => {
         const messageElement = document.createElement('div');
         messageElement.className = 'chat-message user-message';
@@ -114,7 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const toolUrl = toolUrlMap[data.tool];
         let navigationButton = '';
 
-        const redirectMessage = data.message || `I have a special tool for <strong>${data.tool}</strong>. Would you like to go there?`;
+        // Use the message from the backend if it exists, otherwise create a default one.
+        const redirectMessage = data.message || `That's a great question! For the most accurate information on <strong>${data.tool}</strong>, our dedicated tool is the best place to look. I can take you there now.`;
 
         if (toolUrl) {
             navigationButton = `<div class="nav-button-container"><a href="${toolUrl}" class="nav-button">Open ${data.tool} Tool</a></div>`;
