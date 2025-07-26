@@ -3566,12 +3566,14 @@ main {
 /* --- [CORRECTED & FINAL] AI SCHEME ASSISTANT PAGE STYLES --- */
 
 /* Key fix for full-page layout */
-.schemes-page-body {
+/* .schemes-page-body {
     display: flex;
     flex-direction: column;
-    min-height: 100vh; /* MODIFIED: Use min-height instead of fixed height */
-    margin: 0; /* Ensure no default margin */
-}
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
+    background-color: var(--card-background);
+} */
 
 /* Key fix: This makes the main content area grow to fill all available space */
 .schemes-page-body main#chat-container {
@@ -3583,8 +3585,7 @@ main {
     padding: 0;
     margin: 0;
     border-top: none;
-    overflow: hidden; /* Prevent main from scrolling, only the log inside it will */
-    height: 700px;
+    overflow: hidden;
 }
 
 /* Key fix for the scrolling chat area */
@@ -3592,6 +3593,7 @@ main {
     flex-grow: 1; /* Allows this div to fill the space within the main container */
     overflow-y: auto; /* This is what will scroll now */
     padding: 24px;
+    display: flex;
     max-width: 900px;
     width: 100%;
     margin: 0 auto; /* Center the chat log content */
@@ -3605,18 +3607,41 @@ main {
     align-items: center;
     justify-content: center;
     text-align: center;
-    height: 100%;
     color: var(--subtle-text);
+    width: 100%;
+    max-width: 500px;
+    margin: auto;
+    padding-bottom: 10vh;
 }
-.initial-view-icon { width: 60px; height: 60px; margin-bottom: 20px; }
-.initial-view h2 { color: var(--text-color); font-size: 2rem; margin: 0 0 10px 0; }
+
+.initial-view-icon {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 20px;
+    filter: invert(35%) sepia(8%) saturate(921%) hue-rotate(174deg) brightness(94%) contrast(86%);
+}
+
+.initial-view h2 {
+    color: var(--text-color);
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+}
+
+.initial-view p {
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+}
+
 
 /* Input Bar Area (Stays at the bottom) */
 .chat-input-area {
     padding: 15px 20px;
+    display: contents;
     background-color: var(--card-background);
     border-top: 1px solid var(--border-color);
     box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
+    display: contents;
     flex-shrink: 0; /* Prevent this area from shrinking */
 }
 
@@ -3897,7 +3922,7 @@ main {
 
 /* Chat input area */
 .chat-input-area {
-    display: flex;
+    display: contents;
     padding: 16px;
     border-top: 1px solid #e2e8f0;
     background-color: #f8fafc;
@@ -4877,5 +4902,6 @@ main {
     }
     .chat-input-area {
         padding: 0.75rem;
+
     }
 }
