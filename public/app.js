@@ -10,33 +10,38 @@ const firebaseConfig = {
 // translations.js
 
 // In app.js
+// Add the new keys to your existing translations object
+
 const translations = {
   en: {
-    severity: "Severity",
-    contagionRisk: "Contagion Risk",
-    description: "DESCRIPTION",
-    organicRemedy: "ORGANIC REMEDY",
-    chemicalRemedy: "CHEMICAL REMEDY",
-    preventionTips: "PREVENTION TIPS",
-    listenToSummary: "Listen to Summary"
+    // ... your existing keys (description, organicRemedy, etc.) ...
+    marketTrend: "Market Trend:",
+    sellStatus: "Sell Status:",
+    priceOutlook: "Price Outlook:",
+    farmerOpinion: "Farmer Opinion & Advice",
+    influencingFactors: "Influencing Factors",
+    currentAvgPrice: "Current Avg Price",
+    analysisTitle: "Analysis in {market}, {state}"
   },
   hi: {
-    severity: "गंभीरता",
-    contagionRisk: "संक्रमण का खतरा",
-    description: "विवरण",
-    organicRemedy: "जैविक उपचार",
-    chemicalRemedy: "रासायनिक उपचार",
-    preventionTips: "बचाव के उपाय",
-    listenToSummary: "सारांश सुनें"
+    // ... your existing keys ...
+    marketTrend: "बाजार की प्रवृत्ति:",
+    sellStatus: "बिक्री की स्थिति:",
+    priceOutlook: "मूल्य का दृष्टिकोण:",
+    farmerOpinion: "किसान की राय और सलाह",
+    influencingFactors: "प्रभावित करने वाले कारक",
+    currentAvgPrice: "वर्तमान औसत मूल्य",
+     analysisTitle: "{market}, {state} में विश्लेषण"
   },
   kn: {
-    severity: "ತೀವ್ರತೆ",
-    contagionRisk: "ಸಾಂಕ್ರಾಮಿಕ ಅಪಾಯ",
-    description: "ವಿವರಣೆ",
-    organicRemedy: "ಸಾವಯವ ಪರಿಹಾರ",
-    chemicalRemedy: "ರಾಸಾಯನಿಕ ಪರಿಹಾರ",
-    preventionTips: "ತಡೆಗಟ್ಟುವ ಕ್ರಮಗಳು",
-    listenToSummary: "ಸಾರಾಂಶವನ್ನು ಕೇಳಿ"
+    // ... your existing keys ...
+    marketTrend: "ಮಾರುಕಟ್ಟೆ ಪ್ರವೃತ್ತಿ:",
+    sellStatus: "ಮಾರಾಟ ಸ್ಥಿತಿ:",
+    priceOutlook: "ಬೆಲೆ ದೃಷ್ಟಿಕೋನ:",
+    farmerOpinion: "ರೈತರ ಅಭಿಪ್ರಾಯ ಮತ್ತು ಸಲಹೆ",
+    influencingFactors: "ಪ್ರಭಾವ ಬೀರುವ ಅಂಶಗಳು",
+    currentAvgPrice: "ಪ್ರಸ್ತುತ ಸರಾಸರಿ ಬೆಲೆ",
+    analysisTitle: "{market}, {state} ನಲ್ಲಿ ವಿಶ್ಲೇಷಣೆ"
   }
 };
 

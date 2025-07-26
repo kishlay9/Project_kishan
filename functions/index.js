@@ -27,6 +27,30 @@ const cors = require('cors')({ origin: true });
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 // NEW, ROBUST IMPORT LINE
 
+// Add this near the top of functions/index.js
+
+// =================================================================
+// LANGUAGE CONFIGURATION (SINGLE SOURCE OF TRUTH)
+// =================================================================
+const LANGUAGE_CONFIG = {
+    'en': {
+        name: 'English',
+        voice: { languageCode: 'en-IN', name: 'en-IN-Wavenet-D' },
+        instructions: 'All text values in the JSON response MUST be in English.'
+    },
+    'hi': {
+        name: 'Hindi',
+        voice: { languageCode: 'hi-IN', name: 'hi-IN-Wavenet-D' },
+        instructions: 'All text values in the JSON response MUST be in Hindi.'
+    },
+    'kn': {
+        name: 'Kannada',
+        voice: { languageCode: 'kn-IN', name: 'kn-IN-Wavenet-A' },
+        instructions: 'All text values in the JSON response MUST be in Kannada.'
+    },
+    // You can add more languages here later without changing the functions
+};
+
 
 // Initialize all clients ONCE
 admin.initializeApp();
@@ -715,6 +739,7 @@ exports.getMarketAnalysis = onRequest(
         let cropName = request.query.cropName || request.body.cropName;
         let stateName = request.query.stateName || request.body.stateName;
         let marketName = request.query.marketName || request.body.marketName;
+        let language = request.query.language || request.body.language || 'en'; 
 
         try {
             let accessToken;
@@ -828,29 +853,33 @@ exports.getMarketAnalysis = onRequest(
             const currentPriceForAI = chartDataArray.length > 0 ?
                 chartDataArray[chartDataArray.length - 1].price_modal : 'N/A';
 
-            const analysisPrompt = `You are a world-class AI market analyst for Indian farmers. Analyze the provided crop price data and offer actionable advice.
+            // This is the NEW multilingual prompt
+
+// Get language settings from our global config object
+const langSettings = LANGUAGE_CONFIG[language] || LANGUAGE_CONFIG['en'];
+
+const analysisPrompt = `You are a world-class AI market analyst for Indian farmers. Analyze the provided crop price data and offer actionable advice.
+
+*** ${langSettings.instructions} ***
 
 Crop: ${cropName}
 Market: ${marketName} (District: ${districtNameForPrompt}, State: ${stateName})
 Analysis Date: ${todayStr}
 
-Current Price (latest available from provided data): ${currentPriceForAI} INR
-
-Recent Prices (last 30 days of current year from provided data):
-${currentYearRecentDataStr || "No recent data available from Firestore for current year."}
-
-Prices Same Period Last Year (data from corresponding period last year):
-${previousYearComparativeDataStr || "No data available from Firestore for the same period last year."}
+Current Price (from data): ${currentPriceForAI} INR
+Recent Prices (last 30 days):
+${currentYearRecentDataStr || "No recent data for current year."}
+Prices Same Period Last Year:
+${previousYearComparativeDataStr || "No data for same period last year."}
 
 Based on this data:
-1. Describe the current price trend (rising, falling, stable) compared to the last 30 days of available data.
-2. Identify potential general factors (e.g., weather, supply, demand, local events, government policies) that might be influencing any significant price changes or trends you observe.
-3. Provide clear, actionable advice and an opinion for farmers regarding selling or holding their crop.
-4. Provide a qualitative outlook for price movement in the next 7-15 days based on historical patterns and trends (e.g., 'Prices are likely to rise', 'Expect stabilization', 'Possible slight dip').
-5. Based STRICTLY on the provided 'Current Price' and 'Recent Prices' data, provide a direct recommendation to 'Buy', 'Sell', or 'Hold' the crop. If insufficient data or unclear trend, state 'Monitor' and briefly explain why. This recommendation MUST be derived SOLELY from the provided numbers and trends, and MUST NOT hallucinate external market conditions not mentioned in the data.
-6. If data for a specific period is stated as "No data available" above, clearly mention this limitation in your analysis and provide a general outlook based on general agricultural market knowledge for this crop/region if possible.
+1.  Describe the current price trend.
+2.  Identify potential influencing factors.
+3.  Provide clear, actionable advice for farmers.
+4.  Provide a short-term price outlook.
+5.  Give a direct recommendation: 'Buy', 'Sell', 'Hold', or 'Monitor'.
 
-Respond ONLY with a single, valid JSON object with the exact structure and keys below. All responses must be in English. The 'chart_data' array should be populated directly from the raw data provided to the AI, maintaining the 'date', 'price_modal', 'price_min', 'price_max', and 'year' fields for all relevant data points.
+Respond ONLY with a single, valid JSON object with the exact structure below.
 
 {
   "crop_name": "${cropName}",
@@ -858,11 +887,11 @@ Respond ONLY with a single, valid JSON object with the exact structure and keys 
   "state_name": "${stateName}",
   "analysis_date": "${todayStr}",
   "current_price_inr": ${currentPriceForAI},
-  "price_trend_description": "A concise description of the current trend (e.g., 'Prices are moderately rising, up 5% in the last 7 days.').",
-  "influencing_factors": ["An array of strings. Each string is a potential influencing factor, presented as a complete sentence."],
-  "farmer_opinion_and_advice": "A string containing actionable advice for farmers. Format this advice as a single paragraph or as a few concise bullet points using markdown like '* Point 1' or '- Point 1'. The advice must be practical.",
-  "price_outlook_short_term": "A qualitative outlook for price movement in the next 7-15 days (e.g., 'Prices are likely to rise', 'Expect stabilization', 'Possible slight dip'). If the data is insufficient to form a strong opinion, provide a cautious but definitive-sounding outlook based on general market principles for this crop, for example, 'Prices may see some volatility due to seasonal shifts' instead of stating 'Insufficient data'or 'limited data' .",
-  "buy_sell_hold_recommendation": "Direct recommendation: 'Buy', 'Sell', 'Hold', or 'Monitor'. ",
+  "price_trend_description": "A concise description of the trend.",
+  "influencing_factors": ["An array of strings for influencing factors."],
+  "farmer_opinion_and_advice": "A string with actionable advice.",
+  "price_outlook_short_term": "A qualitative outlook for the next 7-15 days.",
+  "buy_sell_hold_recommendation": "Direct recommendation: 'Buy', 'Sell', 'Hold', or 'Monitor'.",
   "chart_data": ${JSON.stringify(chartDataArray)}, 
   "data_completeness": "${dataCompleteness}"
 }`;

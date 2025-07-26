@@ -1,3 +1,44 @@
+// Add these new keys to your existing translations object
+
+const translations = {
+  en: {
+    // ... all your existing keys for Crop Doctor and Market Analysis labels ...
+    analysisTitle: "{crop} Analysis in {market}, {state}",
+    dateLabel: "Date: {date}",
+    priceLabel: "₹ {price} / Quintal",
+    noTrendData: "No trend data available.",
+    noComparisonData: "No comparison data available.",
+    noOutlookData: "Outlook not available.",
+    noAdviceData: "No specific advice available.",
+    noFactorsData: "No specific factors identified."
+  },
+  hi: {
+    // ... all your existing keys ...
+    analysisTitle: "{market}, {state} में {crop} का विश्लेषण",
+    dateLabel: "दिनांक: {date}",
+    priceLabel: "₹ {price} / क्विंटल",
+    noTrendData: "कोई प्रवृत्ति डेटा उपलब्ध नहीं है।",
+    noComparisonData: "कोई तुलना डेटा उपलब्ध नहीं है।",
+    noOutlookData: "दृष्टिकोण उपलब्ध नहीं है।",
+    noAdviceData: "कोई विशेष सलाह उपलब्ध नहीं है।",
+    noFactorsData: "कोई विशेष कारक पहचाना नहीं गया।"
+  },
+  kn: {
+    // ... all your existing keys ...
+   analysisTitle: "{market}, {state} ನಲ್ಲಿ {crop} ವಿಶ್ಲೇಷಣೆ", 
+    dateLabel: "ದಿನಾಂಕ: {date}",
+    priceLabel: "₹ {price} / ಕ್ವಿಂಟಲ್",
+    noTrendData: "ಯಾವುದೇ ಪ್ರವೃತ್ತಿ ಡೇಟಾ ಲಭ್ಯವಿಲ್ಲ.",
+    noComparisonData: "ಯಾವುದೇ ಹೋಲಿಕೆ ಡೇಟಾ ಲಭ್ಯವಿಲ್ಲ.",
+    noOutlookData: "ದೃಷ್ಟಿಕೋನ ಲಭ್ಯವಿಲ್ಲ.",
+    noAdviceData: "ಯಾವುದೇ ನಿರ್ದಿಷ್ಟ ಸಲಹೆ ಲಭ್ಯವಿಲ್ಲ.",
+    noFactorsData: "ಯಾವುದೇ ನಿರ್ದಿಷ್ಟ ಅಂಶಗಳನ್ನು ಗುರುತಿಸಲಾಗಿಲ್ಲ."
+  }
+};
+
+
+
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- DATABASE: Pre-processed data from the provided CSV file ---
     const marketData = {
@@ -788,12 +829,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- YOUR ORIGINAL DISPLAY FUNCTIONS (PRESERVED) ---
     function displayMarketAnalysis(data) {
-        document.getElementById('res-title').textContent = `${data.crop_name} Analysis in ${data.market_name}, ${data.state_name}`;
-        document.getElementById('res-analysis-date').textContent = `Date: ${data.analysis_date || 'N/A'}`;
-        document.getElementById('res-price').textContent = `₹ ${data.current_price_inr || 'N/A'} / Quintal`;
-        document.getElementById('res-trend').textContent = data.price_trend_description || 'No trend data available.';
-        document.getElementById('res-comparison').textContent = data.buy_sell_hold_recommendation || 'No yearly comparison data.';
-        document.getElementById('res-outlook').textContent = data.price_outlook_short_term || 'Outlook not available.';
+        const lang = localStorage.getItem('project-kisan-lang') || 'en';
+
+        // --- Title ---
+        // Get the translated title "template" from your translations object
+        let titleTemplate = translations[lang]?.analysisTitle || translations.en.analysisTitle;
+        // Replace placeholders with the (already translated) data from the AI
+        const finalTitle = titleTemplate
+            .replace('{crop}', data.crop_name)
+            .replace('{market}', data.market_name)
+            .replace('{state}', data.state_name);
+        document.getElementById('res-title').textContent = finalTitle;
+
+        // --- Date ---
+        let dateTemplate = translations[lang]?.dateLabel || translations.en.dateLabel;
+        const finalDate = dateTemplate.replace('{date}', data.analysis_date || 'N/A');
+        document.getElementById('res-analysis-date').textContent = finalDate;
+
+        // --- Price ---
+        let priceTemplate = translations[lang]?.priceLabel || translations.en.priceLabel;
+        const finalPrice = priceTemplate.replace('{price}', data.current_price_inr || 'N/A');
+        document.getElementById('res-price').textContent = finalPrice;
+
+        // --- Trend, Status, and Outlook (These are simple text replacements) ---
+        document.getElementById('res-trend').textContent = data.price_trend_description || (translations[lang]?.noTrendData || translations.en.noTrendData);
+        document.getElementById('res-comparison').textContent = data.buy_sell_hold_recommendation || (translations[lang]?.noComparisonData || translations.en.noComparisonData);
+        document.getElementById('res-outlook').textContent = data.price_outlook_short_term || (translations[lang]?.noOutlookData || translations.en.noOutlookData);
 
         const adviceContainer = document.getElementById('res-advice');
         const adviceText = data.farmer_opinion_and_advice;
