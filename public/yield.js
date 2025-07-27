@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tasks.forEach(task => {
             const taskCard = document.createElement('div');
             taskCard.className = 'daily-task-card';
-            taskCard.innerHTML = `<img src="images/${task.icon}.svg" alt="${task.title} Icon"><h4>${task.title}</h4><p>${task.description}</p>`;
+            taskCard.innerHTML = `<h4>${task.title}</h4><p>${task.description}</p>`;
             dailyTasksGrid.appendChild(taskCard);
         });
     }
