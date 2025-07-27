@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,7 +27,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.projectkisan.androidapp.ui.theme.*
 
 // --- 1. DATA MODELS AND DATABASE ---
@@ -48,7 +49,7 @@ data class FertilizerResult(
 )
 
 // Hardcoded database using correct drawable resource IDs
-val cropData = mapOf(
+val fertilizerCropData = mapOf(
     "cabbage" to CropInfo("Cabbage", R.drawable.cabbage, "plot", nutrientsPerAcre = Nutrients(80.0, 40.0, 40.0)),
     "tomato" to CropInfo("Tomato", R.drawable.tomatoes, "plot", nutrientsPerAcre = Nutrients(100.0, 60.0, 60.0)),
     "apple" to CropInfo("Apple", R.drawable.apple, "trees", nutrientsPerTree = Nutrients(0.6, 0.3, 0.7)),
@@ -79,7 +80,7 @@ fun FertilizerCalculatorScreen(onNavigateBack: () -> Unit) {
     var showCropDialog by remember { mutableStateOf(false) }
     var calculationResult by remember { mutableStateOf<Pair<FertilizerResult, FertilizerResult>?>(null) }
 
-    val selectedCrop = cropData[selectedCropKey]!!
+    val selectedCrop = fertilizerCropData[selectedCropKey]!!
     val conversionFactor = when(selectedUnit) {
         "Hectare" -> 2.47105
         "Gunta" -> 0.025
@@ -92,13 +93,11 @@ fun FertilizerCalculatorScreen(onNavigateBack: () -> Unit) {
                 title = { Text("Fertilizer Calculator", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(painterResource(id = R.drawable.ic_arrow_back), contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -134,7 +133,7 @@ fun FertilizerCalculatorScreen(onNavigateBack: () -> Unit) {
 
             item {
                 if (selectedCrop.inputType == "plot") {
-                    PlotSizeInput(plotSize = plotSize, onValueChange = {
+                    PlotSizeInput(plotSize = plotSize, unit = selectedUnit, onValueChange = {
                         plotSize = it
                         calculationResult = null
                     })
@@ -152,9 +151,9 @@ fun FertilizerCalculatorScreen(onNavigateBack: () -> Unit) {
                     onClick = { calculationResult = calculateFertilizers(selectedCrop, plotSize, treeCount) },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
                 ) {
-                    Text("Calculate", fontSize = 16.sp)
+                    Text("Calculate", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -202,19 +201,18 @@ fun CropSelectorButton(crop: CropInfo, onClick: () -> Unit) {
 fun NutrientDisplayCard(crop: CropInfo, unit: String, factor: Double) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Nutrient Quantities", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text("Nutrient Quantities", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Text("Based on your selection, we've chosen a nutrient ratio for you.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(16.dp))
-            // --- THIS IS THE NEW, CORRECTED CODE ---
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                 if (crop.inputType == "plot" && crop.nutrientsPerAcre != null) {
-                    NutrientItem("N", "${(crop.nutrientsPerAcre.n / factor).toInt()} kg/$unit") // <-- Colon removed
-                    NutrientItem("P", "${(crop.nutrientsPerAcre.p / factor).toInt()} kg/$unit") // <-- Colon removed
-                    NutrientItem("K", "${(crop.nutrientsPerAcre.k / factor).toInt()} kg/$unit") // <-- Colon removed
+                    NutrientItem("N", "${(crop.nutrientsPerAcre.n / factor).toInt()} kg/$unit")
+                    NutrientItem("P", "${(crop.nutrientsPerAcre.p / factor).toInt()} kg/$unit")
+                    NutrientItem("K", "${(crop.nutrientsPerAcre.k / factor).toInt()} kg/$unit")
                 } else if (crop.inputType == "trees" && crop.nutrientsPerTree != null) {
-                    NutrientItem("N", "${crop.nutrientsPerTree.n} kg/tree") // <-- Colon removed
-                    NutrientItem("P", "${crop.nutrientsPerTree.p} kg/tree") // <-- Colon removed
-                    NutrientItem("K", "${crop.nutrientsPerTree.k} kg/tree") // <-- Colon removed
+                    NutrientItem("N", "${crop.nutrientsPerTree.n} kg/tree")
+                    NutrientItem("P", "${crop.nutrientsPerTree.p} kg/tree")
+                    NutrientItem("K", "${crop.nutrientsPerTree.k} kg/tree")
                 }
             }
         }
@@ -225,7 +223,7 @@ fun NutrientDisplayCard(crop: CropInfo, unit: String, factor: Double) {
 fun NutrientItem(name: String, value: String) {
     Card(shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(name, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+            Text(name, fontWeight = FontWeight.Bold)
             Text(value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -235,7 +233,7 @@ fun NutrientItem(name: String, value: String) {
 fun UnitSelector(selectedUnit: String, onUnitSelected: (String) -> Unit) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Unit", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text("Unit", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Acre", "Hectare", "Gunta").forEach { unit ->
@@ -245,10 +243,10 @@ fun UnitSelector(selectedUnit: String, onUnitSelected: (String) -> Unit) {
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = if (isSelected) MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f) else Color.Transparent,
-                            contentColor = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
+                            containerColor = if (isSelected) PrimaryGreen.copy(alpha = 0.1f) else Color.Transparent,
+                            contentColor = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
                         ),
-                        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                        border = BorderStroke(1.dp, if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                     ) {
                         Text(unit)
                     }
@@ -259,23 +257,23 @@ fun UnitSelector(selectedUnit: String, onUnitSelected: (String) -> Unit) {
 }
 
 @Composable
-fun PlotSizeInput(plotSize: Float, onValueChange: (Float) -> Unit) {
+fun PlotSizeInput(plotSize: Float, unit: String, onValueChange: (Float) -> Unit) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Plot Size", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-            Text("Example: half acre = 0.5", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Plot Size", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text("Example: half an acre = 0.5", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background, RoundedCornerShape(12.dp)).padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { if (plotSize > 0.1f) onValueChange(plotSize - 0.1f) }) { Icon(painterResource(id = R.drawable.ic_remove), contentDescription = "Decrease", tint = MaterialTheme.colorScheme.onBackground) }
+                IconButton(onClick = { if (plotSize > 0.1f) onValueChange(plotSize - 0.1f) }) { Icon(painterResource(id = R.drawable.ic_remove), contentDescription = "Decrease") }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(String.format("%.1f", plotSize), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-                    Text("Acre", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(String.format("%.1f", plotSize), fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                    Text(unit, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = { onValueChange(plotSize + 0.1f) }) { Icon(painterResource(id = R.drawable.ic_add), contentDescription = "Increase", tint = MaterialTheme.colorScheme.onBackground) }
+                IconButton(onClick = { onValueChange(plotSize + 0.1f) }) { Icon(painterResource(id = R.drawable.ic_add), contentDescription = "Increase") }
             }
         }
     }
@@ -285,19 +283,19 @@ fun PlotSizeInput(plotSize: Float, onValueChange: (Float) -> Unit) {
 fun TreeCountInput(treeCount: Int, onValueChange: (Int) -> Unit) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Number of Trees", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text("Number of Trees", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background, RoundedCornerShape(12.dp)).padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { if (treeCount > 1) onValueChange(treeCount - 1) }) { Icon(painterResource(id = R.drawable.ic_remove), contentDescription = "Decrease", tint = MaterialTheme.colorScheme.onBackground) }
+                IconButton(onClick = { if (treeCount > 1) onValueChange(treeCount - 1) }) { Icon(painterResource(id = R.drawable.ic_remove), contentDescription = "Decrease") }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("$treeCount", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                    Text("$treeCount", fontSize = 32.sp, fontWeight = FontWeight.Bold)
                     Text("Trees", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = { onValueChange(treeCount + 1) }) { Icon(painterResource(id = R.drawable.ic_add), contentDescription = "Increase", tint = MaterialTheme.colorScheme.onBackground) }
+                IconButton(onClick = { onValueChange(treeCount + 1) }) { Icon(painterResource(id = R.drawable.ic_add), contentDescription = "Increase") }
             }
         }
     }
@@ -307,7 +305,7 @@ fun TreeCountInput(treeCount: Int, onValueChange: (Int) -> Unit) {
 @Composable
 fun CropSelectionDialog(onDismiss: () -> Unit, onCropSelected: (String) -> Unit) {
     ModalBottomSheet(
-        onDismissRequest = { onDismiss() },
+        onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(),
         dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
@@ -331,7 +329,7 @@ fun CropSelectionDialog(onDismiss: () -> Unit, onCropSelected: (String) -> Unit)
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(cropData.entries.toList()) { (key, crop) ->
+                items(fertilizerCropData.entries.toList()) { (key, crop) ->
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.clickable { onCropSelected(key) }
@@ -343,7 +341,7 @@ fun CropSelectionDialog(onDismiss: () -> Unit, onCropSelected: (String) -> Unit)
                             contentScale = ContentScale.Crop
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(crop.name, fontSize = 12.sp, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurface)
+                        Text(crop.name, fontSize = 12.sp, textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -356,7 +354,7 @@ fun CalculationResults(result: Pair<FertilizerResult, FertilizerResult>?) {
     if (result == null) return
     val (mopTspUrea, dapMopUrea) = result
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Choose your preferred fertilizer combination", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+        Text("Choose your preferred fertilizer combination", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PrimaryGreen, textAlign = TextAlign.Center)
         Spacer(modifier = Modifier.height(16.dp))
         ResultCombinationCard(
             title = "MOP/TSP/Urea",
@@ -383,7 +381,7 @@ fun ResultCombinationCard(
 ) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 FertilizerResultItem(name = fertilizer1Name, kg = fertilizer1Value, bags = fertilizer1Bags)
@@ -398,7 +396,7 @@ fun ResultCombinationCard(
 fun FertilizerResultItem(name: String, kg: Double, bags: Double) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("${kg.toInt()} kg", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.secondary)
+        Text("${kg.toInt()} kg", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = PrimaryGreen)
         Text("${String.format("%.2f", bags)} Bags", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,10 +20,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.projectkisan.androidapp.ui.theme.*
 import kotlinx.coroutines.delay
 
-// --- 1. DATA MODELS (FIXED NAMING CONVENTION) ---
+// --- 1. DATA MODELS ---
 data class CropRecommendation(
     val cropName: String = "",
     val estimatedProfitInr: Int = 0,
@@ -33,7 +36,7 @@ data class CropRecommendation(
 // --- 2. MAIN SCREEN COMPOSABLE ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CropPlannerScreen(onNavigateBack: () -> Unit) {
+fun CropPlannerScreen(navController: NavController) { // Changed to NavController for consistency
     var selectedState by remember { mutableStateOf("") }
     var selectedWater by remember { mutableStateOf("") }
     var landSize by remember { mutableStateOf("") }
@@ -46,8 +49,8 @@ fun CropPlannerScreen(onNavigateBack: () -> Unit) {
             TopAppBar(
                 title = { Text("AI Crop Planner", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(painterResource(id = R.drawable.ic_arrow_back), contentDescription = "Back")
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -77,7 +80,7 @@ fun CropPlannerScreen(onNavigateBack: () -> Unit) {
             item {
                 LaunchedEffect(isLoading) {
                     if (isLoading) {
-                        delay(2000)
+                        delay(2000) // Simulate network call
                         recommendations = getHardcodedRecommendations()
                         isLoading = false
                     }
@@ -106,7 +109,7 @@ fun CropPlannerScreen(onNavigateBack: () -> Unit) {
     }
 }
 
-// --- 3. UI SUB-COMPONENTS (FIXED COLOR REFERENCES) ---
+// --- 3. UI SUB-COMPONENTS ---
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +138,7 @@ fun PlannerInputCard(
         modifier = Modifier.shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
-            Text("Ai Crop Planner", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("AI Crop Planner", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             Text("Get recommendations based on your location, water, and budget.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(24.dp))
@@ -179,15 +182,15 @@ fun RecommendationCard(recommendation: CropRecommendation) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.shadow(elevation = 1.dp, shape = RoundedCornerShape(16.dp)) // Softer shadow
+        modifier = Modifier.shadow(elevation = 1.dp, shape = RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Header with dark background
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        color = TextPrimaryLight, // Dark header background
+                        // ▼▼▼ FIX: Use 'TextColor' from your theme ▼▼▼
+                        color = TextColor,
                         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
                     )
                     .padding(16.dp)
@@ -196,23 +199,24 @@ fun RecommendationCard(recommendation: CropRecommendation) {
                     recommendation.cropName,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White // White text on dark background
+                    color = Color.White
                 )
             }
 
-            // Metrics Section with light background
             Column(
                 modifier = Modifier
                     .background(MaterialTheme.colorScheme.surface)
                     .padding(16.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    MetricItem("Est. Profit / acre", "₹${recommendation.estimatedProfitInr.toLocaleString()}", GreenPrimary, Modifier.weight(1f))
+                    // ▼▼▼ FIX: Use 'PrimaryGreen' from your theme ▼▼▼
+                    MetricItem("Est. Profit / acre", "₹${recommendation.estimatedProfitInr.toLocaleString()}", PrimaryGreen, Modifier.weight(1f))
                     MetricItem("Est. Cost / acre", "₹${recommendation.estimatedCostInr.toLocaleString()}", MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    ProsConsList("Pros", recommendation.pros, R.drawable.ic_arrow_up, GreenPrimary, Modifier.weight(1f))
+                    // ▼▼▼ FIX: Use 'PrimaryGreen' from your theme ▼▼▼
+                    ProsConsList("Pros", recommendation.pros, R.drawable.ic_arrow_up, PrimaryGreen, Modifier.weight(1f))
                     ProsConsList("Cons", recommendation.cons, R.drawable.ic_arrow_down, Color.Red, Modifier.weight(1f))
                 }
             }
@@ -220,7 +224,6 @@ fun RecommendationCard(recommendation: CropRecommendation) {
     }
 }
 
-// ▼▼▼ SLIGHTLY UPDATED COMPONENT ▼▼▼
 @Composable
 fun MetricItem(label: String, value: String, valueColor: Color, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
@@ -229,7 +232,6 @@ fun MetricItem(label: String, value: String, valueColor: Color, modifier: Modifi
     }
 }
 
-// ▼▼▼ SLIGHTLY UPDATED COMPONENT ▼▼▼
 @Composable
 fun ProsConsList(title: String, items: List<String>, iconRes: Int, iconColor: Color, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
@@ -239,7 +241,6 @@ fun ProsConsList(title: String, items: List<String>, iconRes: Int, iconColor: Co
             Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, color = iconColor)
         }
         Spacer(modifier = Modifier.height(8.dp))
-        // Using a Column for the list items
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             items.forEach {
                 Text(
@@ -253,10 +254,7 @@ fun ProsConsList(title: String, items: List<String>, iconRes: Int, iconColor: Co
     }
 }
 
-
-
 // --- 4. HARDCODED DATA FOR PREVIEW ---
-
 fun getHardcodedRecommendations(): List<CropRecommendation> {
     return listOf(
         CropRecommendation(
