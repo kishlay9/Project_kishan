@@ -67,7 +67,13 @@ dependencies {
     implementation(libs.material)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
     implementation("androidx.media3:media3-exoplayer:1.3.1")
+    implementation("io.ktor:ktor-client-core:2.3.11")
+    implementation("io.ktor:ktor-client-cio:2.3.11")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.11")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.11")
 
+// Kotlinx Serialization for parsing JSON responses
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     // Compose Dependencies
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))

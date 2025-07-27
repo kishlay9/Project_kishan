@@ -1,141 +1,209 @@
 package com.projectkisan.androidapp
-import kotlinx.serialization.Serializable
-import androidx.compose.foundation.BorderStroke
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.projectkisan.androidapp.ui.theme.GreenPrimary
+import com.projectkisan.androidapp.models.ChatMessage
+import com.projectkisan.androidapp.models.Scheme
+import kotlinx.coroutines.launch
 
-// SINGLE SOURCE OF TRUTH for the ChatMessage data model
-
-data class ChatMessage(val text: String, val isFromUser: Boolean, val author: String? = null, val schemes: List<Scheme>? = null)
-// SHARED UI COMPONENTS
+// This file now contains all the UI components for the chat.
 
 @Composable
-fun AiMessageBubble(message: ChatMessage) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.Bottom) {
-        Image(painter = painterResource(id = R.drawable.ic_logo), contentDescription = "AI Avatar", modifier = Modifier.size(32.dp).clip(CircleShape))
-        Spacer(modifier = Modifier.width(8.dp))
-        Card(
-            shape = RoundedCornerShape(topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Text(message.text.replace("**", ""), modifier = Modifier.padding(16.dp))
+fun ChatView(
+    messages: List<ChatMessage>,
+    currentQuery: String,
+    onQueryChange: (String) -> Unit,
+    onSendClicked: () -> Unit,
+    isLoading: Boolean,
+    location: String
+) {
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
+    // Scroll to the bottom when a new message is added
+    LaunchedEffect(messages.size) {
+        coroutineScope.launch {
+            if (messages.isNotEmpty()) {
+                listState.animateScrollToItem(messages.size - 1)
+            }
         }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Bottom),
+        ) {
+            items(messages) { message ->
+                if (message.isFromUser) {
+                    UserMessageBubble(message)
+                } else {
+                    AiMessageBubbleWithSchemes(message)
+                }
+            }
+            if (isLoading) {
+                item { TypingIndicator() }
+            }
+        }
+        ChatInputBar(
+            value = currentQuery,
+            onValueChange = onQueryChange,
+            onSend = onSendClicked,
+            placeholderText = if (messages.size <= 1) "Location set to $location!" else "Ask about irrigation, seeds..."
+        )
     }
 }
 
 @Composable
 fun UserMessageBubble(message: ChatMessage) {
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
-        message.author?.let {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End
+    ) {
+        Card(
+            shape = RoundedCornerShape(20.dp, 4.dp, 20.dp, 20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
             Text(
-                text = it,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 4.dp, end = 8.dp)
+                text = message.text,
+                modifier = Modifier.padding(16.dp),
+                color = MaterialTheme.colorScheme.onPrimary
             )
         }
+    }
+}
+
+@Composable
+fun AiMessageBubble(message: ChatMessage) {
+    Card(
+        shape = RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        // Here you can add Markdown support if you want later
         Text(
             text = message.text,
-            modifier = Modifier
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp))
-                .background(GreenPrimary)
-                .padding(16.dp),
-            color = Color.White
+            modifier = Modifier.padding(16.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatInputBar(value: String, onValueChange: (String) -> Unit, onSend: () -> Unit, placeholderText: String = "Talk to Assistant...") {
-    val keyboardController = LocalSoftwareKeyboardController.current
-    Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text(placeholderText) },
-                leadingIcon = { Icon(painter = painterResource(id = R.drawable.ic_chat_bubble), contentDescription = null) },
-                shape = CircleShape,
-                colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.background,
-                    focusedContainerColor = MaterialTheme.colorScheme.background
-                ),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { onSend(); keyboardController?.hide() })
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            IconButton(
-                onClick = onSend,
-                modifier = Modifier.size(48.dp).background(GreenPrimary, CircleShape),
-                enabled = value.isNotBlank()
-            ) {
-                Icon(painter = painterResource(id = R.drawable.ic_ask), contentDescription = "Send", tint = Color.White)
+fun AiMessageBubbleWithSchemes(message: ChatMessage) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_logo),
+            contentDescription = "AI Avatar",
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .align(Alignment.Top)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            AiMessageBubble(message)
+            message.schemes?.forEach { scheme ->
+                SchemeCard(scheme = scheme)
             }
         }
     }
 }
 
 @Composable
-fun SuggestionChips(onChipClick: (String) -> Unit) {
-    val suggestions = listOf("What is the price of onions?", "Is it going to rain tomorrow?", "How to treat leaf curl virus?")
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-        horizontalAlignment = Alignment.Start
+fun SchemeCard(scheme: Scheme) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
-        suggestions.forEach { suggestion ->
-            OutlinedButton(
-                onClick = { onChipClick(suggestion) },
-                shape = CircleShape,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
-                Text(suggestion, color = MaterialTheme.colorScheme.onSurface)
-            }
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("${scheme.schemeName} (${scheme.governmentLevel})", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(scheme.briefDescription, style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Key Benefits:", fontWeight = FontWeight.SemiBold)
+            scheme.keyBenefits.forEach { Text("• $it") }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("How to Apply:", fontWeight = FontWeight.SemiBold)
+            Text(scheme.howToApply)
         }
     }
 }
 
 @Composable
 fun TypingIndicator() {
-    Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier.padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Image(
             painter = painterResource(id = R.drawable.ic_logo),
             contentDescription = "AI Avatar",
-            modifier = Modifier.size(32.dp).clip(CircleShape)
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Card(
-            shape = RoundedCornerShape(topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            shape = RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            Text("...", modifier = Modifier.padding(16.dp))
+            // Add a simple typing animation if desired, or just show text
+            Text("Typing...", modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+        }
+    }
+}
+
+@Composable
+fun ChatInputBar(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onSend: () -> Unit,
+    placeholderText: String
+) {
+    Surface(shadowElevation = 8.dp) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text(placeholderText) },
+                shape = RoundedCornerShape(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(onClick = onSend, enabled = value.isNotBlank()) {
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+            }
         }
     }
 }
