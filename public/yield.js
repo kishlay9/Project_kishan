@@ -230,60 +230,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- FORM SUBMISSION LOGIC ---
     yieldForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        console.log("📝 [DEBUG] Form submitted.");
+    event.preventDefault();
+    console.log("📝 [DEBUG] Form submitted.");
+    
+    const crop = cropSelect.value;
+    const variety = varietySelect.value;
+    const sowingDate = document.getElementById('sowing-date').value;
+    const locationText = document.getElementById('location').value;
+
+    if (!crop || !variety || !sowingDate || !locationText) {
+        alert('Please fill out all fields to generate a plan.');
+        return;
+    }
+
+    yieldOutput.classList.add('hidden');
+    statusIndicator.classList.remove('hidden');
+    statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    const farmId = 'testFarm01';
+
+    try {
+        // --- START OF THE FIX ---
+
+        // 1. Get the current language from localStorage to send to the backend.
+        const lang = localStorage.getItem('project-kisan-lang') || 'en';
+
+        // 2. Add the 'language' property to the data payload.
+        const dataToSend = {
+            farmId: farmId,
+            crop: crop,
+            variety: variety,
+            sowingDate: sowingDate,
+            location: { latitude: 28.6139, longitude: 77.2090 }, // Note: This location is hardcoded
+            language: lang // <-- THIS IS THE CRITICAL ADDITION
+        };
         
-        const crop = cropSelect.value;
-        const variety = varietySelect.value;
-        const sowingDate = document.getElementById('sowing-date').value;
-        const locationText = document.getElementById('location').value;
-
-        if (!crop || !variety || !sowingDate || !locationText) {
-            alert('Please fill out all fields to generate a plan.');
-            return;
-        }
-
-        yieldOutput.classList.add('hidden');
-        statusIndicator.classList.remove('hidden');
-        statusIndicator.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // --- END OF THE FIX ---
         
-        const farmId = 'testFarm01';
-
-        try {
-            const dataToSend = {
-                farmId: farmId,
-                crop: crop,
-                variety: variety,
-                sowingDate: sowingDate,
-                location: { latitude: 28.6139, longitude: 77.2090 } 
-            };
-            
-            const generateMasterPlanCallable = functions.httpsCallable('generateMasterPlan');
-            console.log("🚀 [DEBUG] Calling 'generateMasterPlan' with payload:", dataToSend);
-            
-            const result = await generateMasterPlanCallable(dataToSend);
-            console.log("✅ [DEBUG] Received response from callable function:", result.data);
-            
-            if (!result.data || !result.data.dailyTasks) {
-                throw new Error("The function response from the server was incomplete.");
-            }
-            const dailyTasks = result.data.dailyTasks;
-            
-            const masterPlan = await fetchMasterPlanFromFirestore(farmId);
-
-            displayMasterPlan(masterPlan);
-            displayDailyTasks(dailyTasks);
-
-            statusIndicator.classList.add('hidden');
-            yieldOutput.classList.remove('hidden');
-            yieldOutput.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-        } catch (error) {
-            console.error("❌ [CRITICAL ERROR] Failed to generate plan:", error);
-            statusIndicator.classList.add('hidden');
-            alert(`Failed to generate your plan. Please try again. \nError: ${error.message}`);
+        const generateMasterPlanCallable = functions.httpsCallable('generateMasterPlan');
+        console.log("🚀 [DEBUG] Calling 'generateMasterPlan' with payload:", dataToSend);
+        
+        const result = await generateMasterPlanCallable(dataToSend);
+        console.log("✅ [DEBUG] Received response from callable function:", result.data);
+        
+        if (!result.data || !result.data.dailyTasks) {
+            throw new Error("The function response from the server was incomplete.");
         }
-    });
+        
+        // The data received from the function is already translated.
+        const dailyTasks = result.data.dailyTasks;
+        
+        // Fetch the master plan which was saved to Firestore by the function.
+        const masterPlan = await fetchMasterPlanFromFirestore(farmId);
+
+        // Display the translated data.
+        displayMasterPlan(masterPlan);
+        displayDailyTasks(dailyTasks);
+
+        statusIndicator.classList.add('hidden');
+        yieldOutput.classList.remove('hidden');
+        yieldOutput.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch (error) {
+        console.error("❌ [CRITICAL ERROR] Failed to generate plan:", error);
+        statusIndicator.classList.add('hidden');
+        alert(`Failed to generate your plan. Please try again. \nError: ${error.message}`);
+    }
+});
+
 
     async function fetchMasterPlanFromFirestore(farmId) {
         console.log(`[DEBUG] Fetching master plan for farm '${farmId}' from Firestore...`);

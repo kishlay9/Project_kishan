@@ -964,79 +964,100 @@ Respond ONLY with a single, valid JSON object with the exact structure below.
 // =================================================================
 // FUNCTION 6: YIELD MAXIMIZER - GENERATE MASTER PLAN (CORRECTED)
 // =================================================================
+// =================================================================
+// FUNCTION 6: YIELD MAXIMIZER - GENERATE MASTER PLAN (ROBUST 2-STEP TRANSLATION)
+// =================================================================
 exports.generateMasterPlan = onCall(
     {
         region: LOCATION,
         memory: "1GiB",
-        timeoutSeconds: 120,
+        timeoutSeconds: 180, // Increased timeout for two AI calls
     },
     async (request) => {
-        // 1. Validate Input from the Frontend
-        const { farmId, crop, variety, sowingDate, location } = request.data;
+        const { farmId, crop, variety, sowingDate, location, language = 'en' } = request.data;
 
         if (!farmId || !crop || !sowingDate || !location) {
-            throw new HttpsError('invalid-argument', 'Missing required data: farmId, crop, sowingDate, and location are all required.');
+            throw new HttpsError('invalid-argument', 'Missing required data.');
         }
-        functions.logger.info(`[Master Plan] Request for farm: ${farmId}, crop: ${crop}, variety: ${variety || 'N/A'}`);
+        functions.logger.info(`[Master Plan] Request for farm: ${farmId}, crop: ${crop}, language: ${language}`);
 
         try {
-            // 2. The AI's Job: Create the comprehensive plan
             const generativeModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
 
-            // CORRECTED PROMPT: Asks for both masterPlan and dailyTasks
-            const prompt = `
-                You are a master agronomist for the Indian subcontinent. Your task is to create a complete cultivation content package.
-
+            // --- STEP 1: Get the Plan in English FIRST ---
+            const englishPrompt = `
+                You are a master agronomist. Your task is to create a cultivation content package in ENGLISH.
                 **Farmer's Details:**
                 - Crop: ${crop}
                 - Variety: ${variety || 'General'}
-                - Location: Latitude ${location.latitude}, Longitude ${location.longitude}
                 - Sowing Date: ${sowingDate}
-
                 **Task:**
-                Generate a single, valid JSON object that contains TWO main parts: "masterPlan" and "recommendedDailyTasks".
-
-                1.  **masterPlan**: A week-by-week plan for the crop's lifecycle. This MUST be an array of objects. Each object must have "weekNumber" (integer) and "activities" (string).
-                
-                2.  **recommendedDailyTasks**: A list of 3 generic, essential daily tasks. This MUST be an array of 3 objects. Each object must have "title" (string), "icon" (string: "diagnose-crop", "ai-guardian", or "marketshop"), and "description" (string).
-
-                Respond ONLY with the single, valid JSON object and nothing else.
+                Generate a single, valid JSON object with TWO keys: "masterPlan" and "recommendedDailyTasks".
+                1.  **masterPlan**: An array of objects. Each object must have "weekNumber" (integer) and "activities" (string in English).
+                2.  **recommendedDailyTasks**: An array of 3 objects. Each object must have "title", "icon", and "description" (all strings in English).
+                Respond ONLY with the single, valid JSON object.
             `;
-
-            const resp = await generativeModel.generateContent(prompt);
-            const content = resp.response.candidates[0].content.parts[0].text;
-
-            // Robustly parse the JSON response from the AI
-            let jsonString = content.replace(/```json/g, '').replace(/```/g, '').trim();
+            
+            console.log("Requesting English plan from AI...");
+            const englishResp = await generativeModel.generateContent(englishPrompt);
+            const englishContent = englishResp.response.candidates[0].content.parts[0].text;
+            let jsonString = englishContent.replace(/```json/g, '').replace(/```/g, '').trim();
             const firstBrace = jsonString.indexOf('{');
             const lastBrace = jsonString.lastIndexOf('}');
-            if (firstBrace === -1 || lastBrace === -1) throw new Error("AI response was not valid JSON.");
             const finalJsonString = jsonString.substring(firstBrace, lastBrace + 1);
-            const fullPlanData = JSON.parse(finalJsonString);
+            let planData = JSON.parse(finalJsonString);
+            
+            // --- STEP 2: If a different language is requested, TRANSLATE the English plan ---
+            if (language !== 'en' && LANGUAGE_CONFIG[language]) {
+                const langSettings = LANGUAGE_CONFIG[language];
+                console.log(`Translating plan to ${langSettings.name}...`);
+                
+                // Create a new prompt specifically for translation
+                const translationPrompt = `
+                    You are an expert translator. Translate the 'activities', 'title', and 'description' fields in the following JSON object into ${langSettings.name}.
+                    
+                    **Rules:**
+                    1.  Keep the JSON structure exactly the same.
+                    2.  Do NOT translate the keys (like "weekNumber", "icon").
+                    3.  Do NOT change any numbers or icon names.
+                    4.  Only translate the string values for the specified fields.
 
-            // Validate the structure of the AI's response
-            if (!fullPlanData.masterPlan || !fullPlanData.recommendedDailyTasks) {
-                throw new Error("AI did not return the data in the expected format (masterPlan and recommendedDailyTasks).");
+                    **JSON to Translate:**
+                    ${JSON.stringify(planData)}
+
+                    Respond ONLY with the translated JSON object.
+                `;
+
+                const translatedResp = await generativeModel.generateContent(translationPrompt);
+                const translatedContent = translatedResp.response.candidates[0].content.parts[0].text;
+                let translatedJsonString = translatedContent.replace(/```json/g, '').replace(/```/g, '').trim();
+                const firstTBrace = translatedJsonString.indexOf('{');
+                const lastTBrace = translatedJsonString.lastIndexOf('}');
+                const finalTJsonString = translatedJsonString.substring(firstTBrace, lastTBrace + 1);
+                planData = JSON.parse(finalTJsonString); // Overwrite the English plan with the translated version
             }
-
-            // 3. Save the specific Master Plan to the farm's document in Firestore
+            
+            // --- STEP 3: Save and Return the final (possibly translated) plan ---
+            if (!planData.masterPlan || !planData.recommendedDailyTasks) {
+                throw new Error("AI did not return the data in the expected format.");
+            }
+            
             await firestore.collection('userFarms').doc(farmId).set({
                 activePlan: {
                     crop: crop,
                     variety: variety || 'General',
                     sowingDate: sowingDate,
-                    masterPlan: fullPlanData.masterPlan // Only the master plan is saved
+                    masterPlan: planData.masterPlan // Save only the master plan part
                 }
             }, { merge: true });
 
             functions.logger.info(`[Master Plan] Successfully generated and saved plan for farm ${farmId}.`);
-
-            // 4. Return the farmId and the generic daily tasks to the client
+            
             return {
                 success: true,
                 message: "Plan saved successfully.",
                 farmId: farmId,
-                dailyTasks: fullPlanData.recommendedDailyTasks
+                dailyTasks: planData.recommendedDailyTasks
             };
 
         } catch (error) {
@@ -1045,7 +1066,6 @@ exports.generateMasterPlan = onCall(
         }
     }
 );
-
 // =================================================================
 // FUNCTION 10: GEOCODE ADDRESS HELPER (CORRECTED to onCall)
 // =================================================================
