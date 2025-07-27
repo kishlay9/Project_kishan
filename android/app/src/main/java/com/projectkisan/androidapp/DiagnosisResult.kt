@@ -1,24 +1,27 @@
-package com.projectkisan.androidapp
+package com.projectkisan.androidapp.models
 
-import com.google.firebase.firestore.IgnoreExtraProperties
+import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.ServerTimestamp
+import java.util.Date
 
-// This annotation tells Firestore to ignore any fields in the document
-// that are not in our data class, preventing crashes.
-@IgnoreExtraProperties
+// This data class now correctly matches the multilingual structure in your Firestore database.
 data class DiagnosisResult(
-    val plant_type: String = "N/A",
-    val diagnosis_status: String = "N/A",
-    val disease_name_english: String = "N/A",
+    @DocumentId val id: String = "",
+
+    val object_category: String = "Loading...",
+    val diagnosis_status: String = "",
     val confidence_score: Double = 0.0,
     val severity: String = "None",
     val contagion_risk: String = "None",
-    val description_english: String = "No description available.",
-    // Note: Add Kannada fields from your backend. Simulating them for now.
-    val description_kannada: String = "ವಿವರಣೆ ಲಭ್ಯವಿಲ್ಲ.",
-    val organic_remedy_english: String = "N/A",
-    val organic_remedy_kannada: String = "N/A",
-    val chemical_remedy_english: String = "N/A",
-    val chemical_remedy_kannada: String = "N/A",
-    val prevention_tips_english: List<String> = emptyList(),
-    val audio_remedy_url: String = ""
+
+    // FIX: These fields are now Maps to handle multiple languages
+    val plant_type: Map<String, String> = emptyMap(),
+    val disease_name: Map<String, String> = emptyMap(),
+    val description: Map<String, String> = emptyMap(),
+    val organic_remedy: Map<String, String> = emptyMap(),
+    val chemical_remedy: Map<String, String> = emptyMap(),
+    val prevention_tips: Map<String, List<String>> = emptyMap(), // Prevention tips is a map of string to list of strings
+    val audio_remedy_url: Map<String, String> = emptyMap(),
+
+    @ServerTimestamp val last_updated: Date? = null
 )

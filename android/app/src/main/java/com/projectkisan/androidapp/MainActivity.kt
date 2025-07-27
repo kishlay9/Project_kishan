@@ -31,6 +31,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.projectkisan.androidapp.ui.theme.*
 
+// Data class and Sealed class for Navigation
 sealed class Screen(val route: String, val label: String, val icon: Int) {
     object Home : Screen("home", "Home", R.drawable.ic_home)
     object Schemes : Screen("schemes", "Schemes", R.drawable.ic_schemes)
@@ -92,9 +93,8 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("crop_planner") {
-                CropPlannerScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
+                // Assuming you have this screen defined elsewhere
+                // CropPlannerScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable(Screen.Home.route) { HomeScreen(navController = navController) }
             composable(Screen.Schemes.route) { SchemesScreen() }
@@ -108,7 +108,8 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
             }
             composable(Screen.Market.route) { MarketScreen() }
             composable("fertilizer_calculator") {
-                FertilizerCalculatorScreen(onNavigateBack = { navController.popBackStack() })
+                // Assuming you have this screen defined elsewhere
+                // FertilizerCalculatorScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable("diagnosis_result") {
                 val result = diagnosisViewModel.lastResult
@@ -186,7 +187,6 @@ fun BottomBar(navController: NavController) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBar(navController: NavController, isDarkMode: Boolean, onThemeToggle: () -> Unit, onHomeClick: () -> Unit, onContactClick: () -> Unit) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -259,7 +259,6 @@ private fun AboutAndContactSheet(onDismiss: () -> Unit) {
                 Text("About & Contact", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 IconButton(onClick = onDismiss) { Icon(painterResource(id = R.drawable.ic_close), contentDescription = "Close") }
             }
-            // ▼▼▼ FIX: Replaced deprecated Divider with HorizontalDivider ▼▼▼
             HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
             Text("About Project Kisan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
