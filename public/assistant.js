@@ -29,11 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const toolUrlMap = {
         "Market Prices": "market.html",
-        "Crop Diagnosis": "index.html#diagnose-tool",
+        "Crop Diagnosis": "index.html#diagnose-tool", // Assuming this is correct
         "Pest Guardian": "guardian.html",
-        "Yield Maximizer": "yield.html",
-        "Govt. Schemes": "schemes.html",
-        "Fertilizer Calculator": "fertilizer.html"
+        "Yield Maximizer": "yield.html", // You have a yield.html file
+        "Profit Planner": "cropplanner.html", // You have a cropplanner.html file
+        "Govt. Schemes": "schemes.html", // You have a schemes.html file
+        "Fertilizer Calculator": "fertilizer.html" // Keeping this for consistency
     };
 
     // --- EVENT LISTENERS (Unchanged) ---

@@ -2019,14 +2019,15 @@ exports.askAiAssistant = onRequest(
             // --- CORE LOGIC (This is your original, working AI logic) ---
 
             // STEP 1: Routing AI Call
-            const routerModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
-            const routingPrompt = `You are a classification AI. Your only job is to determine which category a user's question falls into.
+                        const routingPrompt = `You are a classification AI. Your only job is to determine which category a user's question falls into based on their query.
                 The available categories are:
                 - "Market Prices": For questions about crop prices, when to sell, market trends, etc.
                 - "Crop Diagnosis": For questions describing a sick plant, like "yellow leaves", "spots on my crop", etc.
                 - "Pest Guardian": For questions about future risks, pests, diseases, or weather-related threats.
-                - "Profit Planner": For questions about planning a new crop, profitability, costs, or business strategy.
-                - "General Question": For any other farming-related question.
+                - "Yield Maximizer": For questions about creating a detailed, week-by-week cultivation schedule or a "master plan" for a specific crop. This is about the physical activities in the field.
+                - "Profit Planner": For questions about the business side of farming, like calculating profitability, costs, revenue, or a "crop plan" in terms of finances.
+                - "Govt. Schemes": For questions about government subsidies, financial aid, loans, or specific government programs like PM-KISAN.
+                - "General Question": For any other farming-related question that does not fit into the specialized tools above.
 
                 User's Question: "${query}"
 
@@ -2042,11 +2043,13 @@ exports.askAiAssistant = onRequest(
             // STEP 2: Logic Switch
             if (classification.tool !== "General Question") {
                 const navigationMessages = {
-                    "Market Prices": "It looks like you're asking about market prices. I have a special tool for that. Would you like to go there?",
-                    "Crop Diagnosis": "It sounds like you need to diagnose a crop. My Crop Doctor tool can help with that. Shall I take you there?",
-                    "Pest Guardian": "For predicting future risks like pests, my Guardian AI is the best tool. Would you like to check your farm's status?",
-                    "Profit Planner": "That sounds like a strategic question. My Profit Planner can help you create a business plan. Would you like to start?"
-                };
+                "Market Prices": "It looks like you're asking about market prices. I have a special tool for that. Would you like to go there?",
+                "Crop Diagnosis": "It sounds like you need to diagnose a crop. My Crop Doctor tool can help with that. Shall I take you there?",
+                "Pest Guardian": "For predicting future risks like pests, my Guardian AI is the best tool. Would you like to check your farm's status?",
+                "Yield Maximizer": "For a detailed, week-by-week cultivation schedule, my Yield Maximizer is the perfect tool. Would you like to create a master plan?",
+                "Profit Planner": "That sounds like a business question. My Profit Planner can help you calculate costs and potential profits. Shall we create a crop plan?",
+                "Govt. Schemes": "For questions about government programs and subsidies, my Government Schemes tool has the latest information. Shall I take you there?"
+            };
                 const navigationResponse = {
                     type: "navigation",
                     tool: classification.tool,
