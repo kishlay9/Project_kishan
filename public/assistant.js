@@ -1,10 +1,8 @@
+// assistant.js - CORRECTED VERSION
 
-
-// assistant.js
-
-// --- 1. INITIALIZE FIREBASE (REQUIRED FOR 'onCall' FUNCTIONS) ---
+// --- 1. INITIALIZE FIREBASE ---
 const firebaseConfig = {
-  apiKey: "AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg",
+  apiKey: "AIzaSyC4Aeebs6yLYHq-ZlDDMpUcTwvCYX48KRg", // Replace with your actual key if needed
   authDomain: "project-kisan-new.firebaseapp.com",
   projectId: "project-kisan-new",
   storageBucket: "project-kisan-new.firebasestorage.app",
@@ -13,32 +11,39 @@ const firebaseConfig = {
   measurementId: "G-GDJE785E2N"
 };
 
-firebase.initializeApp(firebaseConfig);
-// CRITICAL: Specify the correct region for your functions
-const functions = firebase.app().functions('asia-south1'); 
-// Create a callable reference to your cloud function
-const askAiAssistant = functions.httpsCallable('askAiAssistant');
+// Initialize Firebase if it hasn't been already
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 
-
-// --- 2. THE REST OF YOUR CODE, WITH THE 'fetch' CALL REPLACED ---
+// --- 2. CORE CHAT LOGIC ---
 document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM ELEMENTS ---
     const chatHistory = document.getElementById('chat-history');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
     const sendButton = document.getElementById('send-button');
+    const voiceBtn = document.getElementById('voice-btn');
+
+    // --- STATE & DATA ---
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+    const apiUrl = 'https://asia-south1-project-kisan-new.cloudfunctions.net/askAiAssistant';
 
     const toolUrlMap = {
         "Market Prices": "market.html",
-        "Crop Diagnosis": "index.html#diagnose-tool", // Assuming this is correct
+        "Crop Diagnosis": "index.html#diagnose-tool",
         "Pest Guardian": "guardian.html",
-        "Yield Maximizer": "yield.html", // You have a yield.html file
-        "Profit Planner": "cropplanner.html", // You have a cropplanner.html file
-        "Govt. Schemes": "schemes.html", // You have a schemes.html file
-        "Fertilizer Calculator": "fertilizer.html" // Keeping this for consistency
+        "Yield Maximizer": "yield.html",
+        "Profit Planner": "cropplanner.html",
+        "Govt. Schemes": "schemes.html",
+        "Fertilizer Calculator": "fertilizer.html"
     };
 
-    // --- EVENT LISTENERS (Unchanged) ---
-    chatForm.addEventListener('submit', handleFormSubmit);
+    // --- EVENT LISTENERS ---
+    chatForm.addEventListener('submit', handleTextSubmit);
+    voiceBtn.addEventListener('click', handleVoiceClick);
     chatInput.addEventListener('input', () => {
         chatInput.style.height = 'auto';
         chatInput.style.height = `${Math.min(chatInput.scrollHeight, 150)}px`;
@@ -46,12 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
     chatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleFormSubmit(e);
+            handleTextSubmit(e);
         }
     });
 
-    // --- CORE FUNCTIONS (handleFormSubmit is updated) ---
-    async function handleFormSubmit(event) {
+    // --- CORE SUBMISSION LOGIC ---
+    async function handleTextSubmit(event) {
         event.preventDefault();
         const userQuery = chatInput.value.trim();
         if (!userQuery) return;
@@ -59,51 +64,119 @@ document.addEventListener('DOMContentLoaded', () => {
         addUserMessage(userQuery);
         chatInput.value = '';
         chatInput.style.height = 'auto';
-        
         showTypingIndicator();
 
         try {
-            // Get the current language from browser storage
-            const currentLang = localStorage.getItem('project-kisan-lang') || 'en';
-
-            // === THIS IS THE CORRECTED PART ===
-            // Call the function using the Firebase SDK instead of fetch
-            const result = await askAiAssistant({ 
-                query: userQuery,
-                language: currentLang 
+            // ▼▼▼ THIS IS THE FIX ▼▼▼
+            // Text submissions should send a JSON body with the correct Content-Type header.
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query: userQuery }) // Backend expects 'query' field
             });
+            // ▲▲▲ END OF FIX ▲▲▲
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || `Server error: ${response.status}`);
             
-            // The actual response from your function is inside result.data
-            const data = result.data; 
-            console.log("✅ [DEBUG] Received from AI Assistant:", data);
-
             hideTypingIndicator();
-
-            // Check the response structure from your backend
-            // Note: We check data.type directly now, not data.result.type
-            if (data && data.type) {
-                if (data.type === 'navigation') {
-                    addAiNavigationMessage(data);
-                } else if (data.type === 'answer') {
-                    addAiMessage(data.content);
-                } else {
-                     throw new Error("API returned an unknown response type.");
-                }
-            } else {
-                 throw new Error("Invalid response structure from API. Expected a 'type' property.");
-            }
-
-        } catch (error) {
-            console.error("❌ [CRITICAL ERROR] Failed to get AI response:", error);
+            handleAiResponse(data);
+        } catch (error)  {
+            console.error("❌ [CRITICAL ERROR] Failed to get text AI response:", error);
             hideTypingIndicator();
             addAiMessage("I'm sorry, I'm having some trouble connecting right now. Please try again in a moment.");
         }
     }
 
-    // --- UI HELPER FUNCTIONS (addAiNavigationMessage is slightly improved) ---
+    async function sendAudioToServer(audioBlob) {
+        addUserMessage("[Recording sent for analysis...]");
+        showTypingIndicator();
+        
+        try {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'user_recording.webm');
+            
+            // Audio submissions correctly use FormData. No headers needed, browser sets them.
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || `Server error: ${response.status}`);
+            
+            hideTypingIndicator();
+            handleAiResponse(data);
+
+        } catch (error) {
+            console.error("❌ [CRITICAL ERROR] Failed to get audio AI response:", error);
+            hideTypingIndicator();
+            addAiMessage("I'm sorry, I had trouble understanding the audio. Please try again.");
+        }
+    }
+    
+    // --- UNIFIED AI RESPONSE HANDLER ---
+    function handleAiResponse(data) {
+        console.log("✅ [DEBUG] Received from AI Assistant:", data);
+        if (data.type === 'navigation') {
+            addAiNavigationMessage(data);
+        } else if (data.content) {
+            addAiMessage(data.content);
+        } else {
+            console.warn("[API Response] Parsed JSON lacks 'type' or 'content' keys. Displaying raw data.");
+            addAiMessage(JSON.stringify(data, null, 2));
+        }
+    }
+    
+    // --- VOICE RECORDING LOGIC ---
+    function handleVoiceClick() {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    }
+
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const options = { mimeType: 'audio/webm;codecs=opus' }; // Correct format for backend
+            mediaRecorder = new MediaRecorder(stream, options);
+
+            mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                sendAudioToServer(audioBlob);
+                audioChunks = [];
+                stream.getTracks().forEach(track => track.stop()); // Turn off mic indicator
+            };
+            
+            mediaRecorder.start();
+            isRecording = true;
+            voiceBtn.style.backgroundColor = '#ef4444'; // Red to indicate recording
+            console.log("Recording started...");
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            alert("Could not access microphone. Please check your browser permissions.");
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            isRecording = false;
+            voiceBtn.style.backgroundColor = ''; // Revert to default style
+            console.log("Recording stopped.");
+        }
+    }
+    
+    // --- UI HELPER FUNCTIONS (Corrected with backticks for template literals) ---
     const addUserMessage = (text) => {
         const messageElement = document.createElement('div');
         messageElement.className = 'chat-message user-message';
+        // FIX: Use backticks ``
         messageElement.innerHTML = `<div class="message-content"><p>${text.replace(/\n/g, '<br>')}</p></div>`;
         chatHistory.appendChild(messageElement);
         scrollToBottom();
@@ -112,7 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const addAiMessage = (htmlContent) => {
         const messageElement = document.createElement('div');
         messageElement.className = 'chat-message ai-message';
-        const formattedContent = htmlContent.replace(/\n/g, '<br>').replace(/\\n/g, '<br>');
+        const formattedContent = String(htmlContent).replace(/\n/g, '<br>').replace(/\\n/g, '<br>');
+        // FIX: Use backticks ``
         messageElement.innerHTML = `<img src="images/LOGO.png" alt="AI Avatar" class="avatar"><div class="message-content"><p>${formattedContent}</p></div>`;
         chatHistory.appendChild(messageElement);
         scrollToBottom();
@@ -123,16 +197,16 @@ document.addEventListener('DOMContentLoaded', () => {
         messageElement.className = 'chat-message ai-message';
         const toolUrl = toolUrlMap[data.tool];
         let navigationButton = '';
-
-        // Use the message from the backend if it exists, otherwise create a default one.
+        // FIX: Use backticks ``
         const redirectMessage = data.message || `That's a great question! For the most accurate information on <strong>${data.tool}</strong>, our dedicated tool is the best place to look. I can take you there now.`;
 
         if (toolUrl) {
+            // FIX: Use backticks ``
             navigationButton = `<div class="nav-button-container"><a href="${toolUrl}" class="nav-button">Open ${data.tool} Tool</a></div>`;
         } else {
             console.warn(`[Navigation] No URL found in toolUrlMap for tool: "${data.tool}"`);
         }
-
+        // FIX: Use backticks ``
         messageElement.innerHTML = `<img src="images/LOGO.png" alt="AI Avatar" class="avatar"><div class="message-content"><p>${redirectMessage}</p>${navigationButton}</div>`;
         chatHistory.appendChild(messageElement);
         scrollToBottom();
@@ -142,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const typingElement = document.createElement('div');
         typingElement.id = 'typing-indicator';
         typingElement.className = 'chat-message ai-message typing-indicator';
+        // FIX: Use backticks ``
         typingElement.innerHTML = `<img src="images/LOGO.png" alt="AI Avatar" class="avatar"><div class="message-content"><span></span><span></span><span></span></div>`;
         chatHistory.appendChild(typingElement);
         scrollToBottom();

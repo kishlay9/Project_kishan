@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -54,9 +55,11 @@
                 <!-- Chat messages will be dynamically added here -->
             </div>
             <div class="chat-input-area">
-                <form id="chat-form">
+                <form id="chat-form" class="chat-input-bar">
+                    <!-- ▼▼▼ ADD THIS VOICE BUTTON ▼▼▼ -->
+                    <button type="button" id="voice-btn" class="chat-action-btn"><img src="images/mic.png" alt="Voice Input"></button>
                     <textarea id="chat-input" placeholder="Ask about crop diseases, soil preparation, market prices..." rows="1" required></textarea>
-                    <button id="send-button" type="submit">
+                    <button id="send-button" type="submit" class="chat-action-btn">
                         <img src="images/send.png" alt="Send">
                     </button>
                 </form>
@@ -65,8 +68,6 @@
     </main>
 
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
-    
     
     <script type="module" src="assistant.js"></script>
     <script src="language-manager.js"></script>
