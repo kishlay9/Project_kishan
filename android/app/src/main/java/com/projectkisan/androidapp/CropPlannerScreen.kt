@@ -1,5 +1,10 @@
 package com.projectkisan.androidapp
 
+import android.Manifest
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -15,20 +20,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.google.android.gms.location.LocationServices
+import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.PropertyName
 import com.projectkisan.androidapp.ui.theme.*
-import kotlinx.coroutines.delay
+import com.google.gson.annotations.SerializedName
 
 // --- 1. DATA MODELS ---
 data class CropRecommendation(
+    @SerializedName("crop_name")
     val cropName: String = "",
-    val estimatedProfitInr: Int = 0,
-    val estimatedCostInr: Int = 0,
+
+    @SerializedName("estimated_profit_inr")
+    val estimatedProfitInr: Double = 0.0,
+
+    @SerializedName("estimated_cost_inr")
+    val estimatedCostInr: Double = 0.0,
+
+    // These fields don't need annotation because the names match exactly
     val pros: List<String> = emptyList(),
     val cons: List<String> = emptyList()
 )
@@ -36,13 +53,45 @@ data class CropRecommendation(
 // --- 2. MAIN SCREEN COMPOSABLE ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CropPlannerScreen(navController: NavController) { // Changed to NavController for consistency
+fun CropPlannerScreen(navController: NavController, plannerViewModel: CropPlannerViewModel = viewModel()) {
+    val context = LocalContext.current
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    val uiState by plannerViewModel.uiState.collectAsState()
+
     var selectedState by remember { mutableStateOf("") }
     var selectedWater by remember { mutableStateOf("") }
     var landSize by remember { mutableStateOf("") }
     var budget by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var recommendations by remember { mutableStateOf<List<CropRecommendation>?>(null) }
+
+    val isFormComplete = selectedState.isNotBlank() && selectedWater.isNotBlank() && landSize.isNotBlank() && budget.isNotBlank()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            try {
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        plannerViewModel.generateRecommendations(
+                            location = GeoPoint(location.latitude, location.longitude),
+                            landSize = landSize.toDouble(), // This is now safe
+                            budget = budget.toInt(),       // This is now safe
+                            waterAccess = selectedWater
+                        )
+                    } else {
+                        Toast.makeText(context, "Could not get location. Please enable GPS.", Toast.LENGTH_LONG).show()
+                        plannerViewModel.resetState()
+                    }
+                }
+            } catch (e: SecurityException) {
+                plannerViewModel.resetState()
+                Log.e("CropPlannerScreen", "Location permission error", e)
+            }
+        } else {
+            Toast.makeText(context, "Location permission is required for recommendations.", Toast.LENGTH_LONG).show()
+            plannerViewModel.resetState()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -71,38 +120,54 @@ fun CropPlannerScreen(navController: NavController) { // Changed to NavControlle
                     selectedWater = selectedWater, onWaterChange = { selectedWater = it },
                     landSize = landSize, onLandSizeChange = { landSize = it },
                     budget = budget, onBudgetChange = { budget = it },
+                    isButtonEnabled = isFormComplete && uiState !is PlannerUiState.Loading,
                     onPlanCropsClick = {
-                        isLoading = true
-                        recommendations = null
+                        // ▼▼▼ FIX: ADDED INPUT VALIDATION BEFORE CALLING BACKEND ▼▼▼
+                        val landSizeDouble = landSize.toDoubleOrNull()
+                        val budgetInt = budget.toIntOrNull()
+
+                        if (landSizeDouble == null || landSizeDouble <= 0) {
+                            Toast.makeText(context, "Please enter a valid land size.", Toast.LENGTH_SHORT).show()
+                            return@PlannerInputCard
+                        }
+                        if (budgetInt == null || budgetInt <= 0) {
+                            Toast.makeText(context, "Please enter a valid budget.", Toast.LENGTH_SHORT).show()
+                            return@PlannerInputCard
+                        }
+
+                        // If validation passes, then launch permission request
+                        plannerViewModel.resetState()
+                        permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                     }
                 )
             }
             item {
-                LaunchedEffect(isLoading) {
-                    if (isLoading) {
-                        delay(2000) // Simulate network call
-                        recommendations = getHardcodedRecommendations()
-                        isLoading = false
+                when (val state = uiState) {
+                    is PlannerUiState.Loading -> {
+                        CircularProgressIndicator(modifier = Modifier.padding(top = 32.dp))
                     }
-                }
-
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.padding(top = 32.dp))
-                }
-
-                AnimatedVisibility(visible = !recommendations.isNullOrEmpty()) {
-                    Column {
+                    is PlannerUiState.Error -> {
                         Text(
-                            "Top 3 Recommendations",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 32.dp, bottom = 16.dp)
+                            text = "Error: ${state.message}",
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 32.dp)
                         )
-                        recommendations?.forEach { rec ->
-                            RecommendationCard(recommendation = rec)
-                            Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    is PlannerUiState.Success -> {
+                        Column {
+                            Text(
+                                "Top 3 Recommendations",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(top = 32.dp, bottom = 16.dp)
+                            )
+                            state.recommendations.forEach { rec ->
+                                RecommendationCard(recommendation = rec)
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
                         }
                     }
+                    is PlannerUiState.Idle -> { /* Show nothing */ }
                 }
             }
         }
@@ -118,6 +183,7 @@ fun PlannerInputCard(
     selectedWater: String, onWaterChange: (String) -> Unit,
     landSize: String, onLandSizeChange: (String) -> Unit,
     budget: String, onBudgetChange: (String) -> Unit,
+    isButtonEnabled: Boolean,
     onPlanCropsClick: () -> Unit
 ) {
     var isStateExpanded by remember { mutableStateOf(false) }
@@ -167,6 +233,7 @@ fun PlannerInputCard(
 
             Button(
                 onClick = onPlanCropsClick,
+                enabled = isButtonEnabled,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
@@ -189,7 +256,6 @@ fun RecommendationCard(recommendation: CropRecommendation) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        // ▼▼▼ FIX: Use 'TextColor' from your theme ▼▼▼
                         color = TextColor,
                         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
                     )
@@ -209,13 +275,12 @@ fun RecommendationCard(recommendation: CropRecommendation) {
                     .padding(16.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    // ▼▼▼ FIX: Use 'PrimaryGreen' from your theme ▼▼▼
-                    MetricItem("Est. Profit / acre", "₹${recommendation.estimatedProfitInr.toLocaleString()}", PrimaryGreen, Modifier.weight(1f))
-                    MetricItem("Est. Cost / acre", "₹${recommendation.estimatedCostInr.toLocaleString()}", MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+                    // ▼▼▼ FIX: Convert Double to Int before formatting for cleaner display ▼▼▼
+                    MetricItem("Est. Profit / acre", "₹${recommendation.estimatedProfitInr.toInt().toLocaleString()}", PrimaryGreen, Modifier.weight(1f))
+                    MetricItem("Est. Cost / acre", "₹${recommendation.estimatedCostInr.toInt().toLocaleString()}", MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    // ▼▼▼ FIX: Use 'PrimaryGreen' from your theme ▼▼▼
                     ProsConsList("Pros", recommendation.pros, R.drawable.ic_arrow_up, PrimaryGreen, Modifier.weight(1f))
                     ProsConsList("Cons", recommendation.cons, R.drawable.ic_arrow_down, Color.Red, Modifier.weight(1f))
                 }
@@ -254,33 +319,7 @@ fun ProsConsList(title: String, items: List<String>, iconRes: Int, iconColor: Co
     }
 }
 
-// --- 4. HARDCODED DATA FOR PREVIEW ---
-fun getHardcodedRecommendations(): List<CropRecommendation> {
-    return listOf(
-        CropRecommendation(
-            cropName = "Hybrid Tomato",
-            estimatedProfitInr = 50000,
-            estimatedCostInr = 8500,
-            pros = listOf("High market demand in your area", "Good profit margin", "Multiple harvests possible"),
-            cons = listOf("Needs consistent watering", "Risk of fruit borer pests", "Sensitive to extreme weather")
-        ),
-        CropRecommendation(
-            cropName = "Drought-Tolerant Millet",
-            estimatedProfitInr = 22000,
-            estimatedCostInr = 4000,
-            pros = listOf("Excellent for low water access", "Low input costs", "Improves soil health"),
-            cons = listOf("Lower market price than cash crops", "Risk of bird damage")
-        ),
-        CropRecommendation(
-            cropName = "Quick-Turnaround Spinach",
-            estimatedProfitInr = 15000,
-            estimatedCostInr = 3500,
-            pros = listOf("Very short growth cycle (40-50 days)", "Can be planted between main crops", "Consistent local demand"),
-            cons = listOf("Highly perishable, needs quick sale", "Sensitive to high temperatures")
-        )
-    )
-}
-
+// --- 4. HELPER FUNCTION ---
 fun Int.toLocaleString(): String {
     return "%,d".format(this)
 }

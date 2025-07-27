@@ -40,6 +40,9 @@ android {
 }
 
 dependencies {
+
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.android.gms:play-services-location:21.2.0")
     // This library provides the complete set of Material Design icons
     implementation("androidx.compose.material:material-icons-extended:1.6.8")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
