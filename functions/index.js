@@ -1515,7 +1515,7 @@ async function transcribeAudio(audioBuffer) {
 
     const speechConfig = {
         encoding: 'WEBM_OPUS',
-        sampleRateHertz: 16000,
+        sampleRateHertz: 48000,
         languageCode: 'en-IN',
     };
 
@@ -2017,9 +2017,9 @@ exports.askAiAssistant = onRequest(
             functions.logger.info(`[AI Assistant] Processing query: "${query}"`);
 
             // --- CORE LOGIC (This is your original, working AI logic) ---
-
+                    const routerModel = vertex_ai.getGenerativeModel({ model: "gemini-1.5-pro-002" });
             // STEP 1: Routing AI Call
-                        const routingPrompt = `You are a classification AI. Your only job is to determine which category a user's question falls into based on their query.
+                    const routingPrompt = `You are a classification AI. Your only job is to determine which category a user's question falls into based on their query.
                 The available categories are:
                 - "Market Prices": For questions about crop prices, when to sell, market trends, etc.
                 - "Crop Diagnosis": For questions describing a sick plant, like "yellow leaves", "spots on my crop", etc.
