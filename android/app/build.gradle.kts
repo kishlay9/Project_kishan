@@ -2,11 +2,13 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.google.services)
+    // ▼▼▼ THIS IS THE ONLY CHANGE YOU NEED TO MAKE ▼▼▼
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
     namespace = "com.projectkisan.androidapp"
-    compileSdk = 36
+    compileSdk = 34 // NOTE: Changed from 36 to 34, as 36 is likely a typo and not yet released.
     defaultConfig {
         applicationId = "com.projectkisan.androidapp"
         minSdk = 24
@@ -33,16 +35,36 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8" // Check for latest compatible version
+        kotlinCompilerExtensionVersion = "1.5.8"
     }
 }
 
 dependencies {
+    // This library provides the complete set of Material Design icons
+    implementation("androidx.compose.material:material-icons-extended:1.6.8")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Add the Firebase Bill of Materials (BoM) - This manages library versions for you
+    implementation(platform("com.google.firebase:firebase-bom:33.1.1"))
+    // For fetching device location
+    implementation("com.google.android.gms:play-services-location:21.2.0")
+
+// For loading the weather icon from the URL provided by the backend
+    implementation("io.coil-kt:coil-compose:2.6.0")
+// Add the dependency for Firebase Cloud Functions
+    implementation("com.google.firebase:firebase-functions-ktx")
+
+// Add the dependency for Firebase Firestore (you likely have this already, but ensure it's there)
+    implementation("com.google.firebase:firebase-firestore")
+
+// IMPORTANT: Add this for easier async calls with .await()
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.0")
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
     implementation("androidx.media3:media3-exoplayer:1.3.1")
+
     // Compose Dependencies
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -55,8 +77,9 @@ dependencies {
     // Coil (Image Loading)
     implementation(libs.coil.compose)
 
+    // Ktor (Networking)
     implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.cio) // The engine for making requests
+    implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
 

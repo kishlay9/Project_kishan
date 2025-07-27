@@ -1,5 +1,5 @@
 package com.projectkisan.androidapp
-import androidx.compose.foundation.shape.RoundedCornerShape
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +10,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -97,7 +98,7 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
             }
             composable(Screen.Home.route) { HomeScreen(navController = navController) }
             composable(Screen.Schemes.route) { SchemesScreen() }
-            composable(Screen.Plan.route) { PlanScreen(navController = navController) }
+            composable(Screen.Plan.route) { PlanScreen() }
             composable(Screen.Ask.route) { AskScreen() }
             composable(Screen.Diagnose.route) {
                 DiagnoseScreen(
@@ -156,7 +157,9 @@ fun BottomBar(navController: NavController) {
                     label = { Text(screen.label) },
                     icon = {
                         Box(
-                            modifier = if (isSelected) Modifier.background(Color.White, CircleShape).padding(8.dp) else Modifier,
+                            modifier = if (isSelected) Modifier
+                                .background(Color.White, CircleShape)
+                                .padding(8.dp) else Modifier,
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(painterResource(id = screen.icon), contentDescription = screen.label, modifier = Modifier.size(24.dp))
@@ -198,12 +201,17 @@ fun TopBar(navController: NavController, isDarkMode: Boolean, onThemeToggle: () 
 
     Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.background, shadowElevation = 2.dp) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(painter = painterResource(id = R.drawable.ic_logo), contentDescription = "Logo", modifier = Modifier.size(36.dp).clip(CircleShape))
+                Image(painter = painterResource(id = R.drawable.ic_logo), contentDescription = "Logo", modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Project Kisan", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
@@ -218,11 +226,16 @@ fun TopBar(navController: NavController, isDarkMode: Boolean, onThemeToggle: () 
                     Icon(
                         painter = if (isDarkMode) painterResource(id = R.drawable.ic_top_sun) else painterResource(id = R.drawable.ic_moon),
                         contentDescription = "Toggle Theme",
-                        modifier = Modifier.size(24.dp).rotate(rotationAngle)
+                        modifier = Modifier
+                            .size(24.dp)
+                            .rotate(rotationAngle)
                     )
                 }
                 IconButton(onClick = { /* TODO */ }) {
-                    Icon(painter = painterResource(id = R.drawable.ic_top_profile), contentDescription = "Profile", modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.primary, CircleShape).padding(4.dp), tint = Color.White)
+                    Icon(painter = painterResource(id = R.drawable.ic_top_profile), contentDescription = "Profile", modifier = Modifier
+                        .size(32.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                        .padding(4.dp), tint = Color.White)
                 }
             }
         }
@@ -246,7 +259,8 @@ private fun AboutAndContactSheet(onDismiss: () -> Unit) {
                 Text("About & Contact", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 IconButton(onClick = onDismiss) { Icon(painterResource(id = R.drawable.ic_close), contentDescription = "Close") }
             }
-            Divider(modifier = Modifier.padding(bottom = 16.dp))
+            // ▼▼▼ FIX: Replaced deprecated Divider with HorizontalDivider ▼▼▼
+            HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
             Text("About Project Kisan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Project Kisan is a comprehensive digital assistant designed to empower farmers with data-driven tools. From AI-powered crop diagnosis and personalized cultivation plans to real-time market prices and relevant government schemes, our mission is to bring a new dawn to Indian agriculture.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

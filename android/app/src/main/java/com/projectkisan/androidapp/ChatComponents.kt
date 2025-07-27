@@ -1,5 +1,5 @@
 package com.projectkisan.androidapp
-import androidx.compose.ui.unit.dp
+import kotlinx.serialization.Serializable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,11 +18,12 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import com.projectkisan.androidapp.ui.theme.GreenPrimary
 
 // SINGLE SOURCE OF TRUTH for the ChatMessage data model
-data class ChatMessage(val text: String, val isFromUser: Boolean, val author: String? = null, val schemes: List<Scheme>? = null)
 
+data class ChatMessage(val text: String, val isFromUser: Boolean, val author: String? = null, val schemes: List<Scheme>? = null)
 // SHARED UI COMPONENTS
 
 @Composable
@@ -105,7 +106,7 @@ fun SuggestionChips(onChipClick: (String) -> Unit) {
     val suggestions = listOf("What is the price of onions?", "Is it going to rain tomorrow?", "How to treat leaf curl virus?")
     Column(
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-        horizontalAlignment = Alignment.Start // Chips align to the left
+        horizontalAlignment = Alignment.Start
     ) {
         suggestions.forEach { suggestion ->
             OutlinedButton(
@@ -117,6 +118,24 @@ fun SuggestionChips(onChipClick: (String) -> Unit) {
             ) {
                 Text(suggestion, color = MaterialTheme.colorScheme.onSurface)
             }
+        }
+    }
+}
+
+@Composable
+fun TypingIndicator() {
+    Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_logo),
+            contentDescription = "AI Avatar",
+            modifier = Modifier.size(32.dp).clip(CircleShape)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Card(
+            shape = RoundedCornerShape(topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Text("...", modifier = Modifier.padding(16.dp))
         }
     }
 }

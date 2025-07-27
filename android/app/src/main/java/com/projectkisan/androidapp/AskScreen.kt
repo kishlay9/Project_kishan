@@ -15,9 +15,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-// NOTE: All UI components and the ChatMessage data class have been REMOVED from this file.
-// They are now imported from ChatComponents.kt
-
 @Composable
 fun AskScreen() {
     val messages = remember {
