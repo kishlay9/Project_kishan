@@ -93,8 +93,7 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("crop_planner") {
-                // Assuming you have this screen defined elsewhere
-                // CropPlannerScreen(onNavigateBack = { navController.popBackStack() })
+                CropPlannerScreen(navController = navController)
             }
             composable(Screen.Home.route) { HomeScreen(navController = navController) }
             composable(Screen.Schemes.route) { SchemesScreen() }
@@ -107,10 +106,12 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
                 )
             }
             composable(Screen.Market.route) { MarketScreen() }
+
+            // ▼▼▼ FIX: Corrected the function call to pass the expected lambda ▼▼▼
             composable("fertilizer_calculator") {
-                // Assuming you have this screen defined elsewhere
-                // FertilizerCalculatorScreen(onNavigateBack = { navController.popBackStack() })
+                FertilizerCalculatorScreen(onNavigateBack = { navController.popBackStack() })
             }
+
             composable("diagnosis_result") {
                 val result = diagnosisViewModel.lastResult
                 if (result != null) {
@@ -133,6 +134,7 @@ fun MainScreen(isDarkMode: Boolean, onThemeToggle: () -> Unit) {
     }
 }
 
+// ... The rest of MainActivity.kt remains the same (BottomBar, TopBar, etc.)
 @Composable
 fun BottomBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()

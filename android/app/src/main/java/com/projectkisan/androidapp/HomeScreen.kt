@@ -44,7 +44,6 @@ fun HomeScreen(navController: NavController, weatherViewModel: WeatherViewModel 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val weatherState by weatherViewModel.weatherState.collectAsState()
 
-    // Launcher for requesting location permission
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
@@ -52,33 +51,27 @@ fun HomeScreen(navController: NavController, weatherViewModel: WeatherViewModel 
                 try {
                     fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                         if (location != null) {
-                            // Location found, fetch weather for it
                             weatherViewModel.fetchWeatherData(location.latitude, location.longitude)
                         } else {
-                            // Handle null location (e.g., on emulator or if location is off)
                             Log.e("HomeScreen", "Location is null, fetching with default.")
-                            weatherViewModel.fetchWeatherData(28.7041, 77.1025) // Default to Delhi
+                            weatherViewModel.fetchWeatherData(28.7041, 77.1025)
                         }
                     }
                 } catch (e: SecurityException) {
-                    // Catch SecurityException and use default location
                     Log.e("HomeScreen", "Location permission error, using default.", e)
-                    weatherViewModel.fetchWeatherData(28.7041, 77.1025) // Default to Delhi
+                    weatherViewModel.fetchWeatherData(28.7041, 77.1025)
                 }
             } else {
-                // Handle permission denial and use default location
                 Log.w("HomeScreen", "Permission denied, fetching with default location.")
-                weatherViewModel.fetchWeatherData(28.7041, 77.1025) // Default to Delhi
+                weatherViewModel.fetchWeatherData(28.7041, 77.1025)
             }
         }
     )
 
-    // Trigger the permission request once when the composable is first displayed
     LaunchedEffect(Unit) {
         permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
     }
 
-    // Main UI Layout
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -123,26 +116,28 @@ fun HomeScreen(navController: NavController, weatherViewModel: WeatherViewModel 
                 title = "Fertilizer Calculator",
                 description = "Plan your nutrient application",
                 color = DarkThemeActionBlue,
-                onClick = { /* Handle click */ }
+                // ▼▼▼ FIX: Added navigation action ▼▼▼
+                onClick = { navController.navigate("fertilizer_calculator") }
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
         item {
-            // Note: Ensure you have an 'ic_crop_planner.png' in your drawable folder for this card
             ActionCard(
                 icon = painterResource(id = R.drawable.ic_crop_planner),
                 title = "Crop Planner",
                 description = "Smart crop recommendations",
                 color = DarkThemeActionGreen,
-                onClick = { /* Handle click */ }
+                // ▼▼▼ FIX: Added navigation action ▼▼▼
+                onClick = { navController.navigate("crop_planner") }
             )
         }
     }
 }
 
-// =================================================================
-//  HELPER COMPOSABLES FOR HomeScreen
-// =================================================================
+
+// ... (The rest of your HomeScreen.kt file (WeatherRow, ActionCard, etc.) remains the same)
+// ... (The helper composables like WeatherRow, CurrentWeatherCardV2, SprayingConditionsCardV2,
+// StatusCard, and ActionCard are all correct and do not need to be changed.)
 
 @Composable
 fun WeatherRow(state: WeatherUiState) {
